@@ -6,18 +6,44 @@ import 'package:http/http.dart' as http;
 import '../models/addon.dart';
 import './spotify_service.dart';
 
-/// One timed syllable from Spicy Lyrics (Apple Music-style).
+/// Contributor from UploadAttribution (community syncs only).
+class LyricsContributor {
+  final String id;
+  final String username;
+  final String url;
+  final String? avatar;
+
+  const LyricsContributor({
+    required this.id,
+    required this.username,
+    required this.url,
+    this.avatar,
+  });
+
+  factory LyricsContributor.fromJson(Map<String, dynamic> json) {
+    return LyricsContributor(
+      id: json['id'] as String? ?? '',
+      username: json['username'] as String? ?? '',
+      url: json['url'] as String? ?? '',
+      avatar: json['avatar'] as String?,
+    );
+  }
+}
+
+/// One timed syllable (Syllable sync).
 class LyricSyllable {
   final String text;
-  final double start; // seconds
-  final double end; // seconds
+  final double start;
+  final double end;
   final bool isPartOfWord;
+  final String? transliteratedText;
 
   const LyricSyllable({
     required this.text,
     required this.start,
     required this.end,
     this.isPartOfWord = false,
+    this.transliteratedText,
   });
 
   factory LyricSyllable.fromJson(Map<String, dynamic> json) {
@@ -26,33 +52,37 @@ class LyricSyllable {
       start: (json['StartTime'] as num?)?.toDouble() ?? 0,
       end: (json['EndTime'] as num?)?.toDouble() ?? 0,
       isPartOfWord: json['IsPartOfWord'] as bool? ?? false,
+      transliteratedText: json['TransliteratedText'] as String?,
     );
   }
 
   bool activeAt(double t) => t >= start && t < end;
 }
 
-/// One vocal line (lead and optional background).
-/// Not every response has clean per-word data — use [hasSyllables].
+/// One timed line (syllable or line-level).
 class LyricLine {
   final List<LyricSyllable> lead;
   final List<LyricSyllable> background;
   final double start;
   final double end;
   final bool oppositeAligned;
+  final String? plainText; // Line-type: whole line text without syllables
+  final String? translatedText;
 
   const LyricLine({
-    required this.lead,
+    this.lead = const [],
     this.background = const [],
     required this.start,
     required this.end,
     this.oppositeAligned = false,
+    this.plainText,
+    this.translatedText,
   });
 
   bool get hasSyllables => lead.isNotEmpty;
 
-  /// Reconstructed plain text for this line (respects IsPartOfWord).
   String get text {
+    if (plainText != null && plainText!.isNotEmpty) return plainText!;
     if (lead.isEmpty) return '';
     final buf = StringBuffer();
     for (var i = 0; i < lead.length; i++) {
@@ -69,7 +99,6 @@ class LyricLine {
 
   bool activeAt(double t) => t >= start && t < end;
 
-  /// Active lead syllable index at [t], or -1.
   int activeLeadIndex(double t) {
     for (var i = 0; i < lead.length; i++) {
       if (lead[i].activeAt(t)) return i;
@@ -78,26 +107,40 @@ class LyricLine {
   }
 }
 
-/// Lyrics result from Spicy Lyrics API.
+/// Parsed Spicy Lyrics Body.
 ///
-/// Supports:
-/// - Type "Syllable" (nested Vocal → Lead/Background → Syllables) — best quality
-/// - Flat / line-level / plain fallbacks when syllable data is missing
+/// [source] is one of: spicy_lyrics | apple_music | spotify | unknown
+/// Attribution: always show provider; only when source == spicy_lyrics also
+/// show uploader/maker (fields absent for commercial sources — do not invent).
 class LyricsResult {
   final String? plain;
-  final String? synced; // optional LRC-style string for simple UIs
-  final List<LyricLine> lines; // structured syllable data (may be empty)
+  final String? synced;
+  final List<LyricLine> lines;
   final bool hasSync;
   final String source;
-  final String? bodyType; // e.g. "Syllable"
+  final String? sourceVia;
+  final String? bodyType; // Syllable | Line | Static
+  final String? trackId;
+  final List<String> songWriters;
+  final LyricsContributor? uploader;
+  final LyricsContributor? maker;
+  final double? startTime;
+  final double? endTime;
 
   const LyricsResult({
     this.plain,
     this.synced,
     this.lines = const [],
     this.hasSync = false,
-    this.source = 'spicylyrics',
+    this.source = 'unknown',
+    this.sourceVia,
     this.bodyType,
+    this.trackId,
+    this.songWriters = const [],
+    this.uploader,
+    this.maker,
+    this.startTime,
+    this.endTime,
   });
 
   bool get hasAny =>
@@ -105,9 +148,25 @@ class LyricsResult {
       (synced != null && synced!.trim().isNotEmpty) ||
       lines.isNotEmpty;
 
-  bool get hasSyllables => lines.any((l) => l.hasSyllables);
+  bool get hasSyllables =>
+      bodyType == 'Syllable' && lines.any((l) => l.hasSyllables);
 
-  /// Prefer structured plain, then plain field, then strip synced.
+  bool get isCommunity => source == 'spicy_lyrics';
+
+  /// Provider label for attribution (always shown).
+  String get providerLabel {
+    switch (source) {
+      case 'spicy_lyrics':
+        return 'Spicy Lyrics';
+      case 'apple_music':
+        return 'Apple Music';
+      case 'spotify':
+        return 'Spotify';
+      default:
+        return 'Lyrics';
+    }
+  }
+
   String get displayText {
     if (lines.isNotEmpty) {
       return lines.map((l) => l.text).where((t) => t.isNotEmpty).join('\n');
@@ -123,27 +182,25 @@ class LyricsResult {
     return '';
   }
 
-  /// Line active at playback time [t] (seconds), or null.
   LyricLine? lineAt(double t) {
-    for (final line in lines) {
-      if (line.activeAt(t)) return line;
-    }
-    return null;
+    final i = lineIndexAt(t);
+    if (i < 0 || i >= lines.length) return null;
+    return lines[i];
   }
 
-  /// Index of line active at [t], or -1.
+  /// Active line, or the last started line during gaps (avoids snap-to-top).
   int lineIndexAt(double t) {
+    if (lines.isEmpty) return -1;
+    var lastStarted = -1;
     for (var i = 0; i < lines.length; i++) {
-      if (lines[i].activeAt(t)) return i;
+      final line = lines[i];
+      if (t >= line.start) lastStarted = i;
+      if (line.activeAt(t)) return i;
     }
-    return -1;
+    return lastStarted;
   }
 }
 
-/// Spicy Lyrics API Service.
-///
-/// Endpoint: GET /v1/lyrics/{SPOTIFY_TRACK_ID}
-/// Auth: Authorization: Bearer …
 class LyricsService {
   final http.Client _client;
   static const String apiKey =
@@ -164,50 +221,29 @@ class LyricsService {
       if (itunesTrack != null &&
           itunesTrack.spotifyTrackId != null &&
           itunesTrack.spotifyTrackId!.isNotEmpty) {
-        debugPrint('[Orchid] lyrics: Resolved via iTunes, fetching with Spotify ID');
         return _fetchBySpotifyTrackId(itunesTrack.spotifyTrackId!);
-      } else {
-        debugPrint('[Orchid] lyrics: iTunes resolution found no Spotify ID');
+      }
 
-        final spotifyTrack =
-            await _resolveViaSpotifySearch(track.title, track.artist);
-        if (spotifyTrack != null &&
-            (spotifyTrack.spotifyTrackId ?? '').isNotEmpty) {
-          debugPrint(
-              '[Orchid] lyrics: Resolved via Spotify search, fetching with ID ${spotifyTrack.spotifyTrackId}');
-          return _fetchBySpotifyTrackId(spotifyTrack.spotifyTrackId!);
-        } else {
-          debugPrint('[Orchid] lyrics: Spotify search found no matching track');
-        }
+      final spotifyTrack =
+          await _resolveViaSpotifySearch(track.title, track.artist);
+      if (spotifyTrack != null &&
+          (spotifyTrack.spotifyTrackId ?? '').isNotEmpty) {
+        return _fetchBySpotifyTrackId(spotifyTrack.spotifyTrackId!);
       }
     }
 
-    debugPrint('[Orchid] lyrics: All lookup methods exhausted - no lyrics available');
+    debugPrint('[Orchid] lyrics: All lookup methods exhausted');
     return null;
   }
 
   Future<TrackResult?> _resolveViaSpotifySearch(String title, String artist) async {
     try {
-      debugPrint(
-          '[Orchid] lyrics: Attempting Spotify search for "$title" by "$artist"');
-
       final query = '$artist $title';
       final spotifyService = SpotifyService();
       final results = await spotifyService.searchTracksOnly(query, limit: 5);
-
-      if (results.isEmpty) {
-        debugPrint('[Orchid] lyrics: Spotify search found no tracks');
-        return null;
-      }
-
-      final first = results.first;
-      final track = spotifyService.fromSpotify(first);
-
-      if ((track.spotifyTrackId ?? track.id).isEmpty) {
-        debugPrint('[Orchid] lyrics: Spotify search did not return valid track ID');
-        return null;
-      }
-
+      if (results.isEmpty) return null;
+      final track = spotifyService.fromSpotify(results.first);
+      if ((track.spotifyTrackId ?? track.id).isEmpty) return null;
       return track;
     } catch (e) {
       debugPrint('[Orchid] lyrics: Spotify search error: $e');
@@ -218,7 +254,7 @@ class LyricsService {
   Future<LyricsResult?> _fetchBySpotifyTrackId(String trackId) async {
     try {
       final uri = Uri.parse('https://api.spicylyrics.org/v1/lyrics/$trackId');
-      debugPrint('[Orchid] lyrics fetching from Spicy Lyrics: /v1/lyrics/$trackId');
+      debugPrint('[Orchid] lyrics fetching: /v1/lyrics/$trackId');
 
       final res = await _client.get(
         uri,
@@ -230,46 +266,54 @@ class LyricsService {
       ).timeout(const Duration(seconds: 30));
 
       if (res.statusCode != 200) {
-        debugPrint('[Orchid] lyrics fetch failed with status ${res.statusCode}');
-        final body = res.body;
-        if (body.contains('lyrics_not_found')) {
-          debugPrint('[Orchid] lyrics: No lyrics available for this track');
-        } else if (body.contains('invalid_track_id')) {
-          debugPrint('[Orchid] lyrics: Invalid Spotify track ID format');
-        } else {
-          debugPrint('[Orchid] lyrics: Error response - $body');
-        }
+        debugPrint('[Orchid] lyrics status ${res.statusCode}');
         return null;
       }
 
       final data = jsonDecode(res.body) as Map<String, dynamic>;
-
-      if (!data.containsKey('Body')) {
-        debugPrint('[Orchid] lyrics: Unexpected response format');
-        return null;
-      }
+      if (!data.containsKey('Body')) return null;
 
       final bodyData = data['Body'] as Map<String, dynamic>;
-
       if (bodyData.containsKey('error')) {
-        final error = bodyData['error'] as String;
-        debugPrint('[Orchid] lyrics: API error - $error');
+        debugPrint('[Orchid] lyrics API error: ${bodyData['error']}');
         return null;
       }
 
       return _parseBody(bodyData);
     } catch (e) {
-      debugPrint('[Orchid] lyrics Spotify track ID error: $e');
+      debugPrint('[Orchid] lyrics fetch error: $e');
       return null;
     }
   }
 
-  /// Parse Spicy Lyrics Body. Handles Type "Syllable" and flat fallbacks.
   LyricsResult _parseBody(Map<String, dynamic> bodyData) {
     final type = bodyData['Type'] as String?;
+    final source = bodyData['source'] as String? ?? 'unknown';
+    final sourceVia = bodyData['source_via'] as String?;
+    final trackId = bodyData['id'] as String?;
+    final songWriters = (bodyData['SongWriters'] as List?)
+            ?.map((e) => '$e')
+            .toList() ??
+        const <String>[];
+    final startTime = (bodyData['StartTime'] as num?)?.toDouble();
+    final endTime = (bodyData['EndTime'] as num?)?.toDouble();
+
+    LyricsContributor? uploader;
+    LyricsContributor? maker;
+    final attr = bodyData['UploadAttribution'];
+    if (attr is Map && source == 'spicy_lyrics') {
+      final u = attr['Uploader'];
+      if (u is Map) {
+        uploader = LyricsContributor.fromJson(Map<String, dynamic>.from(u));
+      }
+      final m = attr['Maker'];
+      if (m is Map) {
+        maker = LyricsContributor.fromJson(Map<String, dynamic>.from(m));
+      }
+    }
+
     final content = bodyData['Content'];
 
-    // --- Syllable format (your example) ---
     if (type == 'Syllable' && content is List) {
       final lines = <LyricLine>[];
       final plainBuf = StringBuffer();
@@ -277,63 +321,121 @@ class LyricsService {
       for (final item in content) {
         if (item is! Map) continue;
         final map = Map<String, dynamic>.from(item);
+        if (map['Type'] != 'Vocal') continue;
 
-        if (map['Type'] == 'Vocal') {
-          final lead = _parseSyllableGroup(map['Lead']);
-          final bg = _parseSyllableGroupList(map['Background']);
-          final start = (map['Lead'] is Map
-                  ? (map['Lead']['StartTime'] as num?)
-                  : null)
-              ?.toDouble() ??
-              (lead.isNotEmpty ? lead.first.start : 0.0);
-          final end = (map['Lead'] is Map
-                  ? (map['Lead']['EndTime'] as num?)
-                  : null)
-              ?.toDouble() ??
-              (lead.isNotEmpty ? lead.last.end : start);
+        final lead = _parseSyllableGroup(map['Lead']);
+        final bg = _parseSyllableGroupList(map['Background']);
+        final leadMap = map['Lead'] is Map
+            ? Map<String, dynamic>.from(map['Lead'] as Map)
+            : null;
+        final start = (leadMap?['StartTime'] as num?)?.toDouble() ??
+            (lead.isNotEmpty ? lead.first.start : 0.0);
+        final end = (leadMap?['EndTime'] as num?)?.toDouble() ??
+            (lead.isNotEmpty ? lead.last.end : start);
 
-          final line = LyricLine(
-            lead: lead,
-            background: bg,
-            start: start,
-            end: end,
-            oppositeAligned: map['OppositeAligned'] as bool? ?? false,
-          );
-          lines.add(line);
-          final t = line.text;
-          if (t.isNotEmpty) {
-            if (plainBuf.isNotEmpty) plainBuf.writeln();
-            plainBuf.write(t);
-          }
-        } else if (map.containsKey('Text')) {
-          // occasional flat line inside Content
-          final text = map['Text'] as String? ?? '';
-          if (text.isNotEmpty) {
-            if (plainBuf.isNotEmpty) plainBuf.writeln();
-            plainBuf.write(text);
-          }
+        final line = LyricLine(
+          lead: lead,
+          background: bg,
+          start: start,
+          end: end,
+          oppositeAligned: map['OppositeAligned'] as bool? ?? false,
+          translatedText: leadMap?['TranslatedText'] as String?,
+        );
+        lines.add(line);
+        final t = line.text;
+        if (t.isNotEmpty) {
+          if (plainBuf.isNotEmpty) plainBuf.writeln();
+          plainBuf.write(t);
         }
       }
 
       final plain = plainBuf.toString().trim();
-      final synced = _linesToRoughLrc(lines);
-
       return LyricsResult(
         plain: plain.isEmpty ? null : plain,
-        synced: synced.isEmpty ? null : synced,
+        synced: _linesToRoughLrc(lines),
         lines: lines,
         hasSync: lines.isNotEmpty,
-        source: 'spicylyrics',
+        source: source,
+        sourceVia: sourceVia,
         bodyType: type,
+        trackId: trackId,
+        songWriters: songWriters,
+        uploader: uploader,
+        maker: maker,
+        startTime: startTime,
+        endTime: endTime,
       );
     }
 
-    // --- Flat Content list with Text/StartTime ---
-    if (content is List) {
-      final plainBuf = StringBuffer();
-      final syncedBuf = StringBuffer();
+    // Type: Line — Content is line objects with Text + StartTime/EndTime
+    if (type == 'Line' && content is List) {
       final lines = <LyricLine>[];
+      final plainBuf = StringBuffer();
 
+      for (final item in content) {
+        if (item is! Map) continue;
+        final map = Map<String, dynamic>.from(item);
+        final text = map['Text'] as String? ?? '';
+        if (text.isEmpty) continue;
+        final start = (map['StartTime'] as num?)?.toDouble() ?? 0;
+        final end = (map['EndTime'] as num?)?.toDouble() ?? start + 2;
+        lines.add(LyricLine(
+          plainText: text,
+          start: start,
+          end: end,
+          oppositeAligned: map['OppositeAligned'] as bool? ?? false,
+          translatedText: map['TranslatedText'] as String?,
+        ));
+        if (plainBuf.isNotEmpty) plainBuf.writeln();
+        plainBuf.write(text);
+      }
+
+      final plain = plainBuf.toString().trim();
+      return LyricsResult(
+        plain: plain.isEmpty ? null : plain,
+        synced: _linesToRoughLrc(lines),
+        lines: lines,
+        hasSync: lines.isNotEmpty,
+        source: source,
+        sourceVia: sourceVia,
+        bodyType: type,
+        trackId: trackId,
+        songWriters: songWriters,
+        uploader: uploader,
+        maker: maker,
+        startTime: startTime,
+        endTime: endTime,
+      );
+    }
+
+    // Type: Static — no timings
+    if (type == 'Static') {
+      String plain = '';
+      if (content is List) {
+        plain = content.map((e) {
+          if (e is Map) return e['Text'] as String? ?? '';
+          return '$e';
+        }).where((s) => s.isNotEmpty).join('\n');
+      } else if (content is String) {
+        plain = content;
+      }
+      return LyricsResult(
+        plain: plain.trim().isEmpty ? null : plain.trim(),
+        hasSync: false,
+        source: source,
+        sourceVia: sourceVia,
+        bodyType: type,
+        trackId: trackId,
+        songWriters: songWriters,
+        uploader: uploader,
+        maker: maker,
+      );
+    }
+
+    // Fallback list
+    if (content is List) {
+      final lines = <LyricLine>[];
+      final plainBuf = StringBuffer();
       for (final item in content) {
         if (item is Map) {
           final text = item['Text'] as String? ?? '';
@@ -343,62 +445,53 @@ class LyricsService {
           if (plainBuf.isNotEmpty) plainBuf.writeln();
           plainBuf.write(text);
           if (start != null) {
-            syncedBuf.writeln('[${_formatLrc(start)}] $text');
             lines.add(LyricLine(
-              lead: [
-                LyricSyllable(
-                  text: text,
-                  start: start,
-                  end: end ?? start + 2,
-                  isPartOfWord: false,
-                ),
-              ],
+              plainText: text,
               start: start,
               end: end ?? start + 2,
             ));
           }
-        } else if (item is String && item.trim().isNotEmpty) {
-          if (plainBuf.isNotEmpty) plainBuf.writeln();
-          plainBuf.write(item.trim());
         }
       }
-
       final plain = plainBuf.toString().trim();
       return LyricsResult(
         plain: plain.isEmpty ? null : plain,
-        synced: syncedBuf.toString().trim().isEmpty
-            ? null
-            : syncedBuf.toString().trim(),
         lines: lines,
         hasSync: lines.isNotEmpty,
-        source: 'spicylyrics',
+        source: source,
+        sourceVia: sourceVia,
         bodyType: type,
+        trackId: trackId,
+        songWriters: songWriters,
+        uploader: uploader,
+        maker: maker,
+        startTime: startTime,
+        endTime: endTime,
       );
     }
 
-    // --- Simple string Content ---
     if (content is String && content.trim().isNotEmpty) {
       return LyricsResult(
         plain: content.trim(),
-        hasSync: false,
-        source: 'spicylyrics',
+        source: source,
+        sourceVia: sourceVia,
         bodyType: type,
+        trackId: trackId,
+        songWriters: songWriters,
+        uploader: uploader,
+        maker: maker,
       );
     }
 
-    // Last-resort fields
-    for (final field in ['plain', 'lyrics', 'text']) {
-      final v = bodyData[field];
-      if (v is String && v.trim().isNotEmpty) {
-        return LyricsResult(
-          plain: v.trim(),
-          source: 'spicylyrics',
-          bodyType: type,
-        );
-      }
-    }
-
-    return const LyricsResult(source: 'spicylyrics');
+    return LyricsResult(
+      source: source,
+      sourceVia: sourceVia,
+      bodyType: type,
+      trackId: trackId,
+      songWriters: songWriters,
+      uploader: uploader,
+      maker: maker,
+    );
   }
 
   List<LyricSyllable> _parseSyllableGroup(dynamic group) {
@@ -416,21 +509,21 @@ class LyricsService {
     if (bg is! List) return const [];
     final out = <LyricSyllable>[];
     for (final item in bg) {
-      if (item is Map) {
-        out.addAll(_parseSyllableGroup(item));
-      }
+      if (item is Map) out.addAll(_parseSyllableGroup(item));
     }
     return out;
   }
 
-  String _linesToRoughLrc(List<LyricLine> lines) {
+  String? _linesToRoughLrc(List<LyricLine> lines) {
+    if (lines.isEmpty) return null;
     final buf = StringBuffer();
     for (final line in lines) {
       final t = line.text;
       if (t.isEmpty) continue;
       buf.writeln('[${_formatLrc(line.start)}] $t');
     }
-    return buf.toString().trim();
+    final s = buf.toString().trim();
+    return s.isEmpty ? null : s;
   }
 
   String _formatLrc(double seconds) {
@@ -443,9 +536,6 @@ class LyricsService {
 
   Future<TrackResult?> _resolveViaItunes(TrackResult originalTrack) async {
     try {
-      debugPrint(
-          '[Orchid] lyrics: Attempting iTunes resolution for "${originalTrack.title}" by "${originalTrack.artist}"');
-
       final searchTerm = '${originalTrack.artist} ${originalTrack.title}';
       final uri = Uri.parse('https://itunes.apple.com/search').replace(
         queryParameters: {
@@ -457,17 +547,11 @@ class LyricsService {
       );
 
       final res = await _client.get(uri).timeout(const Duration(seconds: 15));
-      if (res.statusCode != 200) {
-        debugPrint('[Orchid] lyrics: iTunes resolution failed with ${res.statusCode}');
-        return null;
-      }
+      if (res.statusCode != 200) return null;
 
       final body = jsonDecode(res.body) as Map<String, dynamic>;
       final results = body['results'] as List? ?? [];
-      if (results.isEmpty) {
-        debugPrint('[Orchid] lyrics: No results from iTunes');
-        return null;
-      }
+      if (results.isEmpty) return null;
 
       final item = results[0];
       if (item is! Map) return null;
@@ -475,21 +559,12 @@ class LyricsService {
       if (m['wrapperType'] != 'track' || m['kind'] != 'song') return null;
 
       String? spotifyTrackId;
-      final hasSpotifyUrl =
-          m.containsKey('spotifyUrl') || m.containsKey('spotifyURL');
-      if (hasSpotifyUrl) {
-        final spotifyUrl =
-            m['spotifyUrl'] as String? ?? m['spotifyURL'] as String? ?? '';
-        final match = RegExp(r'/track/([a-zA-Z0-9_-]+)').firstMatch(spotifyUrl);
-        if (match != null) {
-          spotifyTrackId = match.group(1)!;
-          debugPrint('[Orchid] lyrics: Extracted Spotify ID: $spotifyTrackId');
-        }
-      }
+      final spotifyUrl =
+          m['spotifyUrl'] as String? ?? m['spotifyURL'] as String? ?? '';
+      final match = RegExp(r'/track/([a-zA-Z0-9_-]+)').firstMatch(spotifyUrl);
+      if (match != null) spotifyTrackId = match.group(1);
 
-      if (spotifyTrackId == null || spotifyTrackId.isEmpty) {
-        return null;
-      }
+      if (spotifyTrackId == null || spotifyTrackId.isEmpty) return null;
 
       return TrackResult(
         id: '${m['trackId']}',
