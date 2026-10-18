@@ -26,6 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _adding = false;
   String? _status;
   bool _showAddons = true;
+  bool _showDebug = true;
 
   @override
   void initState() {
@@ -144,12 +145,50 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text(_status!).muted(),
                 ],
                 const SizedBox(height: 12),
+                _debugPanel(),
+                const SizedBox(height: 12),
                 ..._results.map(_trackTile),
               ],
             ),
           ),
           _playerBar(),
         ],
+      ),
+    );
+  }
+
+  Widget _debugPanel() {
+    final lines = _addonService.lastDebug;
+    if (lines.isEmpty) return const SizedBox.shrink();
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const Text('Debug').semiBold(),
+                const Spacer(),
+                GhostButton(
+                  onPressed: () => setState(() => _showDebug = !_showDebug),
+                  child: Text(_showDebug ? 'Hide' : 'Show'),
+                ),
+              ],
+            ),
+            if (_showDebug) ...[
+              const SizedBox(height: 8),
+              SelectableText(
+                lines.join('\n'),
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 11,
+                  height: 1.35,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -7,12 +8,22 @@ import '../models/addon.dart';
 
 class AddonService {
   static const _storageKey = 'orchid_addons_v1';
-  static const _itunesSearch =
-      'https://itunes.apple.com/search';
+  static const _itunesSearch = 'https://itunes.apple.com/search';
 
   final http.Client _client;
 
+  /// Last resolve steps for UI (newest last).
+  final List<String> lastDebug = [];
+
   AddonService({http.Client? client}) : _client = client ?? http.Client();
+
+  void _log(String msg) {
+    debugPrint('[Orchid] $msg');
+    lastDebug.add(msg);
+    if (lastDebug.length > 40) {
+      lastDebug.removeRange(0, lastDebug.length - 40);
+    }
+  }
 
   static String normalizeBase(String url) {
     var u = url.trim();
@@ -46,8 +57,10 @@ class AddonService {
   Future<InstalledAddon> fetchAndBuild(String url) async {
     final base = normalizeBase(url);
     final manifestUri = Uri.parse('$base/manifest.json');
+    _log('fetch manifest $manifestUri');
     final res =
         await _client.get(manifestUri).timeout(const Duration(seconds: 12));
+    _log('manifest HTTP ${res.statusCode}');
     if (res.statusCode != 200) {
       throw Exception('manifest HTTP ${res.statusCode}');
     }
@@ -56,10 +69,12 @@ class AddonService {
     if (manifest.id.isEmpty || manifest.name.isEmpty) {
       throw Exception('Invalid manifest (missing id/name)');
     }
+    _log(
+      'installed ${manifest.name} id=${manifest.id} resources=${manifest.resources}',
+    );
     return InstalledAddon(baseUrl: base, manifest: manifest);
   }
 
-  /// Search iTunes + every installed search addon, then dedupe.
   Future<List<TrackResult>> search(
     List<InstalledAddon> addons,
     String query,
@@ -67,12 +82,24 @@ class AddonService {
     final q = query.trim();
     if (q.isEmpty) return [];
 
+    lastDebug.clear();
+    _log('search q="$q" addons=${addons.length}');
+    for (final a in addons) {
+      _log(
+        '  addon ${a.manifest.name} search=${a.manifest.canSearch} stream=${a.manifest.canStream} ${a.baseUrl}',
+      );
+    }
+
     final buckets = await Future.wait([
       _searchItunes(q),
       _searchAddons(addons, q),
     ]);
 
-    return _dedupe([...buckets[0], ...buckets[1]]);
+    final merged = [...buckets[0], ...buckets[1]];
+    _log('raw hits: itunes=${buckets[0].length} addons=${buckets[1].length}');
+    final deduped = _dedupe(merged);
+    _log('after dedupe: ${deduped.length}');
+    return deduped;
   }
 
   Future<List<TrackResult>> _searchItunes(String q) async {
@@ -84,6 +111,7 @@ class AddonService {
         'limit': '25',
       });
       final res = await _client.get(uri).timeout(const Duration(seconds: 12));
+      _log('itunes search HTTP ${res.statusCode}');
       if (res.statusCode != 200) return [];
       final body = jsonDecode(res.body) as Map<String, dynamic>;
       final results = body['results'] as List? ?? [];
@@ -112,7 +140,8 @@ class AddonService {
         );
       }
       return out;
-    } catch (_) {
+    } catch (e) {
+      _log('itunes search error: $e');
       return [];
     }
   }
@@ -122,6 +151,7 @@ class AddonService {
     String q,
   ) async {
     final searchable = addons.where((a) => a.manifest.canSearch).toList();
+    _log('searchable addons: ${searchable.length}');
     final results = <TrackResult>[];
 
     await Future.wait(searchable.map((addon) async {
@@ -129,11 +159,17 @@ class AddonService {
         final uri = Uri.parse('${addon.baseUrl}/search').replace(
           queryParameters: {'q': q},
         );
+        _log('GET $uri');
         final res =
             await _client.get(uri).timeout(const Duration(seconds: 15));
-        if (res.statusCode != 200) return;
+        _log('${addon.manifest.name} search HTTP ${res.statusCode}');
+        if (res.statusCode != 200) {
+          _log('${addon.manifest.name} body: ${res.body.length > 200 ? res.body.substring(0, 200) : res.body}');
+          return;
+        }
         final body = jsonDecode(res.body) as Map<String, dynamic>;
         final tracks = body['tracks'] as List? ?? [];
+        _log('${addon.manifest.name} tracks=${tracks.length}');
         for (final t in tracks) {
           if (t is! Map) continue;
           results.add(
@@ -145,15 +181,14 @@ class AddonService {
             ),
           );
         }
-      } catch (_) {
-        // skip failed addon
+      } catch (e) {
+        _log('${addon.manifest.name} search error: $e');
       }
     }));
 
     return results;
   }
 
-  /// Prefer stream-addon hits, then iTunes, keep first of each dedupe key.
   List<TrackResult> _dedupe(List<TrackResult> input) {
     final ranked = List<TrackResult>.from(input)
       ..sort((a, b) {
@@ -173,49 +208,85 @@ class AddonService {
     return out;
   }
 
-  /// Resolve a playable URL using stream-capable addons, then iTunes preview.
   Future<StreamInfo> resolvePlayback(
     TrackResult track,
     List<InstalledAddon> addons,
   ) async {
+    lastDebug.clear();
+    _log(
+      'resolvePlayback "${track.title}" – ${track.artist} '
+      'source=${track.sourceName} fromStreamAddon=${track.fromStreamAddon} '
+      'addonBase=${track.addonBaseUrl} id=${track.id} '
+      'preview=${track.previewUrl != null}',
+    );
+
     final streamAddons =
         addons.where((a) => a.manifest.canStream).toList();
+    _log('stream-capable addons: ${streamAddons.length}');
+    for (final a in streamAddons) {
+      _log(
+        '  stream addon ${a.manifest.name} search=${a.manifest.canSearch} '
+        '${a.baseUrl} resources=${a.manifest.resources}',
+      );
+    }
+
+    if (streamAddons.isEmpty) {
+      _log('no stream addons installed');
+    }
 
     // 1) Track already tied to a stream addon
     if (track.fromStreamAddon &&
         track.addonBaseUrl != null &&
         track.addonBaseUrl!.isNotEmpty) {
+      _log('step1: direct stream from ${track.addonBaseUrl} id=${track.id}');
       try {
-        return await _streamFromAddon(track.addonBaseUrl!, track.id);
-      } catch (_) {
-        // fall through
+        final info = await _streamFromAddon(track.addonBaseUrl!, track.id);
+        _log('step1 OK via ${info.via}');
+        return info;
+      } catch (e) {
+        _log('step1 FAILED: $e');
       }
+    } else {
+      _log('step1 skipped (not from stream addon)');
     }
 
-    // 2) Ask each stream addon to search and match this recording
+    // 2) Match on each stream addon
     final query = '${track.artist} ${track.title}';
+    _log('step2: match query="$query"');
     for (final addon in streamAddons) {
-      // Skip if this is the same addon we already tried
-      if (track.addonBaseUrl == addon.baseUrl) continue;
+      if (track.addonBaseUrl == addon.baseUrl) {
+        _log('step2 skip same addon ${addon.manifest.name}');
+        continue;
+      }
+      _log('step2 try ${addon.manifest.name}');
       try {
         final matched = await _matchOnAddon(addon, track, query);
-        if (matched == null) continue;
-        return await _streamFromAddon(addon.baseUrl, matched);
-      } catch (_) {
+        if (matched == null) {
+          _log('step2 ${addon.manifest.name}: no match');
+          continue;
+        }
+        _log('step2 ${addon.manifest.name}: matched id=$matched → stream');
+        final info = await _streamFromAddon(addon.baseUrl, matched);
+        _log('step2 OK via ${info.via} url=${info.url.substring(0, info.url.length.clamp(0, 80))}…');
+        return info;
+      } catch (e) {
+        _log('step2 ${addon.manifest.name} FAILED: $e');
         continue;
       }
     }
 
-    // 3) iTunes / search-provided preview as last resort
+    // 3) Preview fallback
     if (track.previewUrl != null && track.previewUrl!.isNotEmpty) {
+      _log('step3: falling back to preview (${track.sourceName})');
       return StreamInfo(
         url: track.previewUrl!,
         format: track.format ?? 'm4a',
         quality: 'preview',
-        via: track.sourceName,
+        via: '${track.sourceName} preview',
       );
     }
 
+    _log('step3: no preview either — giving up');
     throw Exception('No stream addon could play this track');
   }
 
@@ -224,29 +295,47 @@ class AddonService {
     TrackResult target,
     String query,
   ) async {
-    // Prefer search if available
-    if (addon.manifest.canSearch) {
-      final uri = Uri.parse('${addon.baseUrl}/search').replace(
-        queryParameters: {'q': query},
+    if (!addon.manifest.canSearch) {
+      _log(
+        '  ${addon.manifest.name}: no search capability '
+        '(resources=${addon.manifest.resources}) — cannot match iTunes hit',
       );
-      final res = await _client.get(uri).timeout(const Duration(seconds: 12));
-      if (res.statusCode != 200) return null;
-      final body = jsonDecode(res.body) as Map<String, dynamic>;
-      final tracks = body['tracks'] as List? ?? [];
-      String? bestId;
-      var bestScore = -1;
-      for (final t in tracks) {
-        if (t is! Map) continue;
-        final m = Map<String, dynamic>.from(t);
-        final score = _matchScore(target, m);
-        if (score > bestScore) {
-          bestScore = score;
-          bestId = '${m['id']}';
-        }
-      }
-      // Require at least title-ish match
-      if (bestScore >= 2 && bestId != null) return bestId;
+      return null;
     }
+
+    final uri = Uri.parse('${addon.baseUrl}/search').replace(
+      queryParameters: {'q': query},
+    );
+    _log('  GET $uri');
+    final res = await _client.get(uri).timeout(const Duration(seconds: 12));
+    _log('  ${addon.manifest.name} match-search HTTP ${res.statusCode}');
+    if (res.statusCode != 200) {
+      final snippet =
+          res.body.length > 180 ? '${res.body.substring(0, 180)}…' : res.body;
+      _log('  body: $snippet');
+      return null;
+    }
+
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    final tracks = body['tracks'] as List? ?? [];
+    _log('  candidates=${tracks.length}');
+
+    String? bestId;
+    var bestScore = -1;
+    String? bestLabel;
+    for (final t in tracks) {
+      if (t is! Map) continue;
+      final m = Map<String, dynamic>.from(t);
+      final score = _matchScore(target, m);
+      final label = '${m['title']} – ${m['artist']}';
+      if (score > bestScore) {
+        bestScore = score;
+        bestId = '${m['id']}';
+        bestLabel = label;
+      }
+    }
+    _log('  best score=$bestScore id=$bestId ($bestLabel) need>=2');
+    if (bestScore >= 2 && bestId != null) return bestId;
     return null;
   }
 
@@ -274,20 +363,33 @@ class AddonService {
     }
     if (target.duration != null && candidate['duration'] is int) {
       final d = ((candidate['duration'] as int) - target.duration!).abs();
-      if (d <= 3) score += 2;
-      else if (d <= 8) score += 1;
+      if (d <= 3) {
+        score += 2;
+      } else if (d <= 8) {
+        score += 1;
+      }
     }
     return score;
   }
 
   Future<StreamInfo> _streamFromAddon(String baseUrl, String id) async {
     final uri = Uri.parse('$baseUrl/stream/${Uri.encodeComponent(id)}');
+    _log('  GET $uri');
     final res = await _client.get(uri).timeout(const Duration(seconds: 12));
+    _log('  stream HTTP ${res.statusCode}');
     if (res.statusCode != 200) {
+      final snippet =
+          res.body.length > 200 ? '${res.body.substring(0, 200)}…' : res.body;
+      _log('  stream body: $snippet');
       throw Exception('stream HTTP ${res.statusCode}');
     }
     final body = jsonDecode(res.body) as Map<String, dynamic>;
+    _log('  stream keys: ${body.keys.toList()}');
     if (body['url'] is! String || (body['url'] as String).isEmpty) {
+      _log(
+        '  no direct url — client-resolved or unexpected payload '
+        '(playback may need X-Eclipse-Access / client resolve)',
+      );
       throw Exception('Addon returned no direct url (client-resolved?)');
     }
     return StreamInfo.fromJson(body, via: baseUrl);
