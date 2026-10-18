@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/addon.dart';
+import './internal_addons/spotify_addon_service.dart';
 
 class AddonService {
   static const _storageKey = 'orchid_addons_v1';
@@ -93,10 +94,15 @@ class AddonService {
     final buckets = await Future.wait([
       _searchItunes(q),
       _searchAddons(addons, q),
+      _searchSpotifyAddon(q),
     ]);
 
-    final merged = [...buckets[0], ...buckets[1]];
-    _log('raw hits: itunes=${buckets[0].length} addons=${buckets[1].length}');
+    final merged = [
+      ...buckets[0],  // iTunes results
+      ...buckets[1],  // User addon results
+      ...buckets[2],  // Spotify addon results (fallback)
+    ];
+    _log('raw hits: itunes=${buckets[0].length} addons=${buckets[1].length} spotify=${buckets[2].length}');
     final deduped = _dedupe(merged);
     _log('after dedupe: ${deduped.length}');
     return deduped;
@@ -121,6 +127,18 @@ class AddonService {
         final m = Map<String, dynamic>.from(item);
         if (m['wrapperType'] != 'track' || m['kind'] != 'song') continue;
         final art = m['artworkUrl100'] as String?;
+        // Extract Spotify track ID if available in iTunes response
+        String? spotifyTrackId;
+        final hasSpotifyUrl = m.containsKey('spotifyUrl') || m.containsKey('spotifyURL');
+        if (hasSpotifyUrl) {
+          final spotifyUrl = m['spotifyUrl'] as String? ?? m['spotifyURL'] as String? ?? '';
+          // Extract track ID from Spotify URL: https://open.spotify.com/track/{ID}...
+          final match = RegExp(r'/track/([a-zA-Z0-9_-]+)').firstMatch(spotifyUrl);
+          if (match != null) {
+            spotifyTrackId = match.group(1)!;
+          }
+        }
+
         out.add(
           TrackResult(
             id: '${m['trackId']}',
@@ -133,6 +151,7 @@ class AddonService {
             artworkUrl: art?.replaceAll('100x100bb', '600x600bb'),
             format: 'm4a',
             previewUrl: m['previewUrl'] as String?,
+            spotifyTrackId: spotifyTrackId,
             sourceId: 'itunes',
             sourceName: 'iTunes',
             fromStreamAddon: false,
@@ -189,11 +208,31 @@ class AddonService {
     return results;
   }
 
+  Future<List<TrackResult>> _searchSpotifyAddon(String q) async {
+    try {
+      final spotify = SpotifyAddonService();
+      final results = await spotify.searchTracks(q, limit: 25);
+      
+      if (results.isNotEmpty) {
+        _log('spotify addon found ${results.length} tracks');
+      }
+      return results;
+    } catch (e) {
+      _log('spotify addon search error: $e');
+      return [];
+    }
+  }
+
   List<TrackResult> _dedupe(List<TrackResult> input) {
     final ranked = List<TrackResult>.from(input)
       ..sort((a, b) {
-        final as = a.fromStreamAddon ? 0 : (a.sourceId == 'itunes' ? 1 : 2);
-        final bs = b.fromStreamAddon ? 0 : (b.sourceId == 'itunes' ? 1 : 2);
+        // Priority: Stream addon > Spotify with ID > iTunes
+        final as = a.fromStreamAddon ? 0 : 
+                   (a.spotifyTrackId?.isNotEmpty ?? false) ? 1 : 
+                   (a.sourceId == 'itunes' || a.sourceId == 'spotify-addon' ? 2 : 3);
+        final bs = b.fromStreamAddon ? 0 :
+                   (b.spotifyTrackId?.isNotEmpty ?? false) ? 1 :
+                   (b.sourceId == 'itunes' || b.sourceId == 'spotify-addon' ? 2 : 3);
         return as.compareTo(bs);
       });
 

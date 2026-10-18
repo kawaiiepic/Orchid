@@ -71,6 +71,10 @@ class TrackResult {
   final String? isrc;
   /// Direct playable URL when the search source already provides one (e.g. iTunes preview).
   final String? previewUrl;
+  /// Spotify track ID (22 base62 chars) for services like Spicy Lyrics.
+  final String? spotifyTrackId;
+  /// YouTube video ID from stream-capable addons (used for direct Spicy Lyrics lookup).
+  final String? videoId;
   final String sourceId;
   final String sourceName;
   /// True when this hit came from a stream-capable addon with a resolvable id.
@@ -87,6 +91,8 @@ class TrackResult {
     this.format,
     this.isrc,
     this.previewUrl,
+    this.spotifyTrackId,
+    this.videoId,
     required this.sourceId,
     required this.sourceName,
     this.fromStreamAddon = false,
@@ -110,6 +116,25 @@ class TrackResult {
     required String addonName,
     required bool canStream,
   }) {
+    // Extract Spotify track ID from addon response
+    String? spotifyTrackId;
+    
+    // Try explicit field first
+    if (json.containsKey('spotifyTrackId')) {
+      spotifyTrackId = json['spotifyTrackId'] as String? ?? '';
+    }
+    
+    // Try to extract from URL fields if not explicitly provided
+    if (spotifyTrackId == null || spotifyTrackId.isEmpty) {
+      final urlField = json['url'] as String? ?? json['URL'] as String? ?? json['streamUrl'] as String?;
+      if (urlField != null && urlField.contains('open.spotify.com/track/')) {
+        final match = RegExp(r'/track/([a-zA-Z0-9_-]+)').firstMatch(urlField);
+        if (match != null) {
+          spotifyTrackId = match.group(1)!;
+        }
+      }
+    }
+
     return TrackResult(
       id: '${json['id']}',
       title: json['title'] as String? ?? 'Unknown',
@@ -120,6 +145,8 @@ class TrackResult {
       format: json['format'] as String?,
       isrc: json['isrc'] as String?,
       previewUrl: json['streamURL'] as String?,
+      spotifyTrackId: (spotifyTrackId ?? '').isEmpty ? null : spotifyTrackId,
+      videoId: json['videoId'] as String?,
       sourceId: addonBaseUrl,
       sourceName: addonName,
       fromStreamAddon: canStream,

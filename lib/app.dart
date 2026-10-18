@@ -7,14 +7,14 @@ class OrchidApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ShadcnApp(
+    return const ShadcnApp(
       title: 'Orchid',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
+      theme: const ThemeData(
         colorScheme: ColorSchemes.darkZinc,
         radius: 0.6,
       ),
-      home: const HomeScreen(),
+      home: HomeScreen(),
     );
   }
 }

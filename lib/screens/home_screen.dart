@@ -132,10 +132,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      headers: [
+      headers: const [
         AppBar(
-          title: const Text('Orchid'),
-          subtitle: const Text('Built-in iTunes · addons · lrclib lyrics'),
+          title: Text('Orchid'),
+          subtitle: Text('Built-in iTunes · Eclipse addons · Spicy Lyrics'),
         ),
       ],
       child: Column(
@@ -204,7 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              const Text('Lyrics via lrclib.net (built-in)').small().muted(),
+              const Text('Spicy Lyrics • Apple Music syllable sync').small().muted(),
               const SizedBox(height: 12),
               const Divider(),
               const SizedBox(height: 12),
@@ -303,9 +303,9 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Row(
               children: [
-                const Text('Lyrics').semiBold(),
+                const Text('Spicy Lyrics').semiBold(),
                 const SizedBox(width: 8),
-                const Text('lrclib').xSmall().muted(),
+                const Text('Apple Music syllable sync').xSmall().muted(),
                 const Spacer(),
                 GhostButton(
                   onPressed: () => setState(() => _showLyrics = !_showLyrics),
