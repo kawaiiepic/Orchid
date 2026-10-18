@@ -8,12 +8,17 @@ class PlayerService {
   final AddonService addonService;
 
   TrackResult? current;
+  String? playingVia;
 
   PlayerService({required this.addonService});
 
-  Future<void> playTrack(TrackResult track) async {
-    final stream = await addonService.resolveStream(track);
+  Future<void> playTrack(
+    TrackResult track,
+    List<InstalledAddon> addons,
+  ) async {
+    final stream = await addonService.resolvePlayback(track, addons);
     current = track;
+    playingVia = stream.via ?? stream.quality;
     await player.setUrl(stream.url);
     await player.play();
   }

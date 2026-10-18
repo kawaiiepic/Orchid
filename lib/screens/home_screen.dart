@@ -51,7 +51,9 @@ class _HomeScreenState extends State<HomeScreen> {
       final installed = await _addonService.fetchAndBuild(url);
       final next = List<InstalledAddon>.from(_addons);
       final idx = next.indexWhere(
-        (a) => a.baseUrl == installed.baseUrl || a.manifest.id == installed.manifest.id,
+        (a) =>
+            a.baseUrl == installed.baseUrl ||
+            a.manifest.id == installed.manifest.id,
       );
       if (idx >= 0) {
         next[idx] = installed;
@@ -82,15 +84,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _search() async {
     final q = _searchController.text.trim();
     if (q.isEmpty) return;
-    if (_addons.where((a) => a.manifest.canSearch).isEmpty) {
-      setState(() => _status = 'Add a search-capable addon first.');
-      return;
-    }
+
     setState(() {
       _searching = true;
-      _status = 'Searching…';
+      _status = 'Searching iTunes + addons…';
       _results = [];
     });
+
     final tracks = await _addonService.search(_addons, q);
     if (!mounted) return;
     setState(() {
@@ -101,11 +101,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _play(TrackResult track) async {
-    setState(() => _status = 'Loading stream…');
+    setState(() => _status = 'Resolving stream…');
     try {
-      await _player.playTrack(track);
+      await _player.playTrack(track, _addons);
       if (!mounted) return;
-      setState(() => _status = null);
+      final via = _player.playingVia;
+      setState(() => _status = via != null ? 'Playing via $via' : null);
     } catch (e) {
       if (!mounted) return;
       setState(() => _status = 'Play failed: $e');
@@ -126,7 +127,7 @@ class _HomeScreenState extends State<HomeScreen> {
       headers: [
         AppBar(
           title: const Text('Orchid'),
-          subtitle: const Text('Eclipse addons'),
+          subtitle: const Text('iTunes search · Eclipse playback addons'),
         ),
       ],
       child: Column(
@@ -177,7 +178,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   Expanded(
                     child: TextField(
                       controller: _urlController,
-                      placeholder: const Text('https://addon…/ or …/manifest.json'),
+                      placeholder:
+                          const Text('https://addon…/ or …/manifest.json'),
                       onSubmitted: (_) => _addAddon(),
                     ),
                   ),
@@ -190,15 +192,21 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 8),
               const Text(
-                'Paste any Eclipse-compatible addon URL.',
+                'Search always uses iTunes. Addons can add more search hits and provide full streams for playback.',
               ).small().muted(),
               const SizedBox(height: 12),
               if (_loadingAddons)
                 const Text('Loading…').muted()
               else if (_addons.isEmpty)
-                const Text('No addons yet.').muted()
+                const Text(
+                  'No playback addons yet — iTunes previews still work.',
+                ).muted()
               else
                 ..._addons.map((a) {
+                  final caps = <String>[
+                    if (a.manifest.canSearch) 'search',
+                    if (a.manifest.canStream) 'stream',
+                  ].join(', ');
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Row(
@@ -209,7 +217,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             children: [
                               Text(a.manifest.name).semiBold(),
                               Text(
-                                '${a.baseUrl} · ${a.manifest.resources.join(", ")} · v${a.manifest.version}',
+                                '${a.baseUrl} · $caps · v${a.manifest.version}',
                               ).small().muted(),
                             ],
                           ),
@@ -264,7 +272,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   width: 48,
                   height: 48,
                   fit: BoxFit.cover,
-                  errorWidget: (_, __, ___) => const SizedBox(width: 48, height: 48),
+                  errorWidget: (_, __, ___) =>
+                      const SizedBox(width: 48, height: 48),
                 ),
               )
             else
@@ -285,7 +294,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text(
                     [t.artist, if (t.album != null) t.album].join(' · '),
                   ).small().muted(),
-                  Text(t.addonName).xSmall().muted(),
+                  Text(
+                    t.fromStreamAddon
+                        ? '${t.sourceName} · stream'
+                        : t.sourceName,
+                  ).xSmall().muted(),
                 ],
               ),
             ),
@@ -326,7 +339,12 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(track?.title ?? 'Nothing playing').semiBold(),
-                Text(track?.artist ?? '—').small().muted(),
+                Text(
+                  [
+                    track?.artist ?? '—',
+                    if (_player.playingVia != null) _player.playingVia!,
+                  ].join(' · '),
+                ).small().muted(),
               ],
             ),
           ),

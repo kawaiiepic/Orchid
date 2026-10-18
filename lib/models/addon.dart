@@ -68,8 +68,14 @@ class TrackResult {
   final int? duration;
   final String? artworkUrl;
   final String? format;
-  final String addonBaseUrl;
-  final String addonName;
+  final String? isrc;
+  /// Direct playable URL when the search source already provides one (e.g. iTunes preview).
+  final String? previewUrl;
+  final String sourceId;
+  final String sourceName;
+  /// True when this hit came from a stream-capable addon with a resolvable id.
+  final bool fromStreamAddon;
+  final String? addonBaseUrl;
 
   const TrackResult({
     required this.id,
@@ -79,14 +85,30 @@ class TrackResult {
     this.duration,
     this.artworkUrl,
     this.format,
-    required this.addonBaseUrl,
-    required this.addonName,
+    this.isrc,
+    this.previewUrl,
+    required this.sourceId,
+    required this.sourceName,
+    this.fromStreamAddon = false,
+    this.addonBaseUrl,
   });
 
-  factory TrackResult.fromJson(
+  /// Key used to collapse duplicate songs across sources.
+  String get dedupeKey {
+    if (isrc != null && isrc!.isNotEmpty) {
+      return 'isrc:${isrc!.toUpperCase()}';
+    }
+    return 't:${_norm(title)}|a:${_norm(artist)}';
+  }
+
+  static String _norm(String s) =>
+      s.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), ' ').trim();
+
+  factory TrackResult.fromAddonJson(
     Map<String, dynamic> json, {
     required String addonBaseUrl,
     required String addonName,
+    required bool canStream,
   }) {
     return TrackResult(
       id: '${json['id']}',
@@ -96,8 +118,12 @@ class TrackResult {
       duration: json['duration'] is int ? json['duration'] as int : null,
       artworkUrl: json['artworkURL'] as String?,
       format: json['format'] as String?,
-      addonBaseUrl: addonBaseUrl,
-      addonName: addonName,
+      isrc: json['isrc'] as String?,
+      previewUrl: json['streamURL'] as String?,
+      sourceId: addonBaseUrl,
+      sourceName: addonName,
+      fromStreamAddon: canStream,
+      addonBaseUrl: canStream ? addonBaseUrl : null,
     );
   }
 }
@@ -106,14 +132,21 @@ class StreamInfo {
   final String url;
   final String? format;
   final String? quality;
+  final String? via;
 
-  const StreamInfo({required this.url, this.format, this.quality});
+  const StreamInfo({
+    required this.url,
+    this.format,
+    this.quality,
+    this.via,
+  });
 
-  factory StreamInfo.fromJson(Map<String, dynamic> json) {
+  factory StreamInfo.fromJson(Map<String, dynamic> json, {String? via}) {
     return StreamInfo(
       url: json['url'] as String,
       format: json['format'] as String?,
       quality: json['quality'] as String?,
+      via: via,
     );
   }
 }
