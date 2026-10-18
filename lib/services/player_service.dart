@@ -28,9 +28,6 @@ class PlayerService extends ChangeNotifier {
     LyricsService? lyricsService,
   }) : lyricsService = lyricsService ?? LyricsService() {
     player.playerStateStream.listen((_) => notifyListeners());
-    player.positionStream.listen((_) {
-      // keep UI in sync without flooding — full player uses its own streams
-    });
   }
 
   bool get hasNext => queueIndex >= 0 && queueIndex < queue.length - 1;
@@ -40,7 +37,6 @@ class PlayerService extends ChangeNotifier {
     _addons = addons;
   }
 
-  /// Play [track]. If [fromQueue] is given, use it as the skip queue.
   Future<void> playTrack(
     TrackResult track, {
     List<TrackResult>? fromQueue,
@@ -111,13 +107,7 @@ class PlayerService extends ChangeNotifier {
   }
 
   Future<void> playPrevious() async {
-    if (!hasPrevious) {
-      // restart current
-      await player.seek(Duration.zero);
-      return;
-    }
-    // If >3s into track, restart; else go previous
-    if (player.position.inSeconds > 3) {
+    if (player.position.inSeconds > 3 || !hasPrevious) {
       await player.seek(Duration.zero);
       return;
     }
@@ -146,8 +136,8 @@ class PlayerService extends ChangeNotifier {
   }
 
   @override
-  Future<void> dispose() async {
-    await player.dispose();
+  void dispose() {
+    player.dispose();
     super.dispose();
   }
 }
