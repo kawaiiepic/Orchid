@@ -126,3 +126,8 @@ if(NOT CMAKE_BUILD_TYPE MATCHES "Debug")
   install(FILES "${AOT_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
     COMPONENT Runtime)
 endif()
+
+find_package(mimalloc REQUIRED)
+
+# Link against the mimalloc target
+target_link_libraries(${BINARY_NAME} PRIVATE mimalloc)

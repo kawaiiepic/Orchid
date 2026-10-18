@@ -273,7 +273,7 @@ class AddonService {
       score += 1;
     }
     if (target.duration != null && candidate['duration'] is int) {
-      final d = (candidate['duration'] as int - target.duration!).abs();
+      final d = ((candidate['duration'] as int) - target.duration!).abs();
       if (d <= 3) score += 2;
       else if (d <= 8) score += 1;
     }
