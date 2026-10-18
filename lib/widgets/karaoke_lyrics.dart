@@ -1,6 +1,13 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart'
-    show FontWeight, TextStyle, TextAlign, TextSpan, TextPainter, Colors;
+    show
+        Curves,
+        FontWeight,
+        TextStyle,
+        TextAlign,
+        TextSpan,
+        TextDecoration,
+        Scrollable;
 import 'package:just_audio/just_audio.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -51,8 +58,6 @@ class _KaraokeLyricsState extends State<KaraokeLyrics> {
 
   void _onUserScrollEnd() {
     _userScrolling = false;
-    // Resume follow only when playback is running again after a short delay
-    // (handled in position listener when playing).
   }
 
   void _maybeFollow(int activeIdx, bool playing) {
@@ -62,7 +67,6 @@ class _KaraokeLyricsState extends State<KaraokeLyrics> {
     }
     if (_userScrolling) return;
 
-    // Re-enable follow once playing and we have a stable active line
     if (!_follow && playing) {
       _follow = true;
     }
@@ -112,8 +116,6 @@ class _KaraokeLyricsState extends State<KaraokeLyrics> {
         final playing = widget.player.playing;
         final activeIdx = result.lineIndexAt(t);
 
-        // Hold last known active during gaps (lineIndexAt already does this),
-        // but also keep _lastActive for scroll follow.
         if (activeIdx >= 0 && playing) {
           _maybeFollow(activeIdx, playing);
         } else if (!playing) {
@@ -127,15 +129,15 @@ class _KaraokeLyricsState extends State<KaraokeLyrics> {
               height: 280,
               child: NotificationListener<ScrollNotification>(
                 onNotification: (n) {
-                  if (n is ScrollStartNotification &&
-                      n.dragDetails != null) {
+                  if (n is ScrollStartNotification && n.dragDetails != null) {
                     _onUserScrollStart();
                   } else if (n is ScrollEndNotification) {
                     _onUserScrollEnd();
-                    // If still playing after user scroll ends, resume follow soon
                     if (widget.player.playing) {
                       Future.delayed(const Duration(milliseconds: 1200), () {
-                        if (mounted && widget.player.playing && !_userScrolling) {
+                        if (mounted &&
+                            widget.player.playing &&
+                            !_userScrolling) {
                           setState(() => _follow = true);
                         }
                       });
@@ -195,16 +197,14 @@ class _LyricLineView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final align =
-        line.oppositeAligned ? TextAlign.right : TextAlign.center;
 
     if (!line.hasSyllables) {
-      final color = isActiveLine
-          ? scheme.foreground
-          : scheme.mutedForeground;
+      final color =
+          isActiveLine ? scheme.foreground : scheme.mutedForeground;
       return Text(
         line.text,
-        textAlign: align,
+        textAlign:
+            line.oppositeAligned ? TextAlign.right : TextAlign.center,
         style: TextStyle(
           fontSize: isActiveLine ? 20 : 15,
           fontWeight: isActiveLine ? FontWeight.w600 : FontWeight.w400,
@@ -319,7 +319,6 @@ class _SyllableChip extends StatelessWidget {
 }
 
 /// Required attribution per Spicy Lyrics terms.
-/// Always show provider. When source == spicy_lyrics, also link uploader/maker.
 class _AttributionBar extends StatelessWidget {
   final LyricsResult result;
 
