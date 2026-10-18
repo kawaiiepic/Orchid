@@ -4,6 +4,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../models/addon.dart';
 import '../services/addon_service.dart';
 import '../services/player_service.dart';
+import '../widgets/karaoke_lyrics.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -108,7 +109,6 @@ class _HomeScreenState extends State<HomeScreen> {
       _showLyrics = true;
     });
     try {
-      // playTrack also loads lyrics after stream starts
       await _player.playTrack(track, _addons);
       if (!mounted) return;
       final via = _player.playingVia;
@@ -184,7 +184,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             if (_showAddons) ...[
               const SizedBox(height: 10),
-              // Built-in
               Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Row(
@@ -295,6 +294,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final track = _player.current;
     if (track == null) return const SizedBox.shrink();
 
+    final hasSyl = _player.lyrics?.hasSyllables == true;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -305,7 +306,9 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 const Text('Spicy Lyrics').semiBold(),
                 const SizedBox(width: 8),
-                const Text('Apple Music syllable sync').xSmall().muted(),
+                Text(
+                  hasSyl ? 'syllable karaoke' : 'Apple Music sync',
+                ).xSmall().muted(),
                 const Spacer(),
                 GhostButton(
                   onPressed: () => setState(() => _showLyrics = !_showLyrics),
@@ -314,13 +317,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             if (_showLyrics) ...[
-              const SizedBox(height: 8),
-              if (_player.lyricsLoading)
-                const Text('Loading lyrics…').muted()
-              else if (_player.lyrics == null || !_player.lyrics!.hasAny)
-                const Text('No lyrics found.').muted()
-              else
-                Text(_player.lyrics!.displayText),
+              const SizedBox(height: 12),
+              KaraokeLyrics(
+                player: _player.player,
+                lyrics: _player.lyrics,
+                loading: _player.lyricsLoading,
+              ),
             ],
           ],
         ),
