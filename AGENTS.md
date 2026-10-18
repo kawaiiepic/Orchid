@@ -1,37 +1,42 @@
 # AGENTS.md – Orchid
 
-Flutter music player. UI: shadcn_flutter. Protocol for third-party sources: Eclipse addons (https://eclipsemusic.app/docs).
+Flutter music player (shadcn_flutter). Third-party sources use the Eclipse addon protocol.
 
-## Search
+## Built-in
 
-1. Always query **iTunes Search API** (no key).
-2. Also query every installed addon with `resources` containing `"search"`.
-3. **Dedupe** by ISRC if present, else normalized `title|artist`.
-4. Prefer stream-capable addon hits over iTunes when collapsing duplicates.
+| Source | Role |
+|--------|------|
+| **iTunes Search API** | Always-on search + 30s preview fallback |
+| **lrclib.net** | Lyrics after play (`/api/get`, then `/api/search`) |
 
-## Playback
+These are not Eclipse addons; they do not need installing.
 
-`AddonService.resolvePlayback(track, addons)`:
+## External Eclipse addons
 
-1. If the result came from a stream addon → `GET {base}/stream/{id}` (must return direct `{ url }`).
-2. Else try each installed stream addon: search `artist title`, score match (ISRC / title / artist / duration), then `/stream/{id}`.
-3. Else use iTunes `previewUrl` (30s) if present.
+User pastes manifest URL. Used for extra search hits and full-length streams.
 
-Client-resolved stream payloads (e.g. official YTM) are rejected — need a real audio URL.
+### Search merge
+1. iTunes
+2. Installed addons with `search`
+3. Dedupe by ISRC or normalized title+artist (prefer stream-addon rows)
 
-## Layout
+### Playback resolve
+1. Stream from the result’s addon if it has `stream`
+2. Else match on each stream addon via its `/search`
+3. Else iTunes preview URL
+
+Requires a normal `{ "url": "…" }` stream response (not client-resolved).
+
+## Files
 
 ```
-lib/
-  main.dart / app.dart
-  models/addon.dart
-  services/addon_service.dart   # install, iTunes+addon search, dedupe, resolvePlayback
-  services/player_service.dart  # just_audio
-  screens/home_screen.dart
+lib/services/addon_service.dart   # iTunes + addons + resolve + debug log
+lib/services/lyrics_service.dart  # lrclib
+lib/services/player_service.dart  # just_audio + lyrics fetch
+lib/screens/home_screen.dart      # UI
 ```
 
-## Rules
+## Notes
 
-- Stay on shadcn_flutter; no Material unless required.
-- Soft-fail per addon on search.
-- No secrets in repo.
+- lrclib asks for a descriptive User-Agent — set in LyricsService.
+- Synced lyrics are shown stripped of timestamps for now (plain display).

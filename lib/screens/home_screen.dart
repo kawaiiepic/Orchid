@@ -26,7 +26,8 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _adding = false;
   String? _status;
   bool _showAddons = true;
-  bool _showDebug = true;
+  bool _showDebug = false;
+  bool _showLyrics = true;
 
   @override
   void initState() {
@@ -88,7 +89,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     setState(() {
       _searching = true;
-      _status = 'Searching iTunes + addons…';
+      _status = 'Searching…';
       _results = [];
     });
 
@@ -102,12 +103,18 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _play(TrackResult track) async {
-    setState(() => _status = 'Resolving stream…');
+    setState(() {
+      _status = 'Resolving stream…';
+      _showLyrics = true;
+    });
     try {
+      // playTrack also loads lyrics after stream starts
       await _player.playTrack(track, _addons);
       if (!mounted) return;
       final via = _player.playingVia;
-      setState(() => _status = via != null ? 'Playing via $via' : null);
+      setState(() {
+        _status = via != null ? 'Playing via $via' : null;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() => _status = 'Play failed: $e');
@@ -128,7 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
       headers: [
         AppBar(
           title: const Text('Orchid'),
-          subtitle: const Text('iTunes search · Eclipse playback addons'),
+          subtitle: const Text('Built-in iTunes · addons · lrclib lyrics'),
         ),
       ],
       child: Column(
@@ -137,7 +144,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                _addonsSection(),
+                _sourcesSection(),
                 const SizedBox(height: 20),
                 _searchSection(),
                 if (_status != null) ...[
@@ -145,8 +152,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text(_status!).muted(),
                 ],
                 const SizedBox(height: 12),
+                _lyricsPanel(),
                 _debugPanel(),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 ..._results.map(_trackTile),
               ],
             ),
@@ -157,43 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _debugPanel() {
-    final lines = _addonService.lastDebug;
-    if (lines.isEmpty) return const SizedBox.shrink();
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                const Text('Debug').semiBold(),
-                const Spacer(),
-                GhostButton(
-                  onPressed: () => setState(() => _showDebug = !_showDebug),
-                  child: Text(_showDebug ? 'Hide' : 'Show'),
-                ),
-              ],
-            ),
-            if (_showDebug) ...[
-              const SizedBox(height: 8),
-              SelectableText(
-                lines.join('\n'),
-                style: const TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 11,
-                  height: 1.35,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _addonsSection() {
+  Widget _sourcesSection() {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -202,7 +174,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Row(
               children: [
-                const Text('Addons').large().semiBold(),
+                const Text('Sources').large().semiBold(),
                 const Spacer(),
                 GhostButton(
                   onPressed: () => setState(() => _showAddons = !_showAddons),
@@ -212,6 +184,32 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             if (_showAddons) ...[
               const SizedBox(height: 10),
+              // Built-in
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('iTunes (built-in)').semiBold(),
+                          const Text(
+                            'Search always on · 30s previews if no stream addon matches',
+                          ).small().muted(),
+                        ],
+                      ),
+                    ),
+                    const Text('built-in').xSmall().muted(),
+                  ],
+                ),
+              ),
+              const Text('Lyrics via lrclib.net (built-in)').small().muted(),
+              const SizedBox(height: 12),
+              const Divider(),
+              const SizedBox(height: 12),
+              const Text('Eclipse addons').semiBold(),
+              const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(
@@ -231,15 +229,13 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 8),
               const Text(
-                'Search always uses iTunes. Addons can add more search hits and provide full streams for playback.',
+                'Add stream/search addons for full playback. Search still merges with iTunes and dedupes.',
               ).small().muted(),
               const SizedBox(height: 12),
               if (_loadingAddons)
                 const Text('Loading…').muted()
               else if (_addons.isEmpty)
-                const Text(
-                  'No playback addons yet — iTunes previews still work.',
-                ).muted()
+                const Text('No external addons yet.').muted()
               else
                 ..._addons.map((a) {
                   final caps = <String>[
@@ -292,6 +288,78 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Text(_searching ? '…' : 'Search'),
         ),
       ],
+    );
+  }
+
+  Widget _lyricsPanel() {
+    final track = _player.current;
+    if (track == null) return const SizedBox.shrink();
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const Text('Lyrics').semiBold(),
+                const SizedBox(width: 8),
+                const Text('lrclib').xSmall().muted(),
+                const Spacer(),
+                GhostButton(
+                  onPressed: () => setState(() => _showLyrics = !_showLyrics),
+                  child: Text(_showLyrics ? 'Hide' : 'Show'),
+                ),
+              ],
+            ),
+            if (_showLyrics) ...[
+              const SizedBox(height: 8),
+              if (_player.lyricsLoading)
+                const Text('Loading lyrics…').muted()
+              else if (_player.lyrics == null || !_player.lyrics!.hasAny)
+                const Text('No lyrics found.').muted()
+              else
+                Text(_player.lyrics!.displayText),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _debugPanel() {
+    final lines = _addonService.lastDebug;
+    if (lines.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Text('Debug').semiBold(),
+                  const Spacer(),
+                  GhostButton(
+                    onPressed: () => setState(() => _showDebug = !_showDebug),
+                    child: Text(_showDebug ? 'Hide' : 'Show'),
+                  ),
+                ],
+              ),
+              if (_showDebug) ...[
+                const SizedBox(height: 8),
+                Text(
+                  lines.join('\n'),
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 
