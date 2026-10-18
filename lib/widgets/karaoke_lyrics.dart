@@ -14,11 +14,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../services/lyrics_service.dart';
 
-/// Karaoke lyrics with:
-/// - auto-follow while playing
-/// - free scroll while paused / when user drags
-/// - holds last active line during gaps (no snap to top)
-/// - Spicy Lyrics attribution (provider always; uploader/maker when community)
 class KaraokeLyrics extends StatefulWidget {
   final AudioPlayer player;
   final LyricsResult? lyrics;
@@ -90,19 +85,19 @@ class _KaraokeLyricsState extends State<KaraokeLyrics> {
   @override
   Widget build(BuildContext context) {
     if (widget.loading) {
-      return const Text('Loading lyrics…').muted();
+      return const Center(child: Text('Loading lyrics…').muted());
     }
     final result = widget.lyrics;
     if (result == null || !result.hasAny) {
-      return const Text('No lyrics found.').muted();
+      return const Center(child: Text('No lyrics found.').muted());
     }
 
     if (result.lines.isEmpty) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(result.displayText),
-          const SizedBox(height: 12),
+          Expanded(child: SingleChildScrollView(child: Text(result.displayText))),
+          const SizedBox(height: 8),
           _AttributionBar(result: result),
         ],
       );
@@ -125,8 +120,7 @@ class _KaraokeLyricsState extends State<KaraokeLyrics> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SizedBox(
-              height: 280,
+            Expanded(
               child: NotificationListener<ScrollNotification>(
                 onNotification: (n) {
                   if (n is ScrollStartNotification && n.dragDetails != null) {
@@ -318,7 +312,6 @@ class _SyllableChip extends StatelessWidget {
   }
 }
 
-/// Required attribution per Spicy Lyrics terms.
 class _AttributionBar extends StatelessWidget {
   final LyricsResult result;
 
@@ -337,10 +330,7 @@ class _AttributionBar extends StatelessWidget {
 
     parts.add(TextSpan(
       text: result.providerLabel,
-      style: TextStyle(
-        fontSize: 11,
-        color: scheme.mutedForeground,
-      ),
+      style: TextStyle(fontSize: 11, color: scheme.mutedForeground),
     ));
 
     if (result.isCommunity) {
@@ -386,7 +376,7 @@ class _AttributionBar extends StatelessWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.only(top: 4),
+      padding: const EdgeInsets.only(top: 4, bottom: 4),
       child: Text.rich(
         TextSpan(children: parts),
         textAlign: TextAlign.center,
