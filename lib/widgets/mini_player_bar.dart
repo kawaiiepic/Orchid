@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart' show MaterialPageRoute, Material, InkWell;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import '../screens/full_player_screen.dart';
@@ -77,9 +78,7 @@ class MiniPlayerBar extends StatelessWidget {
                     ),
                   ),
                   IconButton.ghost(
-                    onPressed: player.hasPrevious || track != null
-                        ? () => player.playPrevious()
-                        : null,
+                    onPressed: () => player.playPrevious(),
                     icon: const Icon(LucideIcons.skipBack, size: 18),
                   ),
                   IconButton.ghost(
