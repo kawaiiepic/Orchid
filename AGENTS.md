@@ -1,52 +1,56 @@
-# AGENTS.md – Orchid (Eclipse Music Addon)
+# AGENTS.md – Orchid
 
-This file is for future AI agents / collaborators working on the repo.
+Orchid is a **music player client** for the Eclipse addon protocol, not an addon itself.
 
-## What this project is
+Protocol reference: https://eclipsemusic.app/docs
 
-Orchid is an **Eclipse Music addon**. Eclipse is a music player app; addons are plain HTTP servers that supply search results and streamable audio URLs. Eclipse handles UI, queue, playback engine, lyrics, etc.
+## Architecture (current)
 
-Official protocol docs: https://eclipsemusic.app/docs
+- `server.js` – Express static server + optional CORS proxy at `GET /proxy?url=`
+- `public/` – single-page UI
+  - `index.html` / `styles.css` / `app.js`
+- Installed addons stored in `localStorage` key `orchid_addons_v1` as:
+  `{ baseUrl, manifest }[]`
 
-### Required endpoints (must keep working)
+### Addon lifecycle
 
-- `GET /manifest.json` – static description of the addon
-- `GET /search?q={query}` – returns `{ tracks, albums, artists, playlists }` (arrays optional)
-- `GET /stream/{id}` – returns `{ url, format?, quality?, ... }` with a direct audio URL
+1. User pastes URL → normalize (strip trailing slash / `manifest.json`)
+2. Fetch `{base}/manifest.json` (direct, then proxy on failure)
+3. Require at least `id` + `name`
+4. Persist; dedupe by baseUrl or manifest.id
 
-Optional later: `/album/{id}`, `/artist/{id}`, `/playlist/{id}`, `/resolve-isrc`, settings, catalogs.
+### Search
 
-### Current implementation (v1.0.0)
+- Fan-out to every installed addon whose `resources` includes `"search"`
+- Aggregate `tracks` arrays; each result is tagged with `_addonBase` and `_addonName`
+- No ranking yet — order is whatever the promises resolve in
 
-- Node.js + Express + CORS
-- Search + stream backed by Apple’s public iTunes Search / Lookup APIs (no key)
-- Streams are **30-second previews** only (AAC/M4A). Enough for basic “search and play” demo.
-- Track IDs are iTunes `trackId` strings.
+### Playback
 
-## Design constraints for future changes
+- On click: `GET {base}/stream/{id}` → use returned `url` as `<audio>` src
+- Direct audio formats only (MP3, AAC/M4A, FLAC, etc.) as required by Eclipse
 
-1. Keep the three required endpoints stable. Eclipse clients cache the manifest and expect the same response shapes.
-2. Stream URLs must be direct audio (MP3 / AAC / M4A / FLAC / WAV / OGG). No HTML pages or login redirects.
-3. Prefer adding a real full-track source (own catalog, licensed API, self-hosted files, etc.) rather than extending the preview path forever.
-4. If you add settings, declare them in the manifest under `settings` and read the corresponding query params on every request.
-5. CORS is already enabled; keep it for local + remote clients.
+## Rules for changes
 
-## Useful files
+1. Do not break the Eclipse response shapes when talking to addons.
+2. Prefer keeping the UI dependency-free (vanilla JS) unless a real need appears.
+3. Proxy exists only as fallback; prefer addons that set proper CORS.
+4. Never store secrets in the repo. Addon URLs that embed tokens are the user’s problem and stay in localStorage only.
 
-- `index.js` – the whole server right now
-- `package.json` – deps and start script
-- `README.md` – human install / run instructions
+## Sensible next work
 
-## Suggested next steps (in priority order)
+- Queue + play next / previous
+- Filter search by selected addon
+- Call `/album/{id}` and `/artist/{id}` when present
+- Persist last search / now-playing lightly
+- Better error surfaces (per-addon failures in the UI)
+- PWA manifest + service worker if offline caching of the shell is wanted
 
-- [ ] Real full-length streams (replace or supplement iTunes previews)
-- [ ] Implement `GET /album/{id}` and `GET /artist/{id}` so browsing works without Apple Music fallback
-- [ ] Optional ISRC support (`resources` + `/resolve-isrc`) for better matching when used as default playback source
-- [ ] Deploy instructions / Dockerfile / Cloudflare Worker port if desired
-- [ ] Basic tests that hit the three endpoints with a known query
+## Files that matter
 
-## Style / conventions
-
-- Keep the server small and readable.
-- Log errors to stderr; return JSON error objects with appropriate HTTP status.
-- Do not commit secrets. Current backend needs none.
+| Path | Role |
+|------|------|
+| `server.js` | HTTP + proxy |
+| `public/app.js` | All client logic |
+| `public/index.html` | Shell |
+| `public/styles.css` | Layout |

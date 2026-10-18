@@ -1,41 +1,47 @@
 # Orchid
 
-Eclipse Music addon that provides **search** and **stream** endpoints.
+Simple music player that speaks the **Eclipse addon** protocol.
 
-Right now it uses the public iTunes Search / Lookup APIs so you can search real songs and play the official 30-second previews immediately. Full-length playback needs a different source later.
+You install existing Eclipse-compatible addons by URL. Orchid searches them and plays whatever stream URLs they return.
 
-## Endpoints
+## Features (v0.1)
 
-| Endpoint | Required | What it does |
-|----------|----------|--------------|
-| `GET /manifest.json` | Yes | Addon description |
-| `GET /search?q={query}` | Yes | Search tracks / albums / artists |
-| `GET /stream/{id}` | Yes | Returns a playable preview URL |
+- Add / remove Eclipse addons (fetches `/manifest.json`)
+- Search across all installed addons that advertise `search`
+- Play tracks via each addon’s `/stream/{id}`
+- Local storage for installed addons (browser)
+- Optional server-side proxy if an addon’s CORS is broken
 
-## Quick start (local)
+## Run
 
 ```bash
 npm install
 npm start
-# → http://localhost:3000
+# open http://localhost:3000
 ```
 
-In Eclipse:
+1. Paste an addon base URL (or full `…/manifest.json`) and hit **Add**
+2. Search for a song
+3. Click a result to play
 
-1. Settings → Connections → Add Connection → Addon
-2. Paste `http://localhost:3000` (or your machine IP if testing on phone)
-3. Install
+## Eclipse addon contract (what Orchid expects)
 
-The addon then shows up in the search dropdown.
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /manifest.json` | id, name, version, resources, … |
+| `GET /search?q=` | `{ tracks: [...] }` (and optionally albums/artists) |
+| `GET /stream/{id}` | `{ url: "https://…" }` direct audio URL |
 
-## Deploy
+Addons should send `Access-Control-Allow-Origin: *`. If they don’t, Orchid falls back to its `/proxy` route.
 
-Any HTTPS host works (Cloudflare Workers, Vercel, Railway, Fly, etc.). Point Eclipse at the public base URL.
+Docs: https://eclipsemusic.app/docs
 
-## Notes
+## Not included yet
 
-- Previews are AAC/M4A (~30 s). Eclipse plays them fine.
-- Album / artist results are returned from search but detail endpoints (`/album/{id}`, `/artist/{id}`) are not implemented yet.
-- No API keys required for the current iTunes backend.
+- Queue / next-up
+- Album & artist detail pages
+- Default-playback / ISRC matching
+- Offline, playlists, lyrics
+- Mobile install / PWA polish
 
-See [Eclipse addon docs](https://eclipsemusic.app/docs) for the full protocol.
+See `AGENTS.md` for how to extend this.

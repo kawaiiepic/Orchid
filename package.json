@@ -1,11 +1,11 @@
 {
   "name": "orchid",
-  "version": "1.0.0",
-  "description": "Eclipse Music addon – search and stream songs (iTunes previews for basic playback)",
-  "main": "index.js",
+  "version": "0.1.0",
+  "description": "Music player with Eclipse addon support",
+  "main": "server.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "node --watch index.js"
+    "start": "node server.js",
+    "dev": "node --watch server.js"
   },
   "engines": {
     "node": ">=18"
