@@ -11,7 +11,7 @@ class OrchidApp extends StatelessWidget {
       title: 'Orchid',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorSchemes.darkZinc(),
+        colorScheme: ColorSchemes.darkZinc,
         radius: 0.6,
       ),
       home: const HomeScreen(),

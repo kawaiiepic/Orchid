@@ -338,7 +338,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     setState(() {});
                   },
             icon: Icon(
-              _player.player.playing ? Icons.pause : Icons.play_arrow,
+              _player.player.playing ? LucideIcons.pause : LucideIcons.play,
             ),
           ),
         ],
