@@ -1,6 +1,6 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import 'screens/home_screen.dart';
+import 'screens/shell_screen.dart';
 
 class OrchidApp extends StatelessWidget {
   const OrchidApp({super.key});
@@ -10,11 +10,11 @@ class OrchidApp extends StatelessWidget {
     return const ShadcnApp(
       title: 'Orchid',
       debugShowCheckedModeBanner: false,
-      theme: const ThemeData(
+      theme: ThemeData(
         colorScheme: ColorSchemes.darkZinc,
         radius: 0.6,
       ),
-      home: HomeScreen(),
+      home: ShellScreen(),
     );
   }
 }
