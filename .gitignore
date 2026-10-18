@@ -1,6 +1,22 @@
-node_modules/
-.env
+# Flutter/Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.melos_tool/
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.swp
 .DS_Store
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.metadata
+
+# Platform generated (recreate with flutter create .)
+# Keep intentional overrides only.

@@ -1,47 +1,54 @@
 # Orchid
 
-Simple music player that speaks the **Eclipse addon** protocol.
+Flutter music player that uses **Eclipse addons** as sources.
 
-You install existing Eclipse-compatible addons by URL. Orchid searches them and plays whatever stream URLs they return.
+- Add any Eclipse-compatible addon by URL
+- Search across installed addons
+- Play streams returned by `/stream/{id}`
 
-## Features (v0.1)
+UI is built with [shadcn_flutter](https://pub.dev/packages/shadcn_flutter) (no Material).
 
-- Add / remove Eclipse addons (fetches `/manifest.json`)
-- Search across all installed addons that advertise `search`
-- Play tracks via each addon’s `/stream/{id}`
-- Local storage for installed addons (browser)
-- Optional server-side proxy if an addon’s CORS is broken
-
-## Run
+## Setup
 
 ```bash
-npm install
-npm start
-# open http://localhost:3000
+git clone https://github.com/kawaiiepic/Orchid
+cd Orchid
+flutter create . --project-name orchid   # generates android/ios/web/… platforms
+flutter pub get
+flutter run
 ```
 
-1. Paste an addon base URL (or full `…/manifest.json`) and hit **Add**
+`flutter create .` is only needed once on a fresh clone so platform folders exist.
+
+## Usage
+
+1. Paste an addon base URL (or full `…/manifest.json`) → **Add**
 2. Search for a song
-3. Click a result to play
+3. Tap a result to play
 
-## Eclipse addon contract (what Orchid expects)
+Addons must implement the Eclipse protocol:
 
-| Endpoint | Purpose |
-|----------|---------|
-| `GET /manifest.json` | id, name, version, resources, … |
-| `GET /search?q=` | `{ tracks: [...] }` (and optionally albums/artists) |
-| `GET /stream/{id}` | `{ url: "https://…" }` direct audio URL |
-
-Addons should send `Access-Control-Allow-Origin: *`. If they don’t, Orchid falls back to its `/proxy` route.
+| Endpoint | Role |
+|----------|------|
+| `GET /manifest.json` | id, name, resources, … |
+| `GET /search?q=` | `{ "tracks": [ … ] }` |
+| `GET /stream/{id}` | `{ "url": "https://…" }` |
 
 Docs: https://eclipsemusic.app/docs
 
-## Not included yet
+## Stack
 
-- Queue / next-up
+- Flutter + shadcn_flutter
+- `http` for addon calls
+- `just_audio` for playback
+- `shared_preferences` for installed addons
+- `cached_network_image` for artwork
+
+## Not in v0.1
+
+- Queue / next-previous
 - Album & artist detail pages
-- Default-playback / ISRC matching
-- Offline, playlists, lyrics
-- Mobile install / PWA polish
+- Background audio / lock-screen controls polish
+- Addon settings passthrough
 
-See `AGENTS.md` for how to extend this.
+See `AGENTS.md` for extension notes.
