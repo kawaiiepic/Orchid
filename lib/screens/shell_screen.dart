@@ -4,7 +4,6 @@ import '../models/addon.dart';
 import '../services/addon_service.dart';
 import '../services/lyrics_appearance.dart';
 import '../services/player_service.dart';
-import '../widgets/floating_lyrics.dart';
 import '../widgets/mini_player_bar.dart';
 import 'search_screen.dart';
 import 'settings_screen.dart';
@@ -19,7 +18,6 @@ class ShellScreen extends StatefulWidget {
 class _ShellScreenState extends State<ShellScreen> {
   final _addonService = AddonService();
   late final PlayerService _player;
-  final _floating = FloatingLyricsController.instance;
 
   Key? selected = const ValueKey(0);
 
@@ -34,19 +32,8 @@ class _ShellScreenState extends State<ShellScreen> {
   void initState() {
     super.initState();
     LyricsAppearance.instance.load();
-    _floating.load();
     _loadAddons();
     _player = PlayerService(addonService: _addonService);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _floating.attach(_player, context);
-    });
-  }
-
-  @override
-  void dispose() {
-    _floating.detach();
-    super.dispose();
   }
 
   Future<void> _loadAddons() async {
