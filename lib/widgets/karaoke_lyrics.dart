@@ -2,13 +2,15 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../services/lyrics_service.dart';
+import 'lyrics_spring.dart';
 
-// ── Curves from Spicy Lyrics LyricsAnimator (CubicSpline control points) ─────
+// ── Curves from Spicy Lyrics LyricsAnimator ──────────────────────────────────
 
 class _Spline {
   final List<double> xs;
@@ -89,19 +91,22 @@ class _Curves {
   static final letterYOffset =
       _Spline([(0, 1.0 / 100), (0.9, -(1.0 / 56)), (1, 0)]);
   static final lineGlow = _Spline([(0, 0), (0.5, 1), (1, 0)]);
+  static final dotScale = _Spline([(0, 0.75), (0.7, 1.05), (1, 1)]);
+  static final dotYOffset = _Spline([(0, 0), (0.9, -0.12), (1, 0)]);
+  static final dotGlow = _Spline([(0, 0), (0.6, 1), (1, 1)]);
+  static final dotOpacity = _Spline([(0, 0.35), (0.6, 1), (1, 1)]);
 
   static const notSungOpacity = 0.51;
   static const activeOpacity = 1.0;
   static const sungOpacity = 0.497;
   static const blurMultiplier = 1.25;
   static double get maxBlur => blurMultiplier * 5 + blurMultiplier * 0.465;
-
-  // Gradient alpha (Mixed.css)
   static const leadLit = 0.85;
   static const leadUnlit = 0.5;
   static const bgLit = 0.6;
   static const bgUnlit = 0.3;
   static const fillFade = 0.2;
+  static const preHiddenDots = 0.5;
 }
 
 double _progress(double t, double start, double end) {
@@ -120,7 +125,7 @@ _SylState _state(double t, double start, double end) {
   return _SylState.active;
 }
 
-// ── Widget ───────────────────────────────────────────────────────────────────
+// ── Karaoke ──────────────────────────────────────────────────────────────────
 
 class KaraokeLyrics extends StatefulWidget {
   final AudioPlayer player;
@@ -138,7 +143,8 @@ class KaraokeLyrics extends StatefulWidget {
   State<KaraokeLyrics> createState() => _KaraokeLyricsState();
 }
 
-class _KaraokeLyricsState extends State<KaraokeLyrics> {
+class _KaraokeLyricsState extends State<KaraokeLyrics>
+    with SingleTickerProviderStateMixin {
   final _scroll = ScrollController();
   final _keys = <int, GlobalKey>{};
 
@@ -146,8 +152,33 @@ class _KaraokeLyricsState extends State<KaraokeLyrics> {
   bool _follow = true;
   int _lastActive = -1;
 
+  late final Ticker _ticker;
+  Duration _lastTick = Duration.zero;
+  double _now = 0; // wall-clock seconds for spring dt
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = createTicker(_onTick)..start();
+  }
+
+  void _onTick(Duration elapsed) {
+    final dt = _lastTick == Duration.zero
+        ? 1 / 60
+        : ((elapsed - _lastTick).inMicroseconds / 1e6).clamp(0.0, 0.25);
+    _lastTick = elapsed;
+    _now = elapsed.inMicroseconds / 1e6;
+    // Rebuild so spring-driven glyphs can step.
+    if (mounted) setState(() {});
+    // Keep dt available via _lastDt
+    _lastDt = dt;
+  }
+
+  double _lastDt = 1 / 60;
+
   @override
   void dispose() {
+    _ticker.dispose();
     _scroll.dispose();
     super.dispose();
   }
@@ -162,7 +193,6 @@ class _KaraokeLyricsState extends State<KaraokeLyrics> {
     _follow = true;
     if (activeIdx < 0 || activeIdx == _lastActive) return;
     _lastActive = activeIdx;
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scroll.hasClients) return;
       final ctx = _keyFor(activeIdx).currentContext;
@@ -185,7 +215,6 @@ class _KaraokeLyricsState extends State<KaraokeLyrics> {
     if (result == null || !result.hasAny) {
       return const Center(child: Text('No lyrics found.'));
     }
-
     if (result.lines.isEmpty) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -199,138 +228,258 @@ class _KaraokeLyricsState extends State<KaraokeLyrics> {
     }
 
     final hasDuets = result.lines.any((l) => l.oppositeAligned);
+    final t = widget.player.position.inMilliseconds / 1000.0;
+    final playing = widget.player.playing;
+    final focusIdx = result.lineIndexAt(t);
 
-    return StreamBuilder<Duration>(
-      stream: widget.player.positionStream,
-      initialData: widget.player.position,
-      builder: (context, snap) {
-        final t = (snap.data ?? Duration.zero).inMilliseconds / 1000.0;
-        final playing = widget.player.playing;
-        final focusIdx = result.lineIndexAt(t);
+    if (focusIdx >= 0 && playing) {
+      _maybeFollow(focusIdx, playing);
+    } else if (!playing) {
+      _follow = false;
+    }
 
-        if (focusIdx >= 0 && playing) {
-          _maybeFollow(focusIdx, playing);
-        } else if (!playing) {
-          _follow = false;
-        }
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: NotificationListener<ScrollNotification>(
-                onNotification: (n) {
-                  if (n is ScrollStartNotification && n.dragDetails != null) {
-                    _userScrolling = true;
-                    _follow = false;
-                  } else if (n is ScrollEndNotification) {
-                    _userScrolling = false;
-                    if (widget.player.playing) {
-                      Future.delayed(const Duration(milliseconds: 1200), () {
-                        if (mounted &&
-                            widget.player.playing &&
-                            !_userScrolling) {
-                          setState(() => _follow = true);
-                        }
-                      });
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (n) {
+              if (n is ScrollStartNotification && n.dragDetails != null) {
+                _userScrolling = true;
+                _follow = false;
+              } else if (n is ScrollEndNotification) {
+                _userScrolling = false;
+                if (widget.player.playing) {
+                  Future.delayed(const Duration(milliseconds: 1200), () {
+                    if (mounted && widget.player.playing && !_userScrolling) {
+                      setState(() => _follow = true);
                     }
+                  });
+                }
+              }
+              return false;
+            },
+            child: ListView.builder(
+              controller: _scroll,
+              padding: const EdgeInsets.symmetric(vertical: 28),
+              itemCount: result.lines.length,
+              itemBuilder: (context, i) {
+                final line = result.lines[i];
+                final isFocus = i == focusIdx;
+                final distance = focusIdx < 0 ? 0 : (i - focusIdx).abs();
+                final lineState = _state(t, line.start, line.end);
+
+                final effectiveState = isFocus && lineState == _SylState.sung
+                    ? (focusIdx < result.lines.length - 1 &&
+                            t < result.lines[focusIdx + 1].start
+                        ? _SylState.active
+                        : lineState)
+                    : (isFocus &&
+                            lineState == _SylState.notSung &&
+                            t >= line.start
+                        ? _SylState.active
+                        : lineState);
+
+                // Interludes only take space while active / nearby
+                if (line.isInterlude) {
+                  final active = line.activeAt(t);
+                  final preHidden =
+                      t > line.end - _Curves.preHiddenDots;
+                  if (!active && distance > 1) {
+                    return const SizedBox.shrink();
                   }
-                  return false;
-                },
-                child: ListView.builder(
-                  controller: _scroll,
-                  padding: const EdgeInsets.symmetric(vertical: 28),
-                  itemCount: result.lines.length,
-                  itemBuilder: (context, i) {
-                    final line = result.lines[i];
-                    final isFocus = i == focusIdx;
-                    final distance =
-                        focusIdx < 0 ? 0 : (i - focusIdx).abs();
-                    final lineState = _state(t, line.start, line.end);
-                    // Hold focus line as "active" through gaps (matches iOS focus).
-                    final effectiveState = isFocus && lineState == _SylState.sung
-                        ? (focusIdx < result.lines.length - 1 &&
-                                t < result.lines[focusIdx + 1].start
-                            ? _SylState.active
-                            : lineState)
-                        : (isFocus && lineState == _SylState.notSung && t >= line.start
-                            ? _SylState.active
-                            : lineState);
+                  return KeyedSubtree(
+                    key: _keyFor(i),
+                    child: _InterludeDots(
+                      dots: line.interludeDots,
+                      t: t,
+                      active: active && !preHidden,
+                      dt: _lastDt,
+                      lineStart: line.start,
+                      lineEnd: line.end,
+                    ),
+                  );
+                }
 
-                    double opacity;
-                    switch (effectiveState) {
-                      case _SylState.notSung:
-                        opacity = _Curves.notSungOpacity;
-                      case _SylState.active:
-                        opacity = _Curves.activeOpacity;
-                      case _SylState.sung:
-                        opacity = _Curves.sungOpacity;
-                    }
+                double opacity;
+                switch (effectiveState) {
+                  case _SylState.notSung:
+                    opacity = _Curves.notSungOpacity;
+                  case _SylState.active:
+                    opacity = _Curves.activeOpacity;
+                  case _SylState.sung:
+                    opacity = _Curves.sungOpacity;
+                }
 
-                    final blur = (!isFocus && distance > 0)
-                        ? math.min(
-                            _Curves.blurMultiplier * distance,
-                            _Curves.maxBlur,
-                          )
-                        : 0.0;
+                final blur = (!isFocus && distance > 0)
+                    ? math.min(
+                        _Curves.blurMultiplier * distance, _Curves.maxBlur)
+                    : 0.0;
 
-                    return KeyedSubtree(
-                      key: _keyFor(i),
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          vertical: 6,
-                          horizontal: hasDuets ? 8 : 4,
-                        ),
-                        child: AnimatedOpacity(
-                          duration: const Duration(milliseconds: 200),
-                          curve: Curves.easeOut,
-                          opacity: opacity,
-                          child: ImageFiltered(
-                            imageFilter: blur > 0.05
-                                ? ui.ImageFilter.blur(
-                                    sigmaX: blur / 2,
-                                    sigmaY: blur / 2,
-                                  )
-                                : ui.ImageFilter.blur(sigmaX: 0, sigmaY: 0),
-                            child: _LyricLineView(
-                              line: line,
-                              t: t,
-                              isActiveLine: isFocus &&
-                                  effectiveState == _SylState.active,
-                              isPast: effectiveState == _SylState.sung ||
-                                  (focusIdx >= 0 && i < focusIdx),
-                              hasDuets: hasDuets,
-                            ),
-                          ),
+                return KeyedSubtree(
+                  key: _keyFor(i),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      vertical: 6,
+                      horizontal: hasDuets ? 8 : 4,
+                    ),
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeOut,
+                      opacity: opacity,
+                      child: ImageFiltered(
+                        imageFilter: blur > 0.05
+                            ? ui.ImageFilter.blur(
+                                sigmaX: blur / 2, sigmaY: blur / 2)
+                            : ui.ImageFilter.blur(sigmaX: 0, sigmaY: 0),
+                        child: _LyricLineView(
+                          line: line,
+                          t: t,
+                          dt: _lastDt,
+                          isActiveLine: isFocus &&
+                              effectiveState == _SylState.active,
+                          isPast: effectiveState == _SylState.sung ||
+                              (focusIdx >= 0 && i < focusIdx),
                         ),
                       ),
-                    );
-                  },
-                ),
-              ),
+                    ),
+                  ),
+                );
+              },
             ),
-            const SizedBox(height: 8),
-            _AttributionBar(result: result),
-          ],
-        );
-      },
+          ),
+        ),
+        const SizedBox(height: 8),
+        _AttributionBar(result: result),
+      ],
     );
   }
 }
 
+// ── Interlude ••• ────────────────────────────────────────────────────────────
+
+class _InterludeDots extends StatefulWidget {
+  final List<LyricSyllable> dots;
+  final double t;
+  final bool active;
+  final double dt;
+  final double lineStart;
+  final double lineEnd;
+
+  const _InterludeDots({
+    required this.dots,
+    required this.t,
+    required this.active,
+    required this.dt,
+    required this.lineStart,
+    required this.lineEnd,
+  });
+
+  @override
+  State<_InterludeDots> createState() => _InterludeDotsState();
+}
+
+class _InterludeDotsState extends State<_InterludeDots> {
+  final _springs = <GlyphSprings>[];
+  double _groupScale = 0;
+
+  @override
+  void didUpdateWidget(covariant _InterludeDots old) {
+    super.didUpdateWidget(old);
+    while (_springs.length < widget.dots.length) {
+      _springs.add(GlyphSprings());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    while (_springs.length < widget.dots.length) {
+      _springs.add(GlyphSprings());
+    }
+
+    // Group scale: ease in 0.3s when shown
+    final targetGroup = widget.active ? 1.0 : 0.0;
+    _groupScale += (targetGroup - _groupScale) *
+        (1 - math.exp(-widget.dt / (widget.active ? 0.3 : 0.4)));
+
+    final scheme = Theme.of(context).colorScheme;
+
+    return Opacity(
+      opacity: _groupScale.clamp(0.0, 1.0),
+      child: Transform.scale(
+        scale: 0.85 + 0.15 * _groupScale,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (var i = 0; i < widget.dots.length; i++)
+                Builder(builder: (_) {
+                  final d = widget.dots[i];
+                  final st = _state(widget.t, d.start, d.end);
+                  final p = switch (st) {
+                    _SylState.notSung => 0.0,
+                    _SylState.sung => 1.0,
+                    _SylState.active =>
+                      _progress(widget.t, d.start, d.end),
+                  };
+                  final (sc, y, gl) = _springs[i].step(
+                    scaleGoal: _Curves.dotScale.at(p),
+                    yGoal: _Curves.dotYOffset.at(p),
+                    glowGoal: _Curves.dotGlow.at(p),
+                    dt: widget.dt,
+                  );
+                  final op = _Curves.dotOpacity.at(p);
+                  return Transform.translate(
+                    offset: Offset(0, -y * 22),
+                    child: Transform.scale(
+                      scale: sc,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        child: Text(
+                          '•',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                            color: scheme.foreground.withOpacity(op),
+                            shadows: gl > 0.05
+                                ? [
+                                    Shadow(
+                                      color: scheme.foreground
+                                          .withOpacity(gl * 0.9),
+                                      blurRadius: (4 + 6 * gl) / 2,
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Line / syllable ──────────────────────────────────────────────────────────
+
 class _LyricLineView extends StatelessWidget {
   final LyricLine line;
   final double t;
+  final double dt;
   final bool isActiveLine;
   final bool isPast;
-  final bool hasDuets;
 
   const _LyricLineView({
     required this.line,
     required this.t,
+    required this.dt,
     required this.isActiveLine,
     required this.isPast,
-    required this.hasDuets,
   });
 
   @override
@@ -342,13 +491,10 @@ class _LyricLineView extends StatelessWidget {
         line.oppositeAligned ? WrapAlignment.end : WrapAlignment.start;
 
     if (!line.hasSyllables) {
-      // Line-synced: whole-line fill + scale 1.05 when active
       final p = isPast
           ? 1.0
           : (isActiveLine ? _progress(t, line.start, line.end) : 0.0);
-      final gradient = isPast
-          ? 1.0
-          : (isActiveLine ? p : -0.2);
+      final gradient = isPast ? 1.0 : (isActiveLine ? p : -0.2);
       final glow = isActiveLine ? _Curves.lineGlow.at(p) : 0.0;
       final scale = isActiveLine ? 1.05 : 1.0;
 
@@ -382,14 +528,13 @@ class _LyricLineView extends StatelessWidget {
         Wrap(
           alignment: wrapAlign,
           crossAxisAlignment: WrapCrossAlignment.center,
-          spacing: 0,
-          runSpacing: 2,
           children: [
             for (var i = 0; i < line.lead.length; i++)
               _SyllableGlyph(
+                key: ValueKey('L${line.start}_$i'),
                 syllable: line.lead[i],
                 t: t,
-                // Hold last-started syllable as active until next starts
+                dt: dt,
                 forceActive: i == activeSyl && isActiveLine,
                 forcePast: isPast ||
                     (isActiveLine && activeSyl >= 0 && i < activeSyl),
@@ -407,8 +552,10 @@ class _LyricLineView extends StatelessWidget {
             children: [
               for (var i = 0; i < line.background.length; i++)
                 _SyllableGlyph(
+                  key: ValueKey('B${line.start}_$i'),
                   syllable: line.background[i],
                   t: t,
+                  dt: dt,
                   forceActive: line.background[i].timedAt(t),
                   forcePast: t >= line.background[i].end,
                   compact: true,
@@ -426,17 +573,20 @@ class _LyricLineView extends StatelessWidget {
 
 enum _GlowKind { syllable, letter, line }
 
-class _SyllableGlyph extends StatelessWidget {
+class _SyllableGlyph extends StatefulWidget {
   final LyricSyllable syllable;
   final double t;
+  final double dt;
   final bool forceActive;
   final bool forcePast;
   final bool compact;
   final double? nextStart;
 
   const _SyllableGlyph({
+    super.key,
     required this.syllable,
     required this.t,
+    required this.dt,
     required this.forceActive,
     required this.forcePast,
     required this.compact,
@@ -444,15 +594,23 @@ class _SyllableGlyph extends StatelessWidget {
   });
 
   @override
+  State<_SyllableGlyph> createState() => _SyllableGlyphState();
+}
+
+class _SyllableGlyphState extends State<_SyllableGlyph> {
+  final _springs = GlyphSprings();
+
+  @override
   Widget build(BuildContext context) {
-    // Effective end: hold until next syllable starts (gap fill)
-    final effectiveEnd = nextStart != null
-        ? math.max(syllable.end, nextStart!)
+    final syllable = widget.syllable;
+    final t = widget.t;
+    final effectiveEnd = widget.nextStart != null
+        ? math.max(syllable.end, widget.nextStart!)
         : syllable.end;
 
-    final st = forcePast
+    final st = widget.forcePast
         ? _SylState.sung
-        : (forceActive
+        : (widget.forceActive
             ? _SylState.active
             : _state(t, syllable.start, effectiveEnd));
 
@@ -462,24 +620,29 @@ class _SyllableGlyph extends StatelessWidget {
       _SylState.active => _progress(t, syllable.start, syllable.end),
     };
 
-    // Gradient left edge: -0.2 unlit → 1 lit (active: -0.2 + 1.2*p)
     final gradient = switch (st) {
       _SylState.notSung => -0.2,
       _SylState.sung => 1.0,
       _SylState.active => -0.2 + 1.2 * p,
     };
 
-    final scale = st == _SylState.notSung ? 1.0 : _Curves.scale.at(p);
-    final y = st == _SylState.notSung ? 0.0 : _Curves.yOffset.at(p);
-    final glow = st == _SylState.notSung ? 0.0 : _Curves.glow.at(p);
+    final scaleGoal = st == _SylState.notSung ? 1.0 : _Curves.scale.at(p);
+    final yGoal = st == _SylState.notSung ? 0.0 : _Curves.yOffset.at(p);
+    final glowGoal = st == _SylState.notSung ? 0.0 : _Curves.glow.at(p);
 
-    final fontSize = compact ? 16.5 : 22.0;
-    final lit = compact ? _Curves.bgLit : _Curves.leadLit;
-    final unlit = compact ? _Curves.bgUnlit : _Curves.leadUnlit;
+    final (scale, y, glow) = _springs.step(
+      scaleGoal: scaleGoal,
+      yGoal: yGoal,
+      glowGoal: glowGoal,
+      dt: widget.dt,
+    );
 
-    // Emphasize long syllables letter-by-letter (Sweet Lyrics Emphasize)
-    final emphasize = !compact &&
-        (syllable.end - syllable.start) >= 0.85 &&
+    final fontSize = widget.compact ? 16.5 : 22.0;
+    final lit = widget.compact ? _Curves.bgLit : _Curves.leadLit;
+    final unlit = widget.compact ? _Curves.bgUnlit : _Curves.leadUnlit;
+
+    final emphasize = !widget.compact &&
+        (syllable.end - syllable.start) >= 1.0 &&
         syllable.text.runes.length > 1 &&
         st == _SylState.active;
 
@@ -505,7 +668,7 @@ class _SyllableGlyph extends StatelessWidget {
         child: _FilledText(
           text: display,
           fontSize: fontSize,
-          fontWeight: compact ? FontWeight.w600 : FontWeight.w700,
+          fontWeight: widget.compact ? FontWeight.w600 : FontWeight.w700,
           gradient: gradient,
           lit: lit,
           unlit: unlit,
@@ -518,7 +681,6 @@ class _SyllableGlyph extends StatelessWidget {
   }
 }
 
-/// Per-letter ripple for long syllables (Sweet Lyrics letter emphasis).
 class _EmphasizedWord extends StatelessWidget {
   final String text;
   final double t;
@@ -542,7 +704,6 @@ class _EmphasizedWord extends StatelessWidget {
   Widget build(BuildContext context) {
     final chars = text.characters.toList();
     if (chars.isEmpty) return const SizedBox.shrink();
-
     final dur = (end - start).clamp(0.001, 60.0);
     final letterDur = dur / chars.length;
 
@@ -554,12 +715,6 @@ class _EmphasizedWord extends StatelessWidget {
             final ls = start + i * letterDur;
             final le = ls + letterDur;
             final st = _state(t, ls, le);
-            final p = switch (st) {
-              _SylState.notSung => 0.0,
-              _SylState.sung => 1.0,
-              _SylState.active => _progress(t, ls, le),
-            };
-            // Find active letter for proximity falloff
             var activeLetter = -1;
             var activeP = 0.0;
             for (var j = 0; j < chars.length; j++) {
@@ -575,7 +730,6 @@ class _EmphasizedWord extends StatelessWidget {
             final restScale = _Curves.letterScale.at(0);
             final restY = _Curves.letterYOffset.at(0);
             final restGlow = _Curves.glow.at(0);
-
             double targetScale = restScale;
             double targetY = restY;
             double targetGlow = restGlow;
@@ -599,9 +753,7 @@ class _EmphasizedWord extends StatelessWidget {
               targetY = restY + (baseY - restY) * falloff;
               targetGlow = restGlow + (baseGlow - restGlow) * glowFalloff;
               if (st == _SylState.active && i == activeLetter) {
-                // easeSinOut fill
-                final eased = math.sin(activeP * math.pi / 2);
-                gradient = -0.2 + 1.2 * eased;
+                gradient = -0.2 + 1.2 * math.sin(activeP * math.pi / 2);
               } else if (st == _SylState.sung) {
                 gradient = 1;
               } else {
@@ -638,7 +790,7 @@ class _FilledText extends StatelessWidget {
   final String text;
   final double fontSize;
   final FontWeight fontWeight;
-  final double gradient; // left edge of fill (-0.2 … 1)
+  final double gradient;
   final double lit;
   final double unlit;
   final double fade;
@@ -721,7 +873,6 @@ class _FilledText extends StatelessWidget {
 
 class _AttributionBar extends StatelessWidget {
   final LyricsResult result;
-
   const _AttributionBar({required this.result});
 
   Future<void> _open(String url) async {
@@ -733,13 +884,12 @@ class _AttributionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final parts = <InlineSpan>[];
-
-    parts.add(TextSpan(
-      text: result.providerLabel,
-      style: TextStyle(fontSize: 11, color: scheme.mutedForeground),
-    ));
-
+    final parts = <InlineSpan>[
+      TextSpan(
+        text: result.providerLabel,
+        style: TextStyle(fontSize: 11, color: scheme.mutedForeground),
+      ),
+    ];
     if (result.isCommunity) {
       if (result.uploader != null) {
         parts.add(TextSpan(
@@ -774,14 +924,12 @@ class _AttributionBar extends StatelessWidget {
         ));
       }
     }
-
     if (result.sourceVia != null) {
       parts.add(TextSpan(
         text: ' · via ${result.sourceVia}',
         style: TextStyle(fontSize: 11, color: scheme.mutedForeground),
       ));
     }
-
     return Padding(
       padding: const EdgeInsets.only(top: 4, bottom: 4),
       child: Text.rich(
