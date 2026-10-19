@@ -243,6 +243,7 @@ class _LyricLineView extends StatelessWidget {
               for (final s in line.background)
                 _SyllableChip(
                   syllable: s,
+                  t: t,
                   isActive: s.activeAt(t),
                   isPast: t >= s.end,
                   isActiveLine: isActiveLine,
