@@ -56,7 +56,11 @@ class LyricSyllable {
     );
   }
 
-  bool activeAt(double t) => t >= start && t < end;
+  /// Strict timing window from the API.
+  bool timedAt(double t) => t >= start && t < end;
+
+  /// Legacy alias — prefer [timedAt] or line-level active index helpers.
+  bool activeAt(double t) => timedAt(t);
 }
 
 /// One timed line (syllable or line-level).
@@ -66,7 +70,7 @@ class LyricLine {
   final double start;
   final double end;
   final bool oppositeAligned;
-  final String? plainText; // Line-type: whole line text without syllables
+  final String? plainText;
   final String? translatedText;
 
   const LyricLine({
@@ -99,19 +103,28 @@ class LyricLine {
 
   bool activeAt(double t) => t >= start && t < end;
 
+  /// Active lead syllable at [t].
+  ///
+  /// Holds the last syllable that has *started* until the next one starts.
+  /// That covers inter-syllable gaps and the tail of a line after the last
+  /// syllable's EndTime — avoids a blank highlight for ~1s between words.
   int activeLeadIndex(double t) {
+    if (lead.isEmpty) return -1;
+    if (t < lead.first.start) return -1;
+
+    var idx = 0;
     for (var i = 0; i < lead.length; i++) {
-      if (lead[i].activeAt(t)) return i;
+      if (t >= lead[i].start) {
+        idx = i;
+      } else {
+        break;
+      }
     }
-    return -1;
+    return idx;
   }
 }
 
 /// Parsed Spicy Lyrics Body.
-///
-/// [source] is one of: spicy_lyrics | apple_music | spotify | unknown
-/// Attribution: always show provider; only when source == spicy_lyrics also
-/// show uploader/maker (fields absent for commercial sources — do not invent).
 class LyricsResult {
   final String? plain;
   final String? synced;
@@ -153,7 +166,6 @@ class LyricsResult {
 
   bool get isCommunity => source == 'spicy_lyrics';
 
-  /// Provider label for attribution (always shown).
   String get providerLabel {
     switch (source) {
       case 'spicy_lyrics':
@@ -188,7 +200,7 @@ class LyricsResult {
     return lines[i];
   }
 
-  /// Active line, or the last started line during gaps (avoids snap-to-top).
+  /// Active line, or the last started line during gaps (no snap-to-top).
   int lineIndexAt(double t) {
     if (lines.isEmpty) return -1;
     var lastStarted = -1;
@@ -367,7 +379,6 @@ class LyricsService {
       );
     }
 
-    // Type: Line — Content is line objects with Text + StartTime/EndTime
     if (type == 'Line' && content is List) {
       final lines = <LyricLine>[];
       final plainBuf = StringBuffer();
@@ -408,7 +419,6 @@ class LyricsService {
       );
     }
 
-    // Type: Static — no timings
     if (type == 'Static') {
       String plain = '';
       if (content is List) {
@@ -432,7 +442,6 @@ class LyricsService {
       );
     }
 
-    // Fallback list
     if (content is List) {
       final lines = <LyricLine>[];
       final plainBuf = StringBuffer();
