@@ -6,7 +6,6 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import '../services/lyrics_service.dart';
 import '../services/player_service.dart';
-import '../widgets/floating_lyrics.dart';
 
 class FullPlayerScreen extends StatefulWidget {
   final PlayerService player;
@@ -173,11 +172,15 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                           ),
                         ),
                         const Spacer(),
-                        IconButton(
-                          variance: ButtonVariance.ghost,
-                          onPressed: () =>
-                              showQueueSheet(context, widget.player),
-                          icon: const Icon(LucideIcons.listMusic),
+                        // Anchor for shadcn drawer overlay.
+                        OverlayAnchor(
+                          anchor: #orchidQueueDrawer,
+                          child: IconButton(
+                            variance: ButtonVariance.ghost,
+                            onPressed: () =>
+                                showQueueSheet(context, widget.player),
+                            icon: const Icon(LucideIcons.listMusic),
+                          ),
                         ),
                       ],
                     ),
@@ -280,17 +283,6 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                             icon: const Icon(LucideIcons.skipForward),
                           ),
                         ],
-                      ),
-                      Positioned(
-                        left: 12,
-                        child: IconButton(
-                          variance: ButtonVariance.ghost,
-                          onPressed: () {
-                            FloatingLyricsController.instance
-                                .showFrom(context);
-                          },
-                          icon: const Icon(LucideIcons.pictureInPicture2),
-                        ),
                       ),
                       Positioned(
                         right: 12,
