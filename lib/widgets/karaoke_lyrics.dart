@@ -277,73 +277,72 @@ class _SyllableChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-
-    late final Color color;
-    late final FontWeight weight;
-    late final double size;
-
-    if (compact) {
-      size = 12;
-      weight = isActive ? FontWeight.w600 : FontWeight.w400;
-      color = isActive
-          ? scheme.primary
-          : scheme.mutedForeground.withOpacity(isPast ? 0.7 : 0.45);
-    } else if (isActive) {
-      size = isActiveLine ? 22 : 16;
-      weight = FontWeight.w700;
-      color = scheme.primary;
-    } else if (isPast) {
-      size = isActiveLine ? 18 : 14;
-      weight = FontWeight.w500;
-      color = scheme.mutedForeground;
-    } else {
-      size = isActiveLine ? 18 : 14;
-      weight = FontWeight.w400;
-      color = isActiveLine
-          ? scheme.foreground.withOpacity(0.4)
-          : scheme.mutedForeground.withOpacity(0.45);
-    }
-
-    final needsSpace = !syllable.isPartOfWord;
     final duration = (syllable.end - syllable.start).clamp(0.001, 60.0);
     final progress = ((t - syllable.start) / duration).clamp(0.0, 1.0);
-    final lift = isActive && !compact ? math.sin(progress * math.pi) * 1.7 : 0.0;
+
+    // Sweet Lyrics keeps typography consistent and animates the glyph itself.
+    // Past syllables are fully lit, future syllables are dim, and the active
+    // syllable uses a left-to-right fill that follows playback continuously.
+    final fillPosition = isPast ? 1.0 : (isActive ? progress : -0.2);
+    final fadeEnd = fillPosition + 0.2;
+    final begin = Alignment((fillPosition * 2) - 1, 0);
+    final finish = Alignment((fadeEnd * 2) - 1, 0);
+
+    final glow = isActive
+        ? (progress < 0.15
+            ? progress / 0.15
+            : progress < 0.6
+                ? 1.0
+                : (1.0 - progress) / 0.4)
+        : 0.0;
+    final scale = isActive
+        ? (progress < 0.7
+            ? 0.95 + (progress / 0.7) * 0.1005
+            : 1.0505 - ((progress - 0.7) / 0.3) * 0.0505)
+        : 1.0;
+    final y = isActive
+        ? (progress < 0.9
+            ? 0.01 + (progress / 0.9) * (-0.0267)
+            : -0.0167 + ((progress - 0.9) / 0.1) * 0.0167)
+        : 0.0;
+    final needsSpace = !syllable.isPartOfWord;
+    final fontSize = compact ? 16.0 : 22.0;
+    final alphaLit = compact ? 0.6 : 0.85;
+    final alphaUnlit = compact ? 0.3 : 0.5;
 
     return Transform.translate(
-      offset: Offset(0, -lift),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
-        padding: EdgeInsets.symmetric(horizontal: compact ? 1 : 0.6, vertical: compact ? 1 : 2),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(5),
-          boxShadow: isActive && !compact
-              ? [
-                  BoxShadow(
-                    color: scheme.primary.withOpacity(0.18),
-                    blurRadius: 16,
-                    spreadRadius: 0.2,
-                  ),
-                ]
-              : const [],
-        ),
-        child: AnimatedDefaultTextStyle(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
-          style: TextStyle(
-            fontSize: size,
-            fontWeight: weight,
-            color: color,
-            height: 1.28,
-            letterSpacing: isActive && !compact ? 0.05 : 0,
-            shadows: isActive && !compact
-                ? [
-                    Shadow(color: scheme.primary.withOpacity(0.42), blurRadius: 13),
-                    Shadow(color: scheme.primary.withOpacity(0.18), blurRadius: 24),
-                  ]
-                : const [],
+      offset: Offset(0, -y * fontSize),
+      child: Transform.scale(
+        scale: compact ? 1 : scale,
+        child: ShaderMask(
+          blendMode: BlendMode.srcIn,
+          shaderCallback: (bounds) => LinearGradient(
+            begin: begin,
+            end: finish,
+            colors: [
+              scheme.foreground.withOpacity(alphaLit),
+              scheme.foreground.withOpacity(alphaUnlit),
+            ],
+          ).createShader(bounds),
+          child: AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 160),
+            curve: Curves.easeOutCubic,
+            style: TextStyle(
+              fontSize: fontSize,
+              fontWeight: compact ? FontWeight.w600 : FontWeight.w700,
+              color: scheme.foreground,
+              height: 1.25,
+              shadows: !compact && isActive && glow > 0.004
+                  ? [
+                      Shadow(
+                        color: scheme.foreground.withOpacity(glow * 0.35),
+                        blurRadius: 3 + glow,
+                      ),
+                    ]
+                  : const [],
+            ),
+            child: Text(needsSpace ? '${syllable.text} ' : syllable.text),
           ),
-          child: Text(needsSpace ? '${syllable.text} ' : syllable.text),
         ),
       ),
     );
