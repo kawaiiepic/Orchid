@@ -120,3 +120,28 @@ final lyrics = await LyricsService().fetchFor(track);
 
 API Base: `https://api.spicylyrics.org/v1/lyrics/{SPOTIFY_TRACK_ID}`  
 Auth Header: `Authorization: Bearer sl_sk_169LGcgCR0Jd02kORnaebr1XxJm59eIjb5NpDJ7zgKM`
+
+## Development Environment
+- **Flutter SDK**: `/home/mia/Documents/sdk/flutter` (use this path for build/analyze commands)
+
+## Project Architecture
+
+The Orchid music player is built using Flutter with a modular architecture that:
+
+1. **Core Services**:
+   - `AddonService`: Manages Eclipse addons and handles search/resolve logic
+   - `LyricsService`: Fetches lyrics using Spicy Lyrics API
+   - `SpotifyService`: Handles Spotify Web API interactions
+   - `PlayerService`: Manages audio playback with just_audio
+
+2. **UI Components**:
+   - `HomeScreen`: Main interface for searching and playing music
+   - `ShellScreen`: Navigation between search and settings screens
+   - Various widgets for player controls, lyrics display, and UI elements
+
+3. **Eclipse Addon Protocol**:
+   - Supports both `search` and `stream` capabilities in addons
+   - Implements a multi-layered resolution strategy
+   - Provides fallback mechanisms for when primary sources fail
+
+The project follows a clean architecture pattern with clear separation of concerns between UI, business logic, and data access layers.

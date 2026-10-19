@@ -1,3 +1,4 @@
+import 'package:orchid/screens/home_screen.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import '../models/addon.dart';
@@ -18,87 +19,78 @@ class _ShellScreenState extends State<ShellScreen> {
   final _addonService = AddonService();
   late final PlayerService _player;
 
+  Key? selected = const ValueKey(0);
+
+  NavigationBarAlignment alignment = NavigationBarAlignment.spaceAround;
+  NavigationLabelType labelType = NavigationLabelType.none;
+  bool customButtonStyle = true;
+  bool expanded = true;
+
   List<InstalledAddon> _addons = [];
-  bool _loadingAddons = true;
-  int _tab = 0;
 
   @override
   void initState() {
     super.initState();
-    _player = PlayerService(addonService: _addonService);
     _loadAddons();
+    _player = PlayerService(addonService: _addonService);
   }
 
   Future<void> _loadAddons() async {
-    final list = await _addonService.load();
-    if (!mounted) return;
-    setState(() {
-      _addons = list;
-      _loadingAddons = false;
-    });
-    _player.setAddons(list);
+    try {
+      final addons = await _addonService.load();
+      setState(() => _addons = addons);
+    } catch (e) {
+      debugPrint('Error loading addons: $e');
+    }
   }
 
-  @override
-  void dispose() {
-    _player.dispose();
-    super.dispose();
+  NavigationItem buildButton(String label, IconData icon, Key key) {
+    return NavigationItem(
+      key: key,
+      style: customButtonStyle
+          ? const ButtonStyle.muted(density: ButtonDensity.icon)
+          : null,
+      selectedStyle: customButtonStyle
+          ? const ButtonStyle.fixed(density: ButtonDensity.icon)
+          : null,
+      label: Text(label),
+      child: Icon(icon),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      headers: [
-        AppBar(
-          title: Text(_tab == 0 ? 'Search' : 'Settings'),
-          subtitle: Text(
-            _tab == 0
-                ? 'iTunes · addons · Spicy Lyrics'
-                : 'Sources & Eclipse addons',
-          ),
-        ),
+      footers: [
+        MiniPlayerBar(player: _player),
+        const Divider(),
+        NavigationBar(
+            alignment: alignment,
+            labelType: labelType,
+            expanded: expanded,
+            onSelected: (key) {
+              setState(() {
+                selected = key;
+              });
+            },
+            selectedKey: selected,
+            children: [
+              buildButton('Home', BootstrapIcons.house, const ValueKey(0)),
+              buildButton('Explore', BootstrapIcons.compass, const ValueKey(1)),
+              buildButton(
+                'Library',
+                BootstrapIcons.musicNoteList,
+                const ValueKey(2),
+              ),
+              buildButton('Profile', BootstrapIcons.person, const ValueKey(3)),
+              buildButton(
+                'App',
+                BootstrapIcons.appIndicator,
+                const ValueKey(4),
+              ),
+            ])
       ],
-      child: Column(
-        children: [
-          Expanded(
-            child: _loadingAddons
-                ? const Center(child: Text('Loading…').muted())
-                : IndexedStack(
-                    index: _tab,
-                    children: [
-                      SearchScreen(
-                        addonService: _addonService,
-                        player: _player,
-                        addons: _addons,
-                      ),
-                      SettingsScreen(
-                        addonService: _addonService,
-                        addons: _addons,
-                        onAddonsChanged: (next) {
-                          setState(() => _addons = next);
-                          _player.setAddons(next);
-                        },
-                      ),
-                    ],
-                  ),
-          ),
-          MiniPlayerBar(player: _player),
-          NavigationBar(
-            index: _tab,
-            onSelected: (i) => setState(() => _tab = i),
-            children: const [
-              NavigationItem(
-                label: Text('Search'),
-                child: Icon(LucideIcons.search),
-              ),
-              NavigationItem(
-                label: Text('Settings'),
-                child: Icon(LucideIcons.settings),
-              ),
-            ],
-          ),
-        ],
-      ),
+      child: [SearchScreen(addonService: _addonService, player: _player, addons: _addons,), SettingsScreen(addonService: _addonService, addons: _addons, onAddonsChanged: (installedAddons) {}) ][(selected as ValueKey<int>).value],
     );
   }
 }

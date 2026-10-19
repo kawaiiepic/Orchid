@@ -162,7 +162,7 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
             ),
             if (playing)
-              Icon(LucideIcons.volume2, size: 16),
+              const Icon(LucideIcons.volume2, size: 16),
           ],
         ),
       ),

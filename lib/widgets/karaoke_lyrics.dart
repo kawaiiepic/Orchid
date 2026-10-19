@@ -1,13 +1,4 @@
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart'
-    show
-        Curves,
-        FontWeight,
-        TextStyle,
-        TextAlign,
-        TextSpan,
-        TextDecoration,
-        Scrollable;
 import 'package:just_audio/just_audio.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -85,11 +76,11 @@ class _KaraokeLyricsState extends State<KaraokeLyrics> {
   @override
   Widget build(BuildContext context) {
     if (widget.loading) {
-      return const Center(child: Text('Loading lyrics…').muted());
+      return const Center(child: Text('Loading lyrics…'));
     }
     final result = widget.lyrics;
     if (result == null || !result.hasAny) {
-      return const Center(child: Text('No lyrics found.').muted());
+      return const Center(child: Text('No lyrics found.'));
     }
 
     if (result.lines.isEmpty) {

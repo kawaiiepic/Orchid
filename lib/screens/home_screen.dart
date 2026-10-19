@@ -109,7 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _showLyrics = true;
     });
     try {
-      await _player.playTrack(track, _addons);
+      await _player.playTrack(track);
       if (!mounted) return;
       final via = _player.playingVia;
       setState(() {

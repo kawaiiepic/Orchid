@@ -1,5 +1,4 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/material.dart' show MaterialPageRoute, Material, InkWell;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import '../screens/full_player_screen.dart';
@@ -13,7 +12,7 @@ class MiniPlayerBar extends StatelessWidget {
   void _openFull(BuildContext context) {
     if (player.current == null) return;
     Navigator.of(context).push(
-      MaterialPageRoute<void>(
+      ShadcnPageRoute<void>(
         builder: (_) => FullPlayerScreen(player: player),
       ),
     );
@@ -29,9 +28,9 @@ class MiniPlayerBar extends StatelessWidget {
 
         final scheme = Theme.of(context).colorScheme;
 
-        return Material(
+        return Container(
           color: scheme.card,
-          child: InkWell(
+          child: GestureDetector(
             onTap: () => _openFull(context),
             child: Container(
               decoration: BoxDecoration(

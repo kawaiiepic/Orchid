@@ -1,14 +1,20 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/material.dart' show Slider, SliderTheme, SliderThemeData, RoundSliderThumbShape, RoundSliderOverlayShape;
+import 'package:orchid/widgets/karaoke_lyrics.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import '../services/player_service.dart';
-import '../widgets/karaoke_lyrics.dart';
 
-class FullPlayerScreen extends StatelessWidget {
+class FullPlayerScreen extends StatefulWidget {
   final PlayerService player;
 
   const FullPlayerScreen({super.key, required this.player});
+
+  @override
+  State<StatefulWidget> createState() => _FullPlayerScreen();
+}
+
+class _FullPlayerScreen extends State<FullPlayerScreen> {
+  bool _showLyrics = false;
 
   String _fmt(Duration d) {
     final m = d.inMinutes.remainder(60).toString().padLeft(1, '0');
@@ -18,203 +24,248 @@ class FullPlayerScreen extends StatelessWidget {
     return '$m:$s';
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: player,
-      builder: (context, _) {
-        final track = player.current;
-        final scheme = Theme.of(context).colorScheme;
+  Widget _lyricsPanel() {
+    final track = widget.player.current;
+    if (track == null) return const SizedBox.shrink();
 
-        return Scaffold(
-          child: SafeArea(
-            child: Column(
-              children: [
-                // Top bar
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  child: Row(
-                    children: [
-                      IconButton.ghost(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(LucideIcons.chevronDown),
-                      ),
-                      const Spacer(),
-                      Text(
-                        player.playingVia ?? 'Now playing',
-                      ).small().muted(),
-                      const Spacer(),
-                      const SizedBox(width: 40),
-                    ],
-                  ),
-                ),
+    final hasSyl = widget.player.lyrics?.hasSyllables == true;
 
-                // Artwork
-                if (track?.artworkUrl != null)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 8),
-                    child: AspectRatio(
-                      aspectRatio: 1,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: CachedNetworkImage(
-                          imageUrl: track!.artworkUrl!,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-                  )
-                else
-                  const SizedBox(height: 12),
-
-                // Title
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    children: [
-                      Text(track?.title ?? '—').large().semiBold(),
-                      const SizedBox(height: 4),
-                      Text(track?.artist ?? '').muted(),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 8),
-
-                // Lyrics (takes remaining space)
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: KaraokeLyrics(
-                      player: player.player,
-                      lyrics: player.lyrics,
-                      loading: player.lyricsLoading,
-                    ),
-                  ),
-                ),
-
-                // Progress
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: StreamBuilder<Duration>(
-                    stream: player.player.positionStream,
-                    builder: (context, posSnap) {
-                      return StreamBuilder<Duration?>(
-                        stream: player.player.durationStream,
-                        builder: (context, durSnap) {
-                          final pos = posSnap.data ?? Duration.zero;
-                          final dur = durSnap.data ?? Duration.zero;
-                          final max = dur.inMilliseconds.toDouble().clamp(1, double.infinity);
-                          final value = pos.inMilliseconds.toDouble().clamp(0, max);
-
-                          return Column(
-                            children: [
-                              SliderTheme(
-                                data: SliderThemeData(
-                                  trackHeight: 3,
-                                  thumbShape: const RoundSliderThumbShape(
-                                    enabledThumbRadius: 6,
-                                  ),
-                                  overlayShape: const RoundSliderOverlayShape(
-                                    overlayRadius: 12,
-                                  ),
-                                  activeTrackColor: scheme.primary,
-                                  inactiveTrackColor: scheme.muted,
-                                  thumbColor: scheme.primary,
-                                ),
-                                child: Slider(
-                                  value: value,
-                                  max: max,
-                                  onChanged: (v) {
-                                    player.seek(Duration(milliseconds: v.round()));
-                                  },
-                                ),
-                              ),
-                              Row(
-                                children: [
-                                  Text(_fmt(pos)).xSmall().muted(),
-                                  const Spacer(),
-                                  Text(_fmt(dur)).xSmall().muted(),
-                                ],
-                              ),
-                            ],
-                          );
-                        },
-                      );
+    return SizedBox(
+      width: double.infinity,
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Text('Spicy Lyrics').semiBold(),
+                  const SizedBox(width: 8),
+                  Text(
+                    hasSyl ? 'syllable karaoke' : 'Apple Music sync',
+                  ).xSmall().muted(),
+                  const Spacer(),
+                  GhostButton(
+                    onPressed: () {
+                      setState(() => _showLyrics = !_showLyrics);
                     },
+                    child: Text(_showLyrics ? 'Hide' : 'Show'),
                   ),
-                ),
-
-                // Transport
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      IconButton.ghost(
-                        onPressed: track == null
-                            ? null
-                            : () => player.playPrevious(),
-                        icon: const Icon(LucideIcons.skipBack),
-                      ),
-                      const SizedBox(width: 12),
-                      IconButton.ghost(
-                        onPressed: track == null
-                            ? null
-                            : () => player.togglePlayPause(),
-                        icon: Icon(
-                          player.player.playing
-                              ? LucideIcons.pause
-                              : LucideIcons.play,
-                          size: 32,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      IconButton.ghost(
-                        onPressed: player.hasNext
-                            ? () => player.playNext()
-                            : null,
-                        icon: const Icon(LucideIcons.skipForward),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Volume
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-                  child: Row(
-                    children: [
-                      const Icon(LucideIcons.volume1, size: 16),
-                      Expanded(
-                        child: SliderTheme(
-                          data: SliderThemeData(
-                            trackHeight: 3,
-                            thumbShape: const RoundSliderThumbShape(
-                              enabledThumbRadius: 5,
-                            ),
-                            overlayShape: const RoundSliderOverlayShape(
-                              overlayRadius: 10,
-                            ),
-                            activeTrackColor: scheme.mutedForeground,
-                            inactiveTrackColor: scheme.muted,
-                            thumbColor: scheme.foreground,
-                          ),
-                          child: Slider(
-                            value: player.volume,
-                            onChanged: (v) => player.setVolume(v),
-                          ),
-                        ),
-                      ),
-                      const Icon(LucideIcons.volume2, size: 16),
-                    ],
+                ],
+              ),
+              if (_showLyrics) ...[
+                const SizedBox(height: 12),
+                Expanded(
+                  child: KaraokeLyrics(
+                    player: widget.player.player,
+                    lyrics: widget.player.lyrics,
+                    loading: widget.player.lyricsLoading,
                   ),
                 ),
               ],
-            ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      child: Builder(
+        builder: (context) {
+          final track = widget.player.current;
+          return Column(
+            children: [
+              // Top bar
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Row(
+                  children: [
+                    IconButton(
+                      variance: ButtonVariance.ghost,
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(LucideIcons.arrowLeft),
+                    ),
+                    const Spacer(),
+                    Text(
+                      widget.player.playingVia ?? 'Now playing',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: scheme.primary,
+                      ),
+                    ),
+                    const Spacer(),
+                    const SizedBox(width: 40),
+                  ],
+                ),
+              ),
+
+              // Album art
+              if (_showLyrics)
+                Expanded(child: _lyricsPanel())
+              else
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (track?.artworkUrl != null)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: CachedNetworkImage(
+                              imageUrl: track!.artworkUrl!,
+                              width: 500,
+                              height: 500,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        else
+                          Container(
+                            width: 500,
+                            height: 500,
+                            decoration: BoxDecoration(
+                              color: scheme.primary,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        const SizedBox(height: 16),
+                        Text(track?.title ?? 'No track playing',
+                            style: const TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold)),
+                        Text(track?.artist ?? 'Unknown artist',
+                            style:
+                                TextStyle(fontSize: 14, color: scheme.primary)),
+                        const SizedBox(height: 32),
+                      ],
+                    ),
+                  ),
+                ),
+
+              // Progress
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: [
+                    StreamBuilder<Duration>(
+                      stream: widget.player.player.positionStream,
+                      builder: (context, snapshot) {
+                        final pos = snapshot.data ?? Duration.zero;
+                        final dur =
+                            widget.player.player.duration ?? Duration.zero;
+                        return Column(
+                          children: [
+                            SizedBox(
+                                width: double.infinity,
+                                child: Slider(
+                                    value: SliderValue.single(
+                                        pos.inMilliseconds.toDouble()),
+                                    max: dur.inMilliseconds.toDouble(),
+                                    onChanged: (v) => widget.player.seek(
+                                          Duration(
+                                              milliseconds: v.value.round()),
+                                        ))),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(_fmt(pos),
+                                    style: TextStyle(color: scheme.primary)),
+                                Text(_fmt(dur),
+                                    style: TextStyle(color: scheme.primary)),
+                              ],
+                            )
+                          ],
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ),
+              ),
+
+              // Controls
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Tooltip(
+                              tooltip: const TooltipContainer(
+                                child: Text('Previous'),
+                              ).call,
+                              child: IconButton(
+                                variance: ButtonVariance.ghost,
+                                onPressed: () => widget.player.playPrevious(),
+                                icon: const Icon(LucideIcons.skipBack),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Tooltip(
+                              tooltip: TooltipContainer(
+                                child: Text(
+                                  widget.player.player.playing
+                                      ? 'Pause'
+                                      : 'Play',
+                                ),
+                              ).call,
+                              child: IconButton(
+                                variance: ButtonVariance.ghost,
+                                onPressed: widget.player.togglePlayPause,
+                                icon: widget.player.player.playing
+                                    ? const Icon(LucideIcons.play)
+                                    : const Icon(LucideIcons.pause),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Tooltip(
+                              tooltip: const TooltipContainer(
+                                child: Text('Next'),
+                              ).call,
+                              child: IconButton(
+                                variance: ButtonVariance.ghost,
+                                onPressed: () => widget.player.playNext(),
+                                icon: const Icon(LucideIcons.skipForward),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  Positioned(
+                    right: 16,
+                    child: Row(
+                      children: [
+                        IconButton(
+                            onPressed: () {
+                              setState(() {
+                                _showLyrics = !_showLyrics;
+                              });
+                            },
+                            icon: Icon(LucideIcons.music),
+                            variance: ButtonVariance.ghost)
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }
