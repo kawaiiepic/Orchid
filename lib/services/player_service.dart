@@ -3,6 +3,7 @@ import 'package:just_audio/just_audio.dart';
 
 import '../models/addon.dart';
 import 'addon_service.dart';
+import 'lyrics_appearance.dart';
 import 'lyrics_service.dart';
 
 class PlayerService extends ChangeNotifier {
@@ -87,6 +88,15 @@ class PlayerService extends ChangeNotifier {
 
       try {
         lyrics = await lyricsService.fetchFor(track);
+        if (LyricsAppearance.instance.skipUnsynced &&
+            (lyrics == null || !lyrics!.hasSync) &&
+            hasNext) {
+          debugPrint('[Orchid] skipUnsynced: advancing');
+          lyricsLoading = false;
+          notifyListeners();
+          await playNext();
+          return;
+        }
       } finally {
         lyricsLoading = false;
         notifyListeners();
