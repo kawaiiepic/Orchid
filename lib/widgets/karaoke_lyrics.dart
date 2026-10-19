@@ -158,13 +158,13 @@ class _KaraokeLyricsState extends State<KaraokeLyrics>
   late final Ticker _ticker;
   Duration _lastTick = Duration.zero;
   double _lastDt = 1 / 60;
-
-  /// Pinch-adjusted multiplier on top of settings font size.
   double _pinchScale = 1.0;
+  double _basePinch = 1.0;
 
-  // Presentation lead (Sweet Lyrics frame compensation)
   double _frameTime = 1 / 60;
   double _presentationLead = 0;
+
+  String? _copyHint;
 
   @override
   void initState() {
@@ -186,7 +186,6 @@ class _KaraokeLyricsState extends State<KaraokeLyrics>
     final dt = rawDt.clamp(0.0, 0.25);
     _lastDt = dt;
 
-    // Presentation lead: run lyrics slightly ahead when frames drop
     const expected = 1 / 60;
     if (dt > 0.006 && dt < 0.4) {
       _frameTime += (dt - _frameTime) * (dt > _frameTime ? 0.3 : 0.08);
@@ -231,13 +230,11 @@ class _KaraokeLyricsState extends State<KaraokeLyrics>
   Future<void> _copyLine(String text) async {
     if (text.trim().isEmpty) return;
     await Clipboard.setData(ClipboardData(text: text));
-    if (!mounted) return;
-    showToast(
-      context: context,
-      builder: (context, overlay) => const SurfaceCard(
-        child: Text('Copied line'),
-      ),
-    );
+    HapticFeedback.lightImpact();
+    setState(() => _copyHint = 'Copied');
+    Future.delayed(const Duration(seconds: 1), () {
+      if (mounted) setState(() => _copyHint = null);
+    });
   }
 
   @override
@@ -274,16 +271,18 @@ class _KaraokeLyricsState extends State<KaraokeLyrics>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (_copyHint != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text(_copyHint!).xSmall().muted().center(),
+          ),
         Expanded(
           child: GestureDetector(
+            onScaleStart: (_) => _basePinch = _pinchScale,
             onScaleUpdate: (d) {
               if (d.pointerCount >= 2) {
                 setState(() {
-                  _pinchScale =
-                      (_pinchScale * d.scale).clamp(0.7, 2.2) / d.scale * d.scale;
-                  // Stable accumulation:
-                  _pinchScale = (a.fontSize * _pinchScale / a.fontSize)
-                      .clamp(0.7, 2.2);
+                  _pinchScale = (_basePinch * d.scale).clamp(0.7, 2.2);
                 });
               }
             },
@@ -293,15 +292,6 @@ class _KaraokeLyricsState extends State<KaraokeLyrics>
                   _userScrolling = true;
                 } else if (n is ScrollEndNotification) {
                   _userScrolling = false;
-                  if (widget.player.playing) {
-                    Future.delayed(const Duration(milliseconds: 1200), () {
-                      if (mounted &&
-                          widget.player.playing &&
-                          !_userScrolling) {
-                        setState(() {});
-                      }
-                    });
-                  }
                 }
                 return false;
               },
@@ -355,7 +345,6 @@ class _KaraokeLyricsState extends State<KaraokeLyrics>
                     case _SylState.sung:
                       opacity = _Curves.sungOpacity;
                   }
-                  // inactiveBrightness scales how dark non-active lines go
                   opacity = (1 -
                           (1 - opacity) * (2 - a.inactiveBrightness))
                       .clamp(0.05, 1.0);
@@ -368,7 +357,6 @@ class _KaraokeLyricsState extends State<KaraokeLyrics>
                           a.blurScale
                       : 0.0;
 
-                  // Duet / centered insets (cqw ≈ 3.9% of width approximated via font)
                   final cqw = fontSize * 0.18;
                   EdgeInsets insets;
                   if (a.centered) {
@@ -606,7 +594,7 @@ class _LyricLineView extends StatelessWidget {
           Wrap(
             alignment: wrapAlign,
             crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: fontSize * 0.6 * 0.32, // word gap ≈ 0.32ch
+            spacing: fontSize * 0.6 * 0.32,
             children: [
               for (var i = 0; i < line.lead.length; i++)
                 _SyllableGlyph(
@@ -654,7 +642,8 @@ class _LyricLineView extends StatelessWidget {
       );
     }
 
-    final translation = appearance.showTranslations ? line.translatedText : null;
+    final translation =
+        appearance.showTranslations ? line.translatedText : null;
     return Column(
       crossAxisAlignment: align,
       children: [
@@ -740,7 +729,7 @@ class _SyllableGlyphState extends State<_SyllableGlyph> {
     final gradient = switch (st) {
       _SylState.notSung => unlitEdge,
       _SylState.sung => 1.0,
-      _SylState.active => unlitEdge + (simple ? 1.2 : 1.2) * p,
+      _SylState.active => unlitEdge + 1.2 * p,
     };
 
     double scaleGoal;
@@ -771,10 +760,8 @@ class _SyllableGlyphState extends State<_SyllableGlyph> {
     final unlit = widget.compact
         ? _Curves.bgUnlit
         : (simple ? _Curves.simpleLeadUnlit : _Curves.leadUnlit);
-    final fade =
-        simple ? _Curves.simpleFillFade : _Curves.fillFade;
+    final fade = simple ? _Curves.simpleFillFade : _Curves.fillFade;
 
-    // Emphasize ≥1s syllables; letters end 250ms early overall
     final emphasize = !widget.compact &&
         !simple &&
         (syllable.end - syllable.start) >= 1.0 &&
