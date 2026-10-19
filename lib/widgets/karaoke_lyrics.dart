@@ -84,12 +84,14 @@ class _Spline {
 }
 
 class _Curves {
-  static final scale = _Spline([(0, 0.95), (0.7, 1.0505), (1, 1)]);
-  static final yOffset = _Spline([(0, 1.0 / 100), (0.9, -(1.0 / 60)), (1, 0)]);
-  static final glow = _Spline([(0, 0), (0.15, 1), (0.6, 1), (1, 0)]);
-  static final letterScale = _Spline([(0, 0.95), (0.7, 1.175), (1, 1)]);
+  // Stronger pop than stock Spicy (was ~1.05) — closer to the dramatic zoom
+  // users expect on active syllables.
+  static final scale = _Spline([(0, 0.92), (0.55, 1.18), (1, 1.02)]);
+  static final yOffset = _Spline([(0, 1.0 / 100), (0.9, -(1.0 / 50)), (1, 0)]);
+  static final glow = _Spline([(0, 0), (0.12, 1), (0.55, 1), (1, 0)]);
+  static final letterScale = _Spline([(0, 0.9), (0.55, 1.32), (1, 1.04)]);
   static final letterYOffset =
-      _Spline([(0, 1.0 / 100), (0.9, -(1.0 / 56)), (1, 0)]);
+      _Spline([(0, 1.0 / 100), (0.9, -(1.0 / 48)), (1, 0)]);
   static final lineGlow = _Spline([(0, 0), (0.5, 1), (1, 0)]);
   static final dotScale = _Spline([(0, 0.75), (0.7, 1.05), (1, 1)]);
   static final dotYOffset = _Spline([(0, 0), (0.9, -0.12), (1, 0)]);
@@ -112,6 +114,7 @@ class _Curves {
   static const simpleFillFade = 0.5;
   static const preHiddenDots = 0.5;
   static const emphasizeEndSub = 0.25;
+  static const activeLineScale = 1.12;
 }
 
 double _progress(double t, double start, double end) {
@@ -193,7 +196,10 @@ class _KaraokeLyricsState extends State<KaraokeLyrics>
           (1.5 * (_frameTime - expected * 1.1)).clamp(0.0, 0.15);
     }
 
-    if (mounted) setState(() {});
+    // Only rebuild while media is playing (or springs still settling briefly).
+    if (mounted && (widget.player.playing || dt < 0.2)) {
+      setState(() {});
+    }
   }
 
   @override
@@ -235,6 +241,16 @@ class _KaraokeLyricsState extends State<KaraokeLyrics>
     Future.delayed(const Duration(seconds: 1), () {
       if (mounted) setState(() => _copyHint = null);
     });
+  }
+
+  Widget _maybeBlur(double blur, Widget child) {
+    // Zero-sigma ImageFiltered still forces a saveLayer and can flash the
+    // backdrop for a frame — only apply when we actually blur.
+    if (blur <= 0.05) return child;
+    return ImageFiltered(
+      imageFilter: ui.ImageFilter.blur(sigmaX: blur / 2, sigmaY: blur / 2),
+      child: child,
+    );
   }
 
   @override
@@ -298,6 +314,9 @@ class _KaraokeLyricsState extends State<KaraokeLyrics>
               child: ListView.builder(
                 controller: _scroll,
                 padding: const EdgeInsets.symmetric(vertical: 28),
+                // Keep off-screen children alive a bit to avoid backdrop flashes
+                // when scrolling or when focus jumps between lines.
+                addAutomaticKeepAlives: true,
                 itemCount: result.lines.length,
                 itemBuilder: (context, i) {
                   final line = result.lines[i];
@@ -320,18 +339,23 @@ class _KaraokeLyricsState extends State<KaraokeLyrics>
                   if (line.isInterlude) {
                     final active = line.activeAt(t);
                     final preHidden = t > line.end - _Curves.preHiddenDots;
-                    if (!active && distance > 1) {
-                      return const SizedBox.shrink();
-                    }
+                    // Keep the row in the tree (no SizedBox.shrink) so layout
+                    // doesn't pop and flash neighboring backgrounds.
                     return KeyedSubtree(
                       key: _keyFor(i),
-                      child: _InterludeDots(
-                        dots: line.interludeDots,
-                        t: t,
-                        active: active && !preHidden,
-                        dt: _lastDt,
-                        simple: a.simpleMode,
-                        glowScale: a.glowScale,
+                      child: IgnorePointer(
+                        ignoring: !active,
+                        child: Opacity(
+                          opacity: (active || distance <= 1) ? 1 : 0,
+                          child: _InterludeDots(
+                            dots: line.interludeDots,
+                            t: t,
+                            active: active && !preHidden,
+                            dt: _lastDt,
+                            simple: a.simpleMode,
+                            glowScale: a.glowScale,
+                          ),
+                        ),
                       ),
                     );
                   }
@@ -371,32 +395,31 @@ class _KaraokeLyricsState extends State<KaraokeLyrics>
 
                   return KeyedSubtree(
                     key: _keyFor(i),
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        vertical: 6 * a.lineSpacingScale,
-                      ).add(insets),
-                      child: GestureDetector(
-                        onTap: () => _seekTo(line.start),
-                        onLongPress: () => _copyLine(line.text),
-                        child: AnimatedOpacity(
-                          duration: const Duration(milliseconds: 200),
-                          curve: Curves.easeOut,
-                          opacity: opacity,
-                          child: ImageFiltered(
-                            imageFilter: blur > 0.05
-                                ? ui.ImageFilter.blur(
-                                    sigmaX: blur / 2, sigmaY: blur / 2)
-                                : ui.ImageFilter.blur(sigmaX: 0, sigmaY: 0),
-                            child: _LyricLineView(
-                              line: line,
-                              t: t,
-                              dt: _lastDt,
-                              isActiveLine: isFocus &&
-                                  effectiveState == _SylState.active,
-                              isPast: effectiveState == _SylState.sung ||
-                                  (focusIdx >= 0 && i < focusIdx),
-                              fontSize: fontSize,
-                              appearance: a,
+                    child: RepaintBoundary(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          vertical: 6 * a.lineSpacingScale,
+                        ).add(insets),
+                        child: GestureDetector(
+                          onTap: () => _seekTo(line.start),
+                          onLongPress: () => _copyLine(line.text),
+                          // Opacity (not AnimatedOpacity) avoids restarting a
+                          // 200ms fade every ticker frame when values jitter.
+                          child: Opacity(
+                            opacity: opacity,
+                            child: _maybeBlur(
+                              blur,
+                              _LyricLineView(
+                                line: line,
+                                t: t,
+                                dt: _lastDt,
+                                isActiveLine: isFocus &&
+                                    effectiveState == _SylState.active,
+                                isPast: effectiveState == _SylState.sung ||
+                                    (focusIdx >= 0 && i < focusIdx),
+                                fontSize: fontSize,
+                                appearance: a,
+                              ),
                             ),
                           ),
                         ),
@@ -555,11 +578,12 @@ class _LyricLineView extends StatelessWidget {
           ? 0.0
           : (isActiveLine ? _Curves.lineGlow.at(p) : 0.0) *
               appearance.glowScale;
-      final scale = isActiveLine ? 1.05 : 1.0;
+      final scale = isActiveLine ? _Curves.activeLineScale : 1.0;
 
       body = AnimatedScale(
         scale: scale,
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
         alignment: centered
             ? Alignment.center
             : (line.oppositeAligned
@@ -796,6 +820,7 @@ class _SyllableGlyphState extends State<_SyllableGlyph> {
       offset: Offset(0, -y * fontSize),
       child: Transform.scale(
         scale: scale,
+        filterQuality: FilterQuality.medium,
         child: _FilledText(
           text: display,
           fontSize: fontSize,
@@ -904,6 +929,7 @@ class _EmphasizedWord extends StatelessWidget {
               offset: Offset(0, -targetY * fontSize),
               child: Transform.scale(
                 scale: targetScale,
+                filterQuality: FilterQuality.medium,
                 child: _FilledText(
                   text: chars[i],
                   fontSize: fontSize,
