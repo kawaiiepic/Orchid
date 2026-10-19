@@ -20,9 +20,14 @@ class PlayerService extends ChangeNotifier {
 
   List<TrackResult> queue = [];
   int queueIndex = -1;
+  /// Recent tracks (oldest → newest), excluding the current one.
+  List<TrackResult> history = [];
   List<InstalledAddon> _addons = [];
 
   double volume = 1.0;
+
+  /// Bumps when the loaded track identity changes — drives lyric crossfades.
+  int lyricsGeneration = 0;
 
   PlayerService({
     required this.addonService,
@@ -38,10 +43,26 @@ class PlayerService extends ChangeNotifier {
     _addons = addons;
   }
 
+  void _pushHistory(TrackResult? track) {
+    if (track == null) return;
+    history.removeWhere(
+      (t) => t.id == track.id && t.sourceId == track.sourceId,
+    );
+    history.add(track);
+    if (history.length > 40) {
+      history = history.sublist(history.length - 40);
+    }
+  }
+
   Future<void> playTrack(
     TrackResult track, {
     List<TrackResult>? fromQueue,
   }) async {
+    if (current != null &&
+        !(current!.id == track.id && current!.sourceId == track.sourceId)) {
+      _pushHistory(current);
+    }
+
     if (fromQueue != null) {
       queue = List<TrackResult>.from(fromQueue);
       queueIndex = queue.indexWhere(
@@ -74,6 +95,7 @@ class PlayerService extends ChangeNotifier {
     error = null;
     lyrics = null;
     lyricsLoading = true;
+    lyricsGeneration++;
     current = track;
     notifyListeners();
 
@@ -112,6 +134,7 @@ class PlayerService extends ChangeNotifier {
 
   Future<void> playNext() async {
     if (!hasNext) return;
+    if (current != null) _pushHistory(current);
     queueIndex++;
     await _loadAndPlay(queue[queueIndex]);
   }
@@ -121,6 +144,7 @@ class PlayerService extends ChangeNotifier {
       await player.seek(Duration.zero);
       return;
     }
+    if (current != null) _pushHistory(current);
     queueIndex--;
     await _loadAndPlay(queue[queueIndex]);
   }
