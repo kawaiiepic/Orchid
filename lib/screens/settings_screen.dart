@@ -3,7 +3,6 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../models/addon.dart';
 import '../services/addon_service.dart';
 import '../services/lyrics_appearance.dart';
-import '../widgets/floating_lyrics.dart';
 
 class SettingsScreen extends StatefulWidget {
   final AddonService addonService;
@@ -26,7 +25,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _adding = false;
   String? _status;
   final _appearance = LyricsAppearance.instance;
-  final _floating = FloatingLyricsController.instance;
 
   @override
   void initState() {
@@ -34,11 +32,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _appearance.load().then((_) {
       if (mounted) setState(() {});
     });
-    _floating.load().then((_) {
-      if (mounted) setState(() {});
-    });
     _appearance.addListener(_onAppearance);
-    _floating.addListener(_onAppearance);
   }
 
   void _onAppearance() {
@@ -48,7 +42,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void dispose() {
     _appearance.removeListener(_onAppearance);
-    _floating.removeListener(_onAppearance);
     _urlController.dispose();
     super.dispose();
   }
@@ -167,18 +160,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             padding: const EdgeInsets.all(14),
             child: Column(
               children: [
-                _switchTile(
-                  'Floating lyrics',
-                  'Draggable mini lyrics bubble while Orchid is open',
-                  _floating.enabled,
-                  (v) {
-                    if (v) {
-                      _floating.showFrom(context);
-                    } else {
-                      _floating.setEnabled(false);
-                    }
-                  },
-                ),
                 _switchTile(
                   'Simple Lyrics Mode',
                   'Softer fill, no glow, milder motion',
