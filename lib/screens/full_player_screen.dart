@@ -1,9 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:orchid/widgets/karaoke_lyrics.dart';
+import 'package:orchid/widgets/liquid_artwork_background.dart';
+import 'package:orchid/widgets/queue_sheet.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import '../services/lyrics_service.dart';
 import '../services/player_service.dart';
+import '../widgets/floating_lyrics.dart';
 
 class FullPlayerScreen extends StatefulWidget {
   final PlayerService player;
@@ -15,7 +18,7 @@ class FullPlayerScreen extends StatefulWidget {
 }
 
 class _FullPlayerScreen extends State<FullPlayerScreen> {
-  bool _showLyrics = false;
+  bool _showLyrics = true;
 
   String _fmt(Duration d) {
     final m = d.inMinutes.remainder(60).toString().padLeft(1, '0');
@@ -40,50 +43,98 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
     return text.isEmpty ? null : text;
   }
 
-  Widget _lyricsPanel() {
-    final track = widget.player.current;
-    if (track == null) return const SizedBox.shrink();
+  void _onHorizontalDragEnd(DragEndDetails d) {
+    final v = d.primaryVelocity ?? 0;
+    if (v < -400 && widget.player.hasNext) {
+      widget.player.playNext();
+    } else if (v > 400) {
+      widget.player.playPrevious();
+    }
+  }
 
-    final hasSyl = widget.player.lyrics?.hasSyllables == true;
-
-    return SizedBox(
-      width: double.infinity,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  const Text('Spicy Lyrics').semiBold(),
-                  const SizedBox(width: 8),
-                  Text(
-                    hasSyl ? 'syllable karaoke' : 'Apple Music sync',
-                  ).xSmall().muted(),
-                  const Spacer(),
-                  GhostButton(
-                    onPressed: () {
-                      setState(() => _showLyrics = !_showLyrics);
-                    },
-                    child: Text(_showLyrics ? 'Hide' : 'Show'),
-                  ),
-                ],
-              ),
-              if (_showLyrics) ...[
-                const SizedBox(height: 12),
-                Expanded(
-                  child: KaraokeLyrics(
-                    player: widget.player.player,
-                    lyrics: widget.player.lyrics,
-                    loading: widget.player.lyricsLoading,
-                  ),
-                ),
-              ],
-            ],
-          ),
+  Widget _lyricsBody() {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 420),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      child: KeyedSubtree(
+        key: ValueKey(widget.player.lyricsGeneration),
+        child: KaraokeLyrics(
+          player: widget.player.player,
+          lyrics: widget.player.lyrics,
+          loading: widget.player.lyricsLoading,
         ),
       ),
+    );
+  }
+
+  Widget _artworkBody(ColorScheme scheme) {
+    final track = widget.player.current;
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (track?.artworkUrl != null)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: CachedNetworkImage(
+              imageUrl: track!.artworkUrl!,
+              width: 280,
+              height: 280,
+              fit: BoxFit.cover,
+            ),
+          )
+        else
+          Container(
+            width: 280,
+            height: 280,
+            decoration: BoxDecoration(
+              color: scheme.muted,
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        const SizedBox(height: 20),
+        Text(
+          track?.title ?? 'No track playing',
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          track?.artist ?? 'Unknown artist',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 14, color: scheme.primary),
+        ),
+        const SizedBox(height: 16),
+        StreamBuilder<Duration>(
+          stream: widget.player.player.positionStream,
+          initialData: widget.player.player.position,
+          builder: (context, snap) {
+            final t = (snap.data ?? Duration.zero).inMilliseconds / 1000.0;
+            final line = _currentLine(widget.player.lyrics, t);
+            if (line == null) {
+              if (widget.player.lyricsLoading) {
+                return Text('Loading lyrics…').small().muted();
+              }
+              return const SizedBox(height: 20);
+            }
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                line,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  height: 1.3,
+                  color: scheme.foreground.withOpacity(0.92),
+                ),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 
@@ -95,226 +146,172 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
       builder: (context, _) {
         final track = widget.player.current;
         return Scaffold(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: Row(
-                  children: [
-                    IconButton(
-                      variance: ButtonVariance.ghost,
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(LucideIcons.arrowLeft),
+          child: LiquidArtworkBackground(
+            imageUrl: track?.artworkUrl,
+            child: GestureDetector(
+              onHorizontalDragEnd: _onHorizontalDragEnd,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
                     ),
-                    const Spacer(),
-                    Text(
-                      widget.player.playingVia ?? 'Now playing',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: scheme.primary,
-                      ),
-                    ),
-                    const Spacer(),
-                    const SizedBox(width: 40),
-                  ],
-                ),
-              ),
-
-              if (_showLyrics)
-                Expanded(child: _lyricsPanel())
-              else
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    child: Row(
                       children: [
-                        if (track?.artworkUrl != null)
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: CachedNetworkImage(
-                              imageUrl: track!.artworkUrl!,
-                              width: 280,
-                              height: 280,
-                              fit: BoxFit.cover,
-                            ),
-                          )
-                        else
-                          Container(
-                            width: 280,
-                            height: 280,
-                            decoration: BoxDecoration(
-                              color: scheme.muted,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        const SizedBox(height: 20),
-                        Text(
-                          track?.title ?? 'No track playing',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        IconButton(
+                          variance: ButtonVariance.ghost,
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(LucideIcons.arrowLeft),
                         ),
-                        const SizedBox(height: 4),
+                        const Spacer(),
                         Text(
-                          track?.artist ?? 'Unknown artist',
-                          textAlign: TextAlign.center,
+                          widget.player.playingVia ?? 'Now playing',
                           style: TextStyle(
                             fontSize: 14,
                             color: scheme.primary,
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        // Mini current line under the cover when full lyrics are hidden.
-                        StreamBuilder<Duration>(
-                          stream: widget.player.player.positionStream,
-                          initialData: widget.player.player.position,
-                          builder: (context, snap) {
-                            final t = (snap.data ?? Duration.zero)
-                                    .inMilliseconds /
-                                1000.0;
-                            final line =
-                                _currentLine(widget.player.lyrics, t);
-                            if (line == null) {
-                              if (widget.player.lyricsLoading) {
-                                return Text('Loading lyrics…')
-                                    .small()
-                                    .muted();
-                              }
-                              return const SizedBox(height: 20);
-                            }
-                            return Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 12),
-                              child: Text(
-                                line,
-                                textAlign: TextAlign.center,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  height: 1.3,
-                                  color:
-                                      scheme.foreground.withOpacity(0.92),
-                                ),
-                              ),
-                            );
-                          },
+                        const Spacer(),
+                        IconButton(
+                          variance: ButtonVariance.ghost,
+                          onPressed: () =>
+                              showQueueSheet(context, widget.player),
+                          icon: const Icon(LucideIcons.listMusic),
                         ),
                       ],
                     ),
                   ),
-                ),
 
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: StreamBuilder<Duration>(
-                  stream: widget.player.player.positionStream,
-                  initialData: widget.player.player.position,
-                  builder: (context, snapshot) {
-                    final pos = snapshot.data ?? Duration.zero;
-                    final dur =
-                        widget.player.player.duration ?? Duration.zero;
-                    // shadcn Slider asserts when max/value produce NaN (dur == 0).
-                    final maxMs = dur.inMilliseconds.toDouble();
-                    final hasDur = maxMs > 0 && maxMs.isFinite;
-                    final posMs = hasDur
-                        ? pos.inMilliseconds
-                            .toDouble()
-                            .clamp(0.0, maxMs)
-                        : 0.0;
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: _showLyrics
+                          ? _lyricsBody()
+                          : _artworkBody(scheme),
+                    ),
+                  ),
 
-                    return Column(
-                      children: [
-                        SizedBox(
-                          width: double.infinity,
-                          child: Slider(
-                            value: SliderValue.single(posMs),
-                            min: 0,
-                            max: hasDur ? maxMs : 1,
-                            onChanged: hasDur
-                                ? (v) => widget.player.seek(
-                                      Duration(
-                                        milliseconds: v.value.round().clamp(
-                                          0,
-                                          maxMs.round(),
-                                        ),
-                                      ),
-                                    )
-                                : null,
-                          ),
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: StreamBuilder<Duration>(
+                      stream: widget.player.player.positionStream,
+                      initialData: widget.player.player.position,
+                      builder: (context, snapshot) {
+                        final pos = snapshot.data ?? Duration.zero;
+                        final dur =
+                            widget.player.player.duration ?? Duration.zero;
+                        final maxMs = dur.inMilliseconds.toDouble();
+                        final hasDur = maxMs > 0 && maxMs.isFinite;
+                        final posMs = hasDur
+                            ? pos.inMilliseconds
+                                .toDouble()
+                                .clamp(0.0, maxMs)
+                            : 0.0;
+
+                        return Column(
                           children: [
-                            Text(
-                              _fmt(pos),
-                              style: TextStyle(color: scheme.primary),
+                            SizedBox(
+                              width: double.infinity,
+                              child: Slider(
+                                value: SliderValue.single(posMs),
+                                min: 0,
+                                max: hasDur ? maxMs : 1,
+                                onChanged: hasDur
+                                    ? (v) => widget.player.seek(
+                                          Duration(
+                                            milliseconds:
+                                                v.value.round().clamp(
+                                              0,
+                                              maxMs.round(),
+                                            ),
+                                          ),
+                                        )
+                                    : null,
+                              ),
                             ),
-                            Text(
-                              _fmt(dur),
-                              style: TextStyle(color: scheme.primary),
+                            Row(
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  _fmt(pos),
+                                  style: TextStyle(color: scheme.primary),
+                                ),
+                                Text(
+                                  _fmt(dur),
+                                  style: TextStyle(color: scheme.primary),
+                                ),
+                              ],
                             ),
                           ],
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
+                        );
+                      },
+                    ),
+                  ),
 
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  Stack(
+                    alignment: Alignment.center,
                     children: [
-                      IconButton(
-                        variance: ButtonVariance.ghost,
-                        onPressed: () => widget.player.playPrevious(),
-                        icon: const Icon(LucideIcons.skipBack),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          IconButton(
+                            variance: ButtonVariance.ghost,
+                            onPressed: () => widget.player.playPrevious(),
+                            icon: const Icon(LucideIcons.skipBack),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            variance: ButtonVariance.ghost,
+                            onPressed: widget.player.togglePlayPause,
+                            icon: Icon(
+                              widget.player.player.playing
+                                  ? LucideIcons.pause
+                                  : LucideIcons.play,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            variance: ButtonVariance.ghost,
+                            onPressed: widget.player.hasNext
+                                ? () => widget.player.playNext()
+                                : null,
+                            icon: const Icon(LucideIcons.skipForward),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        variance: ButtonVariance.ghost,
-                        onPressed: widget.player.togglePlayPause,
-                        icon: Icon(
-                          widget.player.player.playing
-                              ? LucideIcons.pause
-                              : LucideIcons.play,
+                      Positioned(
+                        left: 12,
+                        child: IconButton(
+                          variance: ButtonVariance.ghost,
+                          onPressed: () {
+                            FloatingLyricsController.instance
+                                .showFrom(context);
+                          },
+                          icon: const Icon(LucideIcons.pictureInPicture2),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        variance: ButtonVariance.ghost,
-                        onPressed: widget.player.hasNext
-                            ? () => widget.player.playNext()
-                            : null,
-                        icon: const Icon(LucideIcons.skipForward),
+                      Positioned(
+                        right: 12,
+                        child: IconButton(
+                          variance: ButtonVariance.ghost,
+                          onPressed: () {
+                            setState(() => _showLyrics = !_showLyrics);
+                          },
+                          icon: Icon(
+                            _showLyrics
+                                ? LucideIcons.image
+                                : LucideIcons.mic2,
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                  Positioned(
-                    right: 16,
-                    child: IconButton(
-                      variance: ButtonVariance.ghost,
-                      onPressed: () {
-                        setState(() => _showLyrics = !_showLyrics);
-                      },
-                      icon: Icon(
-                        _showLyrics
-                            ? LucideIcons.image
-                            : LucideIcons.mic2,
-                      ),
-                    ),
-                  ),
+                  const SizedBox(height: 12),
                 ],
               ),
-              const SizedBox(height: 12),
-            ],
+            ),
           ),
         );
       },
