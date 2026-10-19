@@ -258,7 +258,6 @@ class _SyllableChip extends StatelessWidget {
   final double t;
   final bool isActive;
   final bool isPast;
-  final bool isActiveLine;
   final bool compact;
 
   const _SyllableChip({
@@ -266,7 +265,6 @@ class _SyllableChip extends StatelessWidget {
     required this.t,
     required this.isActive,
     required this.isPast,
-    required this.isActiveLine,
     required this.compact,
   });
 
