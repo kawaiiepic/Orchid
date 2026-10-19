@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -6,7 +7,6 @@ import 'package:http/http.dart' as http;
 import '../models/addon.dart';
 import './spotify_service.dart';
 
-/// Contributor from UploadAttribution (community syncs only).
 class LyricsContributor {
   final String id;
   final String username;
@@ -30,7 +30,6 @@ class LyricsContributor {
   }
 }
 
-/// One timed syllable (Syllable sync).
 class LyricSyllable {
   final String text;
   final double start;
@@ -56,14 +55,10 @@ class LyricSyllable {
     );
   }
 
-  /// Strict timing window from the API.
   bool timedAt(double t) => t >= start && t < end;
-
-  /// Legacy alias — prefer [timedAt] or line-level active index helpers.
   bool activeAt(double t) => timedAt(t);
 }
 
-/// One timed line (syllable or line-level).
 class LyricLine {
   final List<LyricSyllable> lead;
   final List<LyricSyllable> background;
@@ -72,6 +67,9 @@ class LyricLine {
   final bool oppositeAligned;
   final String? plainText;
   final String? translatedText;
+  /// Instrumental gap row (three timed dots), like Sweet Lyrics interludes.
+  final bool isInterlude;
+  final List<LyricSyllable> interludeDots;
 
   const LyricLine({
     this.lead = const [],
@@ -81,11 +79,14 @@ class LyricLine {
     this.oppositeAligned = false,
     this.plainText,
     this.translatedText,
+    this.isInterlude = false,
+    this.interludeDots = const [],
   });
 
   bool get hasSyllables => lead.isNotEmpty;
 
   String get text {
+    if (isInterlude) return '';
     if (plainText != null && plainText!.isNotEmpty) return plainText!;
     if (lead.isEmpty) return '';
     final buf = StringBuffer();
@@ -103,15 +104,9 @@ class LyricLine {
 
   bool activeAt(double t) => t >= start && t < end;
 
-  /// Active lead syllable at [t].
-  ///
-  /// Holds the last syllable that has *started* until the next one starts.
-  /// That covers inter-syllable gaps and the tail of a line after the last
-  /// syllable's EndTime — avoids a blank highlight for ~1s between words.
   int activeLeadIndex(double t) {
     if (lead.isEmpty) return -1;
     if (t < lead.first.start) return -1;
-
     var idx = 0;
     for (var i = 0; i < lead.length; i++) {
       if (t >= lead[i].start) {
@@ -124,7 +119,6 @@ class LyricLine {
   }
 }
 
-/// Parsed Spicy Lyrics Body.
 class LyricsResult {
   final String? plain;
   final String? synced;
@@ -132,7 +126,7 @@ class LyricsResult {
   final bool hasSync;
   final String source;
   final String? sourceVia;
-  final String? bodyType; // Syllable | Line | Static
+  final String? bodyType;
   final String? trackId;
   final List<String> songWriters;
   final LyricsContributor? uploader;
@@ -181,7 +175,11 @@ class LyricsResult {
 
   String get displayText {
     if (lines.isNotEmpty) {
-      return lines.map((l) => l.text).where((t) => t.isNotEmpty).join('\n');
+      return lines
+          .where((l) => !l.isInterlude)
+          .map((l) => l.text)
+          .where((t) => t.isNotEmpty)
+          .join('\n');
     }
     if (plain != null && plain!.trim().isNotEmpty) return plain!.trim();
     if (synced != null && synced!.trim().isNotEmpty) {
@@ -200,7 +198,6 @@ class LyricsResult {
     return lines[i];
   }
 
-  /// Active line, or the last started line during gaps (no snap-to-top).
   int lineIndexAt(double t) {
     if (lines.isEmpty) return -1;
     var lastStarted = -1;
@@ -218,6 +215,12 @@ class LyricsService {
   static const String apiKey =
       'sl_sk_169LGcgCR0Jd02kORnaebr1XxJm59eIjb5NpDJ7zgKM';
 
+  /// Gap that earns an interlude (Sweet Lyrics `interludeThreshold`).
+  static const interludeThreshold = 3.0;
+
+  /// Dots finish this long before the next line.
+  static const interludePadding = 0.55;
+
   LyricsService({http.Client? client}) : _client = client ?? http.Client();
 
   Future<LyricsResult?> fetchFor(TrackResult track) async {
@@ -227,15 +230,12 @@ class LyricsService {
     if (track.spotifyTrackId != null && track.spotifyTrackId!.isNotEmpty) {
       final result = await _fetchBySpotifyTrackId(track.spotifyTrackId!);
       if (result?.hasAny == true) return result;
-      debugPrint('[Orchid] lyrics: Spotify track ID lookup failed');
     } else {
       final itunesTrack = await _resolveViaItunes(track);
-      if (itunesTrack != null &&
-          itunesTrack.spotifyTrackId != null &&
-          itunesTrack.spotifyTrackId!.isNotEmpty) {
+      if (itunesTrack?.spotifyTrackId != null &&
+          itunesTrack!.spotifyTrackId!.isNotEmpty) {
         return _fetchBySpotifyTrackId(itunesTrack.spotifyTrackId!);
       }
-
       final spotifyTrack =
           await _resolveViaSpotifySearch(track.title, track.artist);
       if (spotifyTrack != null &&
@@ -243,16 +243,14 @@ class LyricsService {
         return _fetchBySpotifyTrackId(spotifyTrack.spotifyTrackId!);
       }
     }
-
-    debugPrint('[Orchid] lyrics: All lookup methods exhausted');
     return null;
   }
 
   Future<TrackResult?> _resolveViaSpotifySearch(String title, String artist) async {
     try {
-      final query = '$artist $title';
       final spotifyService = SpotifyService();
-      final results = await spotifyService.searchTracksOnly(query, limit: 5);
+      final results =
+          await spotifyService.searchTracksOnly('$artist $title', limit: 5);
       if (results.isEmpty) return null;
       final track = spotifyService.fromSpotify(results.first);
       if ((track.spotifyTrackId ?? track.id).isEmpty) return null;
@@ -266,8 +264,6 @@ class LyricsService {
   Future<LyricsResult?> _fetchBySpotifyTrackId(String trackId) async {
     try {
       final uri = Uri.parse('https://api.spicylyrics.org/v1/lyrics/$trackId');
-      debugPrint('[Orchid] lyrics fetching: /v1/lyrics/$trackId');
-
       final res = await _client.get(
         uri,
         headers: {
@@ -277,20 +273,11 @@ class LyricsService {
         },
       ).timeout(const Duration(seconds: 30));
 
-      if (res.statusCode != 200) {
-        debugPrint('[Orchid] lyrics status ${res.statusCode}');
-        return null;
-      }
-
+      if (res.statusCode != 200) return null;
       final data = jsonDecode(res.body) as Map<String, dynamic>;
       if (!data.containsKey('Body')) return null;
-
       final bodyData = data['Body'] as Map<String, dynamic>;
-      if (bodyData.containsKey('error')) {
-        debugPrint('[Orchid] lyrics API error: ${bodyData['error']}');
-        return null;
-      }
-
+      if (bodyData.containsKey('error')) return null;
       return _parseBody(bodyData);
     } catch (e) {
       debugPrint('[Orchid] lyrics fetch error: $e');
@@ -326,17 +313,42 @@ class LyricsService {
 
     final content = bodyData['Content'];
 
+    LyricsResult result({
+      String? plain,
+      String? synced,
+      List<LyricLine> lines = const [],
+      bool hasSync = false,
+    }) {
+      return LyricsResult(
+        plain: plain,
+        synced: synced,
+        lines: lines,
+        hasSync: hasSync,
+        source: source,
+        sourceVia: sourceVia,
+        bodyType: type,
+        trackId: trackId,
+        songWriters: songWriters,
+        uploader: uploader,
+        maker: maker,
+        startTime: startTime,
+        endTime: endTime,
+      );
+    }
+
     if (type == 'Syllable' && content is List) {
       final lines = <LyricLine>[];
       final plainBuf = StringBuffer();
-
       for (final item in content) {
         if (item is! Map) continue;
         final map = Map<String, dynamic>.from(item);
-        if (map['Type'] != 'Vocal') continue;
+        final itemType = (map['Type'] as String?)?.toLowerCase();
+        if (itemType == 'interlude') continue;
+        if (itemType != null && itemType != 'vocal') continue;
 
         final lead = _parseSyllableGroup(map['Lead']);
         final bg = _parseSyllableGroupList(map['Background']);
+        if (lead.isEmpty && bg.isEmpty) continue;
         final leadMap = map['Lead'] is Map
             ? Map<String, dynamic>.from(map['Lead'] as Map)
             : null;
@@ -360,32 +372,23 @@ class LyricsService {
           plainBuf.write(t);
         }
       }
-
+      final withInterludes = _insertInterludes(lines);
       final plain = plainBuf.toString().trim();
-      return LyricsResult(
+      return result(
         plain: plain.isEmpty ? null : plain,
         synced: _linesToRoughLrc(lines),
-        lines: lines,
-        hasSync: lines.isNotEmpty,
-        source: source,
-        sourceVia: sourceVia,
-        bodyType: type,
-        trackId: trackId,
-        songWriters: songWriters,
-        uploader: uploader,
-        maker: maker,
-        startTime: startTime,
-        endTime: endTime,
+        lines: withInterludes,
+        hasSync: withInterludes.isNotEmpty,
       );
     }
 
     if (type == 'Line' && content is List) {
       final lines = <LyricLine>[];
       final plainBuf = StringBuffer();
-
       for (final item in content) {
         if (item is! Map) continue;
         final map = Map<String, dynamic>.from(item);
+        if ((map['Type'] as String?)?.toLowerCase() == 'interlude') continue;
         final text = map['Text'] as String? ?? '';
         if (text.isEmpty) continue;
         final start = (map['StartTime'] as num?)?.toDouble() ?? 0;
@@ -400,22 +403,13 @@ class LyricsService {
         if (plainBuf.isNotEmpty) plainBuf.writeln();
         plainBuf.write(text);
       }
-
+      final withInterludes = _insertInterludes(lines);
       final plain = plainBuf.toString().trim();
-      return LyricsResult(
+      return result(
         plain: plain.isEmpty ? null : plain,
         synced: _linesToRoughLrc(lines),
-        lines: lines,
-        hasSync: lines.isNotEmpty,
-        source: source,
-        sourceVia: sourceVia,
-        bodyType: type,
-        trackId: trackId,
-        songWriters: songWriters,
-        uploader: uploader,
-        maker: maker,
-        startTime: startTime,
-        endTime: endTime,
+        lines: withInterludes,
+        hasSync: withInterludes.isNotEmpty,
       );
     }
 
@@ -429,17 +423,7 @@ class LyricsService {
       } else if (content is String) {
         plain = content;
       }
-      return LyricsResult(
-        plain: plain.trim().isEmpty ? null : plain.trim(),
-        hasSync: false,
-        source: source,
-        sourceVia: sourceVia,
-        bodyType: type,
-        trackId: trackId,
-        songWriters: songWriters,
-        uploader: uploader,
-        maker: maker,
-      );
+      return result(plain: plain.trim().isEmpty ? null : plain.trim());
     }
 
     if (content is List) {
@@ -463,44 +447,73 @@ class LyricsService {
         }
       }
       final plain = plainBuf.toString().trim();
-      return LyricsResult(
+      final withInterludes = _insertInterludes(lines);
+      return result(
         plain: plain.isEmpty ? null : plain,
-        lines: lines,
-        hasSync: lines.isNotEmpty,
-        source: source,
-        sourceVia: sourceVia,
-        bodyType: type,
-        trackId: trackId,
-        songWriters: songWriters,
-        uploader: uploader,
-        maker: maker,
-        startTime: startTime,
-        endTime: endTime,
+        lines: withInterludes,
+        hasSync: withInterludes.isNotEmpty,
       );
     }
 
     if (content is String && content.trim().isNotEmpty) {
-      return LyricsResult(
-        plain: content.trim(),
-        source: source,
-        sourceVia: sourceVia,
-        bodyType: type,
-        trackId: trackId,
-        songWriters: songWriters,
-        uploader: uploader,
-        maker: maker,
-      );
+      return result(plain: content.trim());
     }
 
-    return LyricsResult(
-      source: source,
-      sourceVia: sourceVia,
-      bodyType: type,
-      trackId: trackId,
-      songWriters: songWriters,
-      uploader: uploader,
-      maker: maker,
+    return result();
+  }
+
+  /// Insert ••• interlude rows for instrumental gaps ≥ [interludeThreshold].
+  List<LyricLine> _insertInterludes(List<LyricLine> source) {
+    if (source.isEmpty) return source;
+    final result = <LyricLine>[];
+    var latestEnd = 0.0;
+
+    if (source.first.start >= interludeThreshold) {
+      result.add(_makeInterlude(0, source.first.start));
+    }
+
+    for (var i = 0; i < source.length; i++) {
+      final line = source[i];
+      result.add(line);
+      latestEnd = math.max(latestEnd, line.end);
+      for (final s in line.lead) {
+        latestEnd = math.max(latestEnd, s.end);
+      }
+      for (final s in line.background) {
+        latestEnd = math.max(latestEnd, s.end);
+      }
+      if (i + 1 < source.length) {
+        final next = source[i + 1];
+        if (next.start - latestEnd >= interludeThreshold) {
+          result.add(_makeInterlude(latestEnd, next.start));
+        }
+      }
+    }
+    return result;
+  }
+
+  LyricLine _makeInterlude(double start, double end) {
+    return LyricLine(
+      start: start,
+      end: end,
+      isInterlude: true,
+      interludeDots: _interludeDots(start, end),
     );
+  }
+
+  /// Three dots timed as Spicy `Syllable.ts` / Sweet Lyrics `dots(from:to:)`.
+  List<LyricSyllable> _interludeDots(double start, double end) {
+    final total = end - start;
+    final third = total / 3;
+    final padding = interludePadding / 3;
+    final dot1 = math.max(start, start + third - padding);
+    final dot2 = math.max(dot1, start + third * 2 - padding * 2);
+    final dot3 = math.max(dot2, start + total - interludePadding);
+    return [
+      LyricSyllable(text: '•', start: start, end: dot1),
+      LyricSyllable(text: '•', start: dot1, end: dot2),
+      LyricSyllable(text: '•', start: dot2, end: dot3),
+    ];
   }
 
   List<LyricSyllable> _parseSyllableGroup(dynamic group) {
@@ -527,6 +540,7 @@ class LyricsService {
     if (lines.isEmpty) return null;
     final buf = StringBuffer();
     for (final line in lines) {
+      if (line.isInterlude) continue;
       final t = line.text;
       if (t.isEmpty) continue;
       buf.writeln('[${_formatLrc(line.start)}] $t');
@@ -554,27 +568,20 @@ class LyricsService {
           'limit': '1',
         },
       );
-
       final res = await _client.get(uri).timeout(const Duration(seconds: 15));
       if (res.statusCode != 200) return null;
-
       final body = jsonDecode(res.body) as Map<String, dynamic>;
       final results = body['results'] as List? ?? [];
       if (results.isEmpty) return null;
-
       final item = results[0];
       if (item is! Map) return null;
       final m = Map<String, dynamic>.from(item);
       if (m['wrapperType'] != 'track' || m['kind'] != 'song') return null;
-
-      String? spotifyTrackId;
       final spotifyUrl =
           m['spotifyUrl'] as String? ?? m['spotifyURL'] as String? ?? '';
       final match = RegExp(r'/track/([a-zA-Z0-9_-]+)').firstMatch(spotifyUrl);
-      if (match != null) spotifyTrackId = match.group(1);
-
+      final spotifyTrackId = match?.group(1);
       if (spotifyTrackId == null || spotifyTrackId.isEmpty) return null;
-
       return TrackResult(
         id: '${m['trackId']}',
         title: m['trackName'] as String? ?? '',
@@ -596,12 +603,5 @@ class LyricsService {
       debugPrint('[Orchid] lyrics: iTunes resolution error: $e');
       return null;
     }
-  }
-
-  static String formatMs(int ms) {
-    final min = ms ~/ (60 * 1000);
-    final sec = (ms % (60 * 1000)) ~/ 1000;
-    final millisecond = (ms % 1000).toString().padLeft(3, '0');
-    return '$min:$sec.$millisecond';
   }
 }
