@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// User-tunable lyrics look — mirrors Sweet Lyrics AppearanceSettings.
