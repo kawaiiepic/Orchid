@@ -3,14 +3,14 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../services/lyrics_appearance.dart';
 import '../services/lyrics_service.dart';
 import 'lyrics_spring.dart';
-
-// ── Curves from Spicy Lyrics LyricsAnimator ──────────────────────────────────
 
 class _Spline {
   final List<double> xs;
@@ -95,6 +95,7 @@ class _Curves {
   static final dotYOffset = _Spline([(0, 0), (0.9, -0.12), (1, 0)]);
   static final dotGlow = _Spline([(0, 0), (0.6, 1), (1, 1)]);
   static final dotOpacity = _Spline([(0, 0.35), (0.6, 1), (1, 1)]);
+  static final simpleYOffset = _Spline([(0, 1.0 / 100), (1, -0.033)]);
 
   static const notSungOpacity = 0.51;
   static const activeOpacity = 1.0;
@@ -105,8 +106,12 @@ class _Curves {
   static const leadUnlit = 0.5;
   static const bgLit = 0.6;
   static const bgUnlit = 0.3;
+  static const simpleLeadLit = 1.0;
+  static const simpleLeadUnlit = 0.3;
   static const fillFade = 0.2;
+  static const simpleFillFade = 0.5;
   static const preHiddenDots = 0.5;
+  static const emphasizeEndSub = 0.25;
 }
 
 double _progress(double t, double start, double end) {
@@ -124,8 +129,6 @@ _SylState _state(double t, double start, double end) {
   if (t >= end) return _SylState.sung;
   return _SylState.active;
 }
-
-// ── Karaoke ──────────────────────────────────────────────────────────────────
 
 class KaraokeLyrics extends StatefulWidget {
   final AudioPlayer player;
@@ -147,37 +150,56 @@ class _KaraokeLyricsState extends State<KaraokeLyrics>
     with SingleTickerProviderStateMixin {
   final _scroll = ScrollController();
   final _keys = <int, GlobalKey>{};
+  final _appearance = LyricsAppearance.instance;
 
   bool _userScrolling = false;
-  bool _follow = true;
   int _lastActive = -1;
 
   late final Ticker _ticker;
   Duration _lastTick = Duration.zero;
-  double _now = 0; // wall-clock seconds for spring dt
+  double _lastDt = 1 / 60;
+
+  /// Pinch-adjusted multiplier on top of settings font size.
+  double _pinchScale = 1.0;
+
+  // Presentation lead (Sweet Lyrics frame compensation)
+  double _frameTime = 1 / 60;
+  double _presentationLead = 0;
 
   @override
   void initState() {
     super.initState();
+    _appearance.load();
+    _appearance.addListener(_onAppearance);
     _ticker = createTicker(_onTick)..start();
   }
 
-  void _onTick(Duration elapsed) {
-    final dt = _lastTick == Duration.zero
-        ? 1 / 60
-        : ((elapsed - _lastTick).inMicroseconds / 1e6).clamp(0.0, 0.25);
-    _lastTick = elapsed;
-    _now = elapsed.inMicroseconds / 1e6;
-    // Rebuild so spring-driven glyphs can step.
+  void _onAppearance() {
     if (mounted) setState(() {});
-    // Keep dt available via _lastDt
-    _lastDt = dt;
   }
 
-  double _lastDt = 1 / 60;
+  void _onTick(Duration elapsed) {
+    final rawDt = _lastTick == Duration.zero
+        ? 1 / 60
+        : (elapsed - _lastTick).inMicroseconds / 1e6;
+    _lastTick = elapsed;
+    final dt = rawDt.clamp(0.0, 0.25);
+    _lastDt = dt;
+
+    // Presentation lead: run lyrics slightly ahead when frames drop
+    const expected = 1 / 60;
+    if (dt > 0.006 && dt < 0.4) {
+      _frameTime += (dt - _frameTime) * (dt > _frameTime ? 0.3 : 0.08);
+      _presentationLead =
+          (1.5 * (_frameTime - expected * 1.1)).clamp(0.0, 0.15);
+    }
+
+    if (mounted) setState(() {});
+  }
 
   @override
   void dispose() {
+    _appearance.removeListener(_onAppearance);
     _ticker.dispose();
     _scroll.dispose();
     super.dispose();
@@ -186,11 +208,7 @@ class _KaraokeLyricsState extends State<KaraokeLyrics>
   GlobalKey _keyFor(int i) => _keys.putIfAbsent(i, GlobalKey.new);
 
   void _maybeFollow(int activeIdx, bool playing) {
-    if (!playing || _userScrolling) {
-      if (!playing) _follow = false;
-      return;
-    }
-    _follow = true;
+    if (!playing || _userScrolling) return;
     if (activeIdx < 0 || activeIdx == _lastActive) return;
     _lastActive = activeIdx;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -204,6 +222,22 @@ class _KaraokeLyricsState extends State<KaraokeLyrics>
         alignment: 0.35,
       );
     });
+  }
+
+  Future<void> _seekTo(double seconds) async {
+    await widget.player.seek(Duration(milliseconds: (seconds * 1000).round()));
+  }
+
+  Future<void> _copyLine(String text) async {
+    if (text.trim().isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: text));
+    if (!mounted) return;
+    showToast(
+      context: context,
+      builder: (context, overlay) => const SurfaceCard(
+        child: Text('Copied line'),
+      ),
+    );
   }
 
   @override
@@ -227,125 +261,162 @@ class _KaraokeLyricsState extends State<KaraokeLyrics>
       );
     }
 
+    final a = _appearance;
     final hasDuets = result.lines.any((l) => l.oppositeAligned);
-    final t = widget.player.position.inMilliseconds / 1000.0;
+    final mediaT = widget.player.position.inMilliseconds / 1000.0;
+    final t = mediaT + _presentationLead;
     final playing = widget.player.playing;
     final focusIdx = result.lineIndexAt(t);
+    final fontSize = a.fontSize * _pinchScale;
 
-    if (focusIdx >= 0 && playing) {
-      _maybeFollow(focusIdx, playing);
-    } else if (!playing) {
-      _follow = false;
-    }
+    if (focusIdx >= 0 && playing) _maybeFollow(focusIdx, playing);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
-          child: NotificationListener<ScrollNotification>(
-            onNotification: (n) {
-              if (n is ScrollStartNotification && n.dragDetails != null) {
-                _userScrolling = true;
-                _follow = false;
-              } else if (n is ScrollEndNotification) {
-                _userScrolling = false;
-                if (widget.player.playing) {
-                  Future.delayed(const Duration(milliseconds: 1200), () {
-                    if (mounted && widget.player.playing && !_userScrolling) {
-                      setState(() => _follow = true);
-                    }
-                  });
-                }
+          child: GestureDetector(
+            onScaleUpdate: (d) {
+              if (d.pointerCount >= 2) {
+                setState(() {
+                  _pinchScale =
+                      (_pinchScale * d.scale).clamp(0.7, 2.2) / d.scale * d.scale;
+                  // Stable accumulation:
+                  _pinchScale = (a.fontSize * _pinchScale / a.fontSize)
+                      .clamp(0.7, 2.2);
+                });
               }
-              return false;
             },
-            child: ListView.builder(
-              controller: _scroll,
-              padding: const EdgeInsets.symmetric(vertical: 28),
-              itemCount: result.lines.length,
-              itemBuilder: (context, i) {
-                final line = result.lines[i];
-                final isFocus = i == focusIdx;
-                final distance = focusIdx < 0 ? 0 : (i - focusIdx).abs();
-                final lineState = _state(t, line.start, line.end);
-
-                final effectiveState = isFocus && lineState == _SylState.sung
-                    ? (focusIdx < result.lines.length - 1 &&
-                            t < result.lines[focusIdx + 1].start
-                        ? _SylState.active
-                        : lineState)
-                    : (isFocus &&
-                            lineState == _SylState.notSung &&
-                            t >= line.start
-                        ? _SylState.active
-                        : lineState);
-
-                // Interludes only take space while active / nearby
-                if (line.isInterlude) {
-                  final active = line.activeAt(t);
-                  final preHidden =
-                      t > line.end - _Curves.preHiddenDots;
-                  if (!active && distance > 1) {
-                    return const SizedBox.shrink();
+            child: NotificationListener<ScrollNotification>(
+              onNotification: (n) {
+                if (n is ScrollStartNotification && n.dragDetails != null) {
+                  _userScrolling = true;
+                } else if (n is ScrollEndNotification) {
+                  _userScrolling = false;
+                  if (widget.player.playing) {
+                    Future.delayed(const Duration(milliseconds: 1200), () {
+                      if (mounted &&
+                          widget.player.playing &&
+                          !_userScrolling) {
+                        setState(() {});
+                      }
+                    });
                   }
+                }
+                return false;
+              },
+              child: ListView.builder(
+                controller: _scroll,
+                padding: const EdgeInsets.symmetric(vertical: 28),
+                itemCount: result.lines.length,
+                itemBuilder: (context, i) {
+                  final line = result.lines[i];
+                  final isFocus = i == focusIdx;
+                  final distance = focusIdx < 0 ? 0 : (i - focusIdx).abs();
+                  final lineState = _state(t, line.start, line.end);
+
+                  final effectiveState =
+                      isFocus && lineState == _SylState.sung
+                          ? (focusIdx < result.lines.length - 1 &&
+                                  t < result.lines[focusIdx + 1].start
+                              ? _SylState.active
+                              : lineState)
+                          : (isFocus &&
+                                  lineState == _SylState.notSung &&
+                                  t >= line.start
+                              ? _SylState.active
+                              : lineState);
+
+                  if (line.isInterlude) {
+                    final active = line.activeAt(t);
+                    final preHidden = t > line.end - _Curves.preHiddenDots;
+                    if (!active && distance > 1) {
+                      return const SizedBox.shrink();
+                    }
+                    return KeyedSubtree(
+                      key: _keyFor(i),
+                      child: _InterludeDots(
+                        dots: line.interludeDots,
+                        t: t,
+                        active: active && !preHidden,
+                        dt: _lastDt,
+                        simple: a.simpleMode,
+                        glowScale: a.glowScale,
+                      ),
+                    );
+                  }
+
+                  double opacity;
+                  switch (effectiveState) {
+                    case _SylState.notSung:
+                      opacity = _Curves.notSungOpacity;
+                    case _SylState.active:
+                      opacity = _Curves.activeOpacity;
+                    case _SylState.sung:
+                      opacity = _Curves.sungOpacity;
+                  }
+                  // inactiveBrightness scales how dark non-active lines go
+                  opacity = (1 -
+                          (1 - opacity) * (2 - a.inactiveBrightness))
+                      .clamp(0.05, 1.0);
+
+                  final blur = (a.blurEnabled && !isFocus && distance > 0)
+                      ? math.min(
+                            _Curves.blurMultiplier * distance,
+                            _Curves.maxBlur,
+                          ) *
+                          a.blurScale
+                      : 0.0;
+
+                  // Duet / centered insets (cqw ≈ 3.9% of width approximated via font)
+                  final cqw = fontSize * 0.18;
+                  EdgeInsets insets;
+                  if (a.centered) {
+                    insets = EdgeInsets.symmetric(horizontal: cqw * 5);
+                  } else if (hasDuets) {
+                    insets = line.oppositeAligned
+                        ? EdgeInsets.only(left: cqw * 15)
+                        : EdgeInsets.only(right: cqw * 15);
+                  } else {
+                    insets = EdgeInsets.only(right: cqw * 5);
+                  }
+
                   return KeyedSubtree(
                     key: _keyFor(i),
-                    child: _InterludeDots(
-                      dots: line.interludeDots,
-                      t: t,
-                      active: active && !preHidden,
-                      dt: _lastDt,
-                      lineStart: line.start,
-                      lineEnd: line.end,
-                    ),
-                  );
-                }
-
-                double opacity;
-                switch (effectiveState) {
-                  case _SylState.notSung:
-                    opacity = _Curves.notSungOpacity;
-                  case _SylState.active:
-                    opacity = _Curves.activeOpacity;
-                  case _SylState.sung:
-                    opacity = _Curves.sungOpacity;
-                }
-
-                final blur = (!isFocus && distance > 0)
-                    ? math.min(
-                        _Curves.blurMultiplier * distance, _Curves.maxBlur)
-                    : 0.0;
-
-                return KeyedSubtree(
-                  key: _keyFor(i),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      vertical: 6,
-                      horizontal: hasDuets ? 8 : 4,
-                    ),
-                    child: AnimatedOpacity(
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeOut,
-                      opacity: opacity,
-                      child: ImageFiltered(
-                        imageFilter: blur > 0.05
-                            ? ui.ImageFilter.blur(
-                                sigmaX: blur / 2, sigmaY: blur / 2)
-                            : ui.ImageFilter.blur(sigmaX: 0, sigmaY: 0),
-                        child: _LyricLineView(
-                          line: line,
-                          t: t,
-                          dt: _lastDt,
-                          isActiveLine: isFocus &&
-                              effectiveState == _SylState.active,
-                          isPast: effectiveState == _SylState.sung ||
-                              (focusIdx >= 0 && i < focusIdx),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        vertical: 6 * a.lineSpacingScale,
+                      ).add(insets),
+                      child: GestureDetector(
+                        onTap: () => _seekTo(line.start),
+                        onLongPress: () => _copyLine(line.text),
+                        child: AnimatedOpacity(
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeOut,
+                          opacity: opacity,
+                          child: ImageFiltered(
+                            imageFilter: blur > 0.05
+                                ? ui.ImageFilter.blur(
+                                    sigmaX: blur / 2, sigmaY: blur / 2)
+                                : ui.ImageFilter.blur(sigmaX: 0, sigmaY: 0),
+                            child: _LyricLineView(
+                              line: line,
+                              t: t,
+                              dt: _lastDt,
+                              isActiveLine: isFocus &&
+                                  effectiveState == _SylState.active,
+                              isPast: effectiveState == _SylState.sung ||
+                                  (focusIdx >= 0 && i < focusIdx),
+                              fontSize: fontSize,
+                              appearance: a,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
         ),
@@ -356,23 +427,21 @@ class _KaraokeLyricsState extends State<KaraokeLyrics>
   }
 }
 
-// ── Interlude ••• ────────────────────────────────────────────────────────────
-
 class _InterludeDots extends StatefulWidget {
   final List<LyricSyllable> dots;
   final double t;
   final bool active;
   final double dt;
-  final double lineStart;
-  final double lineEnd;
+  final bool simple;
+  final double glowScale;
 
   const _InterludeDots({
     required this.dots,
     required this.t,
     required this.active,
     required this.dt,
-    required this.lineStart,
-    required this.lineEnd,
+    required this.simple,
+    required this.glowScale,
   });
 
   @override
@@ -384,20 +453,10 @@ class _InterludeDotsState extends State<_InterludeDots> {
   double _groupScale = 0;
 
   @override
-  void didUpdateWidget(covariant _InterludeDots old) {
-    super.didUpdateWidget(old);
-    while (_springs.length < widget.dots.length) {
-      _springs.add(GlyphSprings());
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     while (_springs.length < widget.dots.length) {
       _springs.add(GlyphSprings());
     }
-
-    // Group scale: ease in 0.3s when shown
     final targetGroup = widget.active ? 1.0 : 0.0;
     _groupScale += (targetGroup - _groupScale) *
         (1 - math.exp(-widget.dt / (widget.active ? 0.3 : 0.4)));
@@ -423,12 +482,14 @@ class _InterludeDotsState extends State<_InterludeDots> {
                     _SylState.active =>
                       _progress(widget.t, d.start, d.end),
                   };
-                  final (sc, y, gl) = _springs[i].step(
-                    scaleGoal: _Curves.dotScale.at(p),
-                    yGoal: _Curves.dotYOffset.at(p),
-                    glowGoal: _Curves.dotGlow.at(p),
-                    dt: widget.dt,
-                  );
+                  final (sc, y, gl) = widget.simple
+                      ? (1.0, 0.0, 0.0)
+                      : _springs[i].step(
+                          scaleGoal: _Curves.dotScale.at(p),
+                          yGoal: _Curves.dotYOffset.at(p),
+                          glowGoal: _Curves.dotGlow.at(p),
+                          dt: widget.dt,
+                        );
                   final op = _Curves.dotOpacity.at(p);
                   return Transform.translate(
                     offset: Offset(0, -y * 22),
@@ -442,11 +503,11 @@ class _InterludeDotsState extends State<_InterludeDots> {
                             fontSize: 22,
                             fontWeight: FontWeight.w700,
                             color: scheme.foreground.withOpacity(op),
-                            shadows: gl > 0.05
+                            shadows: gl * widget.glowScale > 0.05
                                 ? [
                                     Shadow(
-                                      color: scheme.foreground
-                                          .withOpacity(gl * 0.9),
+                                      color: scheme.foreground.withOpacity(
+                                          gl * 0.9 * widget.glowScale),
                                       blurRadius: (4 + 6 * gl) / 2,
                                     ),
                                   ]
@@ -465,14 +526,14 @@ class _InterludeDotsState extends State<_InterludeDots> {
   }
 }
 
-// ── Line / syllable ──────────────────────────────────────────────────────────
-
 class _LyricLineView extends StatelessWidget {
   final LyricLine line;
   final double t;
   final double dt;
   final bool isActiveLine;
   final bool isPast;
+  final double fontSize;
+  final LyricsAppearance appearance;
 
   const _LyricLineView({
     required this.line,
@@ -480,92 +541,142 @@ class _LyricLineView extends StatelessWidget {
     required this.dt,
     required this.isActiveLine,
     required this.isPast,
+    required this.fontSize,
+    required this.appearance,
   });
 
   @override
   Widget build(BuildContext context) {
-    final align = line.oppositeAligned
-        ? CrossAxisAlignment.end
-        : CrossAxisAlignment.start;
-    final wrapAlign =
-        line.oppositeAligned ? WrapAlignment.end : WrapAlignment.start;
+    final centered = appearance.centered;
+    final align = centered
+        ? CrossAxisAlignment.center
+        : (line.oppositeAligned
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start);
+    final wrapAlign = centered
+        ? WrapAlignment.center
+        : (line.oppositeAligned ? WrapAlignment.end : WrapAlignment.start);
 
+    Widget body;
     if (!line.hasSyllables) {
       final p = isPast
           ? 1.0
           : (isActiveLine ? _progress(t, line.start, line.end) : 0.0);
       final gradient = isPast ? 1.0 : (isActiveLine ? p : -0.2);
-      final glow = isActiveLine ? _Curves.lineGlow.at(p) : 0.0;
+      final glow = appearance.simpleMode
+          ? 0.0
+          : (isActiveLine ? _Curves.lineGlow.at(p) : 0.0) *
+              appearance.glowScale;
       final scale = isActiveLine ? 1.05 : 1.0;
 
-      return AnimatedScale(
+      body = AnimatedScale(
         scale: scale,
         duration: const Duration(milliseconds: 200),
-        alignment: line.oppositeAligned
-            ? Alignment.centerRight
-            : Alignment.centerLeft,
+        alignment: centered
+            ? Alignment.center
+            : (line.oppositeAligned
+                ? Alignment.centerRight
+                : Alignment.centerLeft),
         child: _FilledText(
           text: line.text,
-          fontSize: 22,
-          fontWeight: FontWeight.w700,
+          fontSize: fontSize,
+          fontWeight: appearance.weight,
           gradient: gradient,
-          lit: _Curves.leadLit,
-          unlit: _Curves.leadUnlit,
-          fade: _Curves.fillFade,
+          lit: appearance.simpleMode
+              ? _Curves.simpleLeadLit
+              : _Curves.leadLit,
+          unlit: appearance.simpleMode
+              ? _Curves.simpleLeadUnlit
+              : _Curves.leadUnlit,
+          fade: appearance.simpleMode
+              ? _Curves.simpleFillFade
+              : _Curves.fillFade,
           glow: glow,
           glowKind: _GlowKind.line,
-          textAlign:
-              line.oppositeAligned ? TextAlign.right : TextAlign.left,
+          textAlign: centered
+              ? TextAlign.center
+              : (line.oppositeAligned ? TextAlign.right : TextAlign.left),
         ),
       );
-    }
-
-    final activeSyl = isActiveLine ? line.activeLeadIndex(t) : -1;
-
-    return Column(
-      crossAxisAlignment: align,
-      children: [
-        Wrap(
-          alignment: wrapAlign,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            for (var i = 0; i < line.lead.length; i++)
-              _SyllableGlyph(
-                key: ValueKey('L${line.start}_$i'),
-                syllable: line.lead[i],
-                t: t,
-                dt: dt,
-                forceActive: i == activeSyl && isActiveLine,
-                forcePast: isPast ||
-                    (isActiveLine && activeSyl >= 0 && i < activeSyl),
-                compact: false,
-                nextStart: i + 1 < line.lead.length
-                    ? line.lead[i + 1].start
-                    : null,
-              ),
-          ],
-        ),
-        if (line.background.isNotEmpty) ...[
-          const SizedBox(height: 2),
+    } else {
+      final activeSyl = isActiveLine ? line.activeLeadIndex(t) : -1;
+      body = Column(
+        crossAxisAlignment: align,
+        children: [
           Wrap(
             alignment: wrapAlign,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: fontSize * 0.6 * 0.32, // word gap ≈ 0.32ch
             children: [
-              for (var i = 0; i < line.background.length; i++)
+              for (var i = 0; i < line.lead.length; i++)
                 _SyllableGlyph(
-                  key: ValueKey('B${line.start}_$i'),
-                  syllable: line.background[i],
+                  key: ValueKey('L${line.start}_$i'),
+                  syllable: line.lead[i],
                   t: t,
                   dt: dt,
-                  forceActive: line.background[i].timedAt(t),
-                  forcePast: t >= line.background[i].end,
-                  compact: true,
-                  nextStart: i + 1 < line.background.length
-                      ? line.background[i + 1].start
+                  forceActive: i == activeSyl && isActiveLine,
+                  forcePast: isPast ||
+                      (isActiveLine && activeSyl >= 0 && i < activeSyl),
+                  compact: false,
+                  nextStart: i + 1 < line.lead.length
+                      ? line.lead[i + 1].start
                       : null,
+                  fontSize: fontSize,
+                  appearance: appearance,
                 ),
             ],
           ),
+          if (line.background.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Wrap(
+              alignment: wrapAlign,
+              spacing: fontSize * 0.45 * 0.32,
+              children: [
+                for (var i = 0; i < line.background.length; i++)
+                  _SyllableGlyph(
+                    key: ValueKey('B${line.start}_$i'),
+                    syllable: line.background[i],
+                    t: t,
+                    dt: dt,
+                    forceActive: line.background[i].timedAt(t),
+                    forcePast: t >= line.background[i].end,
+                    compact: true,
+                    nextStart: i + 1 < line.background.length
+                        ? line.background[i + 1].start
+                        : null,
+                    fontSize: fontSize * 0.75,
+                    appearance: appearance,
+                  ),
+              ],
+            ),
+          ],
         ],
+      );
+    }
+
+    final translation = appearance.showTranslations ? line.translatedText : null;
+    return Column(
+      crossAxisAlignment: align,
+      children: [
+        body,
+        if (translation != null && translation.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(
+              translation,
+              textAlign: centered
+                  ? TextAlign.center
+                  : (line.oppositeAligned ? TextAlign.right : TextAlign.left),
+              style: TextStyle(
+                fontSize: fontSize * 0.55 * appearance.translationScale,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context)
+                    .colorScheme
+                    .foreground
+                    .withOpacity(0.55),
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -581,6 +692,8 @@ class _SyllableGlyph extends StatefulWidget {
   final bool forcePast;
   final bool compact;
   final double? nextStart;
+  final double fontSize;
+  final LyricsAppearance appearance;
 
   const _SyllableGlyph({
     super.key,
@@ -591,6 +704,8 @@ class _SyllableGlyph extends StatefulWidget {
     required this.forcePast,
     required this.compact,
     this.nextStart,
+    required this.fontSize,
+    required this.appearance,
   });
 
   @override
@@ -604,6 +719,7 @@ class _SyllableGlyphState extends State<_SyllableGlyph> {
   Widget build(BuildContext context) {
     final syllable = widget.syllable;
     final t = widget.t;
+    final simple = widget.appearance.simpleMode;
     final effectiveEnd = widget.nextStart != null
         ? math.max(syllable.end, widget.nextStart!)
         : syllable.end;
@@ -620,44 +736,72 @@ class _SyllableGlyphState extends State<_SyllableGlyph> {
       _SylState.active => _progress(t, syllable.start, syllable.end),
     };
 
+    final unlitEdge = simple ? -0.5 : -0.2;
     final gradient = switch (st) {
-      _SylState.notSung => -0.2,
+      _SylState.notSung => unlitEdge,
       _SylState.sung => 1.0,
-      _SylState.active => -0.2 + 1.2 * p,
+      _SylState.active => unlitEdge + (simple ? 1.2 : 1.2) * p,
     };
 
-    final scaleGoal = st == _SylState.notSung ? 1.0 : _Curves.scale.at(p);
-    final yGoal = st == _SylState.notSung ? 0.0 : _Curves.yOffset.at(p);
-    final glowGoal = st == _SylState.notSung ? 0.0 : _Curves.glow.at(p);
+    double scaleGoal;
+    double yGoal;
+    double glowGoal;
+    if (simple) {
+      scaleGoal = 1;
+      yGoal = st == _SylState.notSung ? 0 : _Curves.simpleYOffset.at(p);
+      glowGoal = 0;
+    } else {
+      scaleGoal = st == _SylState.notSung ? 1.0 : _Curves.scale.at(p);
+      yGoal = st == _SylState.notSung ? 0.0 : _Curves.yOffset.at(p);
+      glowGoal = st == _SylState.notSung ? 0.0 : _Curves.glow.at(p);
+    }
 
-    final (scale, y, glow) = _springs.step(
+    final (scale, y, glowRaw) = _springs.step(
       scaleGoal: scaleGoal,
       yGoal: yGoal,
       glowGoal: glowGoal,
       dt: widget.dt,
     );
+    final glow = glowRaw * widget.appearance.glowScale;
 
-    final fontSize = widget.compact ? 16.5 : 22.0;
-    final lit = widget.compact ? _Curves.bgLit : _Curves.leadLit;
-    final unlit = widget.compact ? _Curves.bgUnlit : _Curves.leadUnlit;
+    final fontSize = widget.fontSize;
+    final lit = widget.compact
+        ? _Curves.bgLit
+        : (simple ? _Curves.simpleLeadLit : _Curves.leadLit);
+    final unlit = widget.compact
+        ? _Curves.bgUnlit
+        : (simple ? _Curves.simpleLeadUnlit : _Curves.leadUnlit);
+    final fade =
+        simple ? _Curves.simpleFillFade : _Curves.fillFade;
 
+    // Emphasize ≥1s syllables; letters end 250ms early overall
     final emphasize = !widget.compact &&
+        !simple &&
         (syllable.end - syllable.start) >= 1.0 &&
         syllable.text.runes.length > 1 &&
         st == _SylState.active;
 
+    final displayText = widget.appearance.showTransliteration &&
+            syllable.transliteratedText != null &&
+            syllable.transliteratedText!.isNotEmpty
+        ? syllable.transliteratedText!
+        : syllable.text;
     final needsSpace = !syllable.isPartOfWord;
-    final display = needsSpace ? '${syllable.text} ' : syllable.text;
+    final display = needsSpace ? '$displayText ' : displayText;
 
     if (emphasize) {
+      final emphEnd =
+          math.max(syllable.start + 0.05, syllable.end - _Curves.emphasizeEndSub);
       return _EmphasizedWord(
         text: display,
         t: t,
         start: syllable.start,
-        end: syllable.end,
+        end: emphEnd,
         fontSize: fontSize,
         lit: lit,
         unlit: unlit,
+        glowScale: widget.appearance.glowScale,
+        weight: widget.appearance.weight,
       );
     }
 
@@ -668,11 +812,13 @@ class _SyllableGlyphState extends State<_SyllableGlyph> {
         child: _FilledText(
           text: display,
           fontSize: fontSize,
-          fontWeight: widget.compact ? FontWeight.w600 : FontWeight.w700,
+          fontWeight: widget.compact
+              ? FontWeight.w600
+              : widget.appearance.weight,
           gradient: gradient,
           lit: lit,
           unlit: unlit,
-          fade: _Curves.fillFade,
+          fade: fade,
           glow: glow,
           glowKind: _GlowKind.syllable,
         ),
@@ -689,6 +835,8 @@ class _EmphasizedWord extends StatelessWidget {
   final double fontSize;
   final double lit;
   final double unlit;
+  final double glowScale;
+  final FontWeight weight;
 
   const _EmphasizedWord({
     required this.text,
@@ -698,6 +846,8 @@ class _EmphasizedWord extends StatelessWidget {
     required this.fontSize,
     required this.lit,
     required this.unlit,
+    required this.glowScale,
+    required this.weight,
   });
 
   @override
@@ -770,12 +920,12 @@ class _EmphasizedWord extends StatelessWidget {
                 child: _FilledText(
                   text: chars[i],
                   fontSize: fontSize,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: weight,
                   gradient: gradient,
                   lit: lit,
                   unlit: unlit,
                   fade: _Curves.fillFade,
-                  glow: targetGlow,
+                  glow: targetGlow * glowScale,
                   glowKind: _GlowKind.letter,
                 ),
               ),
