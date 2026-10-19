@@ -67,7 +67,6 @@ class LyricLine {
   final bool oppositeAligned;
   final String? plainText;
   final String? translatedText;
-  /// Instrumental gap row (three timed dots), like Sweet Lyrics interludes.
   final bool isInterlude;
   final List<LyricSyllable> interludeDots;
 
@@ -168,6 +167,8 @@ class LyricsResult {
         return 'Apple Music';
       case 'spotify':
         return 'Spotify';
+      case 'lrclib':
+        return 'LRCLIB';
       default:
         return 'Lyrics';
     }
@@ -185,7 +186,8 @@ class LyricsResult {
     if (synced != null && synced!.trim().isNotEmpty) {
       return synced!
           .split('\n')
-          .map((line) => line.replaceFirst(RegExp(r'^\[\d+:\d+[.,]?\d*\]\s*'), ''))
+          .map((line) =>
+              line.replaceFirst(RegExp(r'^\[\d+:\d+[.,]?\d*\]\s*'), ''))
           .where((l) => l.trim().isNotEmpty)
           .join('\n');
     }
@@ -215,10 +217,7 @@ class LyricsService {
   static const String apiKey =
       'sl_sk_169LGcgCR0Jd02kORnaebr1XxJm59eIjb5NpDJ7zgKM';
 
-  /// Gap that earns an interlude (Sweet Lyrics `interludeThreshold`).
   static const interludeThreshold = 3.0;
-
-  /// Dots finish this long before the next line.
   static const interludePadding = 0.55;
 
   LyricsService({http.Client? client}) : _client = client ?? http.Client();
@@ -227,23 +226,109 @@ class LyricsService {
     debugPrint(
         '[Orchid] lyrics: Starting lookup for "${track.title}" by "${track.artist}"');
 
+    LyricsResult? spicy;
     if (track.spotifyTrackId != null && track.spotifyTrackId!.isNotEmpty) {
-      final result = await _fetchBySpotifyTrackId(track.spotifyTrackId!);
-      if (result?.hasAny == true) return result;
+      spicy = await _fetchBySpotifyTrackId(track.spotifyTrackId!);
     } else {
       final itunesTrack = await _resolveViaItunes(track);
       if (itunesTrack?.spotifyTrackId != null &&
           itunesTrack!.spotifyTrackId!.isNotEmpty) {
-        return _fetchBySpotifyTrackId(itunesTrack.spotifyTrackId!);
-      }
-      final spotifyTrack =
-          await _resolveViaSpotifySearch(track.title, track.artist);
-      if (spotifyTrack != null &&
-          (spotifyTrack.spotifyTrackId ?? '').isNotEmpty) {
-        return _fetchBySpotifyTrackId(spotifyTrack.spotifyTrackId!);
+        spicy = await _fetchBySpotifyTrackId(itunesTrack.spotifyTrackId!);
+      } else {
+        final spotifyTrack =
+            await _resolveViaSpotifySearch(track.title, track.artist);
+        if (spotifyTrack != null &&
+            (spotifyTrack.spotifyTrackId ?? '').isNotEmpty) {
+          spicy = await _fetchBySpotifyTrackId(spotifyTrack.spotifyTrackId!);
+        }
       }
     }
-    return null;
+    if (spicy?.hasAny == true) return spicy;
+
+    final lrc = await _fetchLrclib(track);
+    if (lrc?.hasAny == true) return lrc;
+
+    return spicy;
+  }
+
+  /// LRCLIB line-synced LRC fallback (https://lrclib.net).
+  Future<LyricsResult?> _fetchLrclib(TrackResult track) async {
+    try {
+      final uri = Uri.https('lrclib.net', '/api/get', {
+        'artist_name': track.artist,
+        'track_name': track.title,
+        if (track.album != null) 'album_name': track.album!,
+        if (track.duration != null)
+          'duration': '${track.duration}',
+      });
+      final res = await _client.get(
+        uri,
+        headers: {'User-Agent': 'Orchid/0.1 (Flutter music player)'},
+      ).timeout(const Duration(seconds: 15));
+      if (res.statusCode != 200) return null;
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      final synced = data['syncedLyrics'] as String?;
+      final plain = data['plainLyrics'] as String?;
+      if (synced == null || synced.trim().isEmpty) {
+        if (plain == null || plain.trim().isEmpty) return null;
+        return LyricsResult(
+          plain: plain.trim(),
+          hasSync: false,
+          source: 'lrclib',
+          bodyType: 'Static',
+        );
+      }
+      final lines = _parseLrc(synced);
+      final withInterludes = _insertInterludes(lines);
+      return LyricsResult(
+        plain: plain?.trim(),
+        synced: synced,
+        lines: withInterludes,
+        hasSync: withInterludes.isNotEmpty,
+        source: 'lrclib',
+        bodyType: 'Line',
+      );
+    } catch (e) {
+      debugPrint('[Orchid] LRCLIB error: $e');
+      return null;
+    }
+  }
+
+  List<LyricLine> _parseLrc(String lrc) {
+    final re = RegExp(r'\[(\d+):(\d+)(?:[.:](\d+))?\]\s*(.*)');
+    final timed = <(double, String)>[];
+    for (final line in lrc.split('\n')) {
+      final m = re.firstMatch(line.trim());
+      if (m == null) continue;
+      final min = int.parse(m.group(1)!);
+      final sec = int.parse(m.group(2)!);
+      final frac = m.group(3);
+      double fracSec = 0;
+      if (frac != null) {
+        if (frac.length <= 2) {
+          fracSec = int.parse(frac) / 100;
+        } else {
+          fracSec = int.parse(frac) / 1000;
+        }
+      }
+      final t = min * 60 + sec + fracSec;
+      final text = m.group(4)?.trim() ?? '';
+      if (text.isEmpty) continue;
+      timed.add((t, text));
+    }
+    timed.sort((a, b) => a.$1.compareTo(b.$1));
+    final lines = <LyricLine>[];
+    for (var i = 0; i < timed.length; i++) {
+      final start = timed[i].$1;
+      final next = i + 1 < timed.length ? timed[i + 1].$1 : start + 5;
+      final end = next - start > 10 ? start + 6 : next;
+      lines.add(LyricLine(
+        plainText: timed[i].$2,
+        start: start,
+        end: math.max(end, start + 0.1),
+      ));
+    }
+    return lines;
   }
 
   Future<TrackResult?> _resolveViaSpotifySearch(String title, String artist) async {
@@ -462,7 +547,6 @@ class LyricsService {
     return result();
   }
 
-  /// Insert ••• interlude rows for instrumental gaps ≥ [interludeThreshold].
   List<LyricLine> _insertInterludes(List<LyricLine> source) {
     if (source.isEmpty) return source;
     final result = <LyricLine>[];
@@ -501,7 +585,6 @@ class LyricsService {
     );
   }
 
-  /// Three dots timed as Spicy `Syllable.ts` / Sweet Lyrics `dots(from:to:)`.
   List<LyricSyllable> _interludeDots(double start, double end) {
     final total = end - start;
     final third = total / 3;
