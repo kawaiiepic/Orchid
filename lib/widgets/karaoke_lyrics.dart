@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/gestures.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -150,7 +148,7 @@ class _KaraokeLyricsState extends State<KaraokeLyrics> {
                         child: AnimatedOpacity(
                           duration: const Duration(milliseconds: 220),
                           curve: Curves.easeOutCubic,
-                          opacity: isActive ? 1 : (isPast ? 0.66 : 0.46),
+                          opacity: isActive ? 1 : 0.5,
                           child: AnimatedScale(
                             duration: const Duration(milliseconds: 340),
                             curve: Curves.easeOutCubic,
@@ -181,13 +179,11 @@ class _KaraokeLyricsState extends State<KaraokeLyrics> {
 class _LyricLineView extends StatelessWidget {
   final LyricLine line;
   final double t;
-  final bool isActiveLine;
   final bool isPast;
 
   const _LyricLineView({
     required this.line,
     required this.t,
-    required this.isActiveLine,
     required this.isPast,
   });
 
@@ -246,7 +242,6 @@ class _LyricLineView extends StatelessWidget {
                   t: t,
                   isActive: s.activeAt(t),
                   isPast: t >= s.end,
-                  isActiveLine: isActiveLine,
                   compact: true,
                 ),
             ],
