@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/gestures.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -145,11 +147,21 @@ class _KaraokeLyricsState extends State<KaraokeLyrics> {
                           vertical: 8,
                           horizontal: 4,
                         ),
-                        child: _LyricLineView(
-                          line: line,
-                          t: t,
-                          isActiveLine: isActive,
-                          isPast: isPast,
+                        child: AnimatedOpacity(
+                          duration: const Duration(milliseconds: 220),
+                          curve: Curves.easeOutCubic,
+                          opacity: isActive ? 1 : (isPast ? 0.66 : 0.46),
+                          child: AnimatedScale(
+                            duration: const Duration(milliseconds: 340),
+                            curve: Curves.easeOutCubic,
+                            scale: isActive ? 1.015 : 1,
+                            child: _LyricLineView(
+                              line: line,
+                              t: t,
+                              isActiveLine: isActive,
+                              isPast: isPast,
+                            ),
+                          ),
                         ),
                       ),
                     );
@@ -214,6 +226,7 @@ class _LyricLineView extends StatelessWidget {
             for (var i = 0; i < line.lead.length; i++)
               _SyllableChip(
                 syllable: line.lead[i],
+                t: t,
                 isActive: i == activeSyl,
                 isPast: isPast ||
                     (isActiveLine && activeSyl >= 0 && i < activeSyl),
@@ -245,6 +258,7 @@ class _LyricLineView extends StatelessWidget {
 
 class _SyllableChip extends StatelessWidget {
   final LyricSyllable syllable;
+  final double t;
   final bool isActive;
   final bool isPast;
   final bool isActiveLine;
@@ -252,6 +266,7 @@ class _SyllableChip extends StatelessWidget {
 
   const _SyllableChip({
     required this.syllable,
+    required this.t,
     required this.isActive,
     required this.isPast,
     required this.isActiveLine,
@@ -289,16 +304,47 @@ class _SyllableChip extends StatelessWidget {
     }
 
     final needsSpace = !syllable.isPartOfWord;
+    final duration = (syllable.end - syllable.start).clamp(0.001, 60.0);
+    final progress = ((t - syllable.start) / duration).clamp(0.0, 1.0);
+    final lift = isActive && !compact ? math.sin(progress * math.pi) * 1.7 : 0.0;
 
-    return AnimatedDefaultTextStyle(
-      duration: const Duration(milliseconds: 70),
-      style: TextStyle(
-        fontSize: size,
-        fontWeight: weight,
-        color: color,
-        height: 1.25,
+    return Transform.translate(
+      offset: Offset(0, -lift),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        padding: EdgeInsets.symmetric(horizontal: compact ? 1 : 0.6, vertical: compact ? 1 : 2),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(5),
+          boxShadow: isActive && !compact
+              ? [
+                  BoxShadow(
+                    color: scheme.primary.withOpacity(0.18),
+                    blurRadius: 16,
+                    spreadRadius: 0.2,
+                  ),
+                ]
+              : const [],
+        ),
+        child: AnimatedDefaultTextStyle(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          style: TextStyle(
+            fontSize: size,
+            fontWeight: weight,
+            color: color,
+            height: 1.28,
+            letterSpacing: isActive && !compact ? 0.05 : 0,
+            shadows: isActive && !compact
+                ? [
+                    Shadow(color: scheme.primary.withOpacity(0.42), blurRadius: 13),
+                    Shadow(color: scheme.primary.withOpacity(0.18), blurRadius: 24),
+                  ]
+                : const [],
+          ),
+          child: Text(needsSpace ? '${syllable.text} ' : syllable.text),
+        ),
       ),
-      child: Text(needsSpace ? '${syllable.text} ' : syllable.text),
     );
   }
 }
