@@ -2,6 +2,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import '../models/addon.dart';
 import '../services/addon_service.dart';
+import '../services/lyrics_appearance.dart';
 
 class SettingsScreen extends StatefulWidget {
   final AddonService addonService;
@@ -23,9 +24,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _urlController = TextEditingController();
   bool _adding = false;
   String? _status;
+  final _appearance = LyricsAppearance.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _appearance.load().then((_) {
+      if (mounted) setState(() {});
+    });
+    _appearance.addListener(_onAppearance);
+  }
+
+  void _onAppearance() {
+    if (mounted) setState(() {});
+  }
 
   @override
   void dispose() {
+    _appearance.removeListener(_onAppearance);
     _urlController.dispose();
     super.dispose();
   }
@@ -72,11 +88,188 @@ class _SettingsScreenState extends State<SettingsScreen> {
     widget.onAddonsChanged(next);
   }
 
+  Widget _switchTile(String title, String subtitle, bool value,
+      ValueChanged<bool> onChanged) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title),
+                Text(subtitle).xSmall().muted(),
+              ],
+            ),
+          ),
+          Switch(value: value, onChanged: onChanged),
+        ],
+      ),
+    );
+  }
+
+  Widget _sliderTile(
+    String title,
+    double value,
+    double min,
+    double max, {
+    int divisions = 20,
+    String Function(double)? label,
+    required ValueChanged<double> onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(child: Text(title)),
+              Text(label?.call(value) ?? value.toStringAsFixed(2))
+                  .xSmall()
+                  .muted(),
+            ],
+          ),
+          Slider(
+            value: SliderValue.single(value),
+            min: min,
+            max: max,
+            divisions: divisions,
+            onChanged: (v) => onChanged(v.value),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final a = _appearance;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        const Text('Lyrics appearance').large().semiBold(),
+        const SizedBox(height: 8),
+        const Text(
+          'Matches Sweet Lyrics style options: simple mode, size, glow, blur, alignment.',
+        ).small().muted(),
+        const SizedBox(height: 12),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              children: [
+                _switchTile(
+                  'Simple Lyrics Mode',
+                  'Softer fill, no glow, milder motion',
+                  a.simpleMode,
+                  (v) => a.update((x) => x.simpleMode = v),
+                ),
+                _switchTile(
+                  'Centered lyrics',
+                  'Center-align every line',
+                  a.centered,
+                  (v) => a.update((x) => x.centered = v),
+                ),
+                _switchTile(
+                  'Distance blur',
+                  'Blur lines away from the active one',
+                  a.blurEnabled,
+                  (v) => a.update((x) => x.blurEnabled = v),
+                ),
+                _switchTile(
+                  'Show translations',
+                  'Under each line when available',
+                  a.showTranslations,
+                  (v) => a.update((x) => x.showTranslations = v),
+                ),
+                _switchTile(
+                  'Show transliteration',
+                  'Romanized syllables when available',
+                  a.showTransliteration,
+                  (v) => a.update((x) => x.showTransliteration = v),
+                ),
+                _switchTile(
+                  'Skip unsynced tracks',
+                  'Auto-skip when lyrics have no timing',
+                  a.skipUnsynced,
+                  (v) => a.update((x) => x.skipUnsynced = v),
+                ),
+                _switchTile(
+                  'Big artwork mode',
+                  'Prefer large cover + current line in full player',
+                  a.bigArtworkMode,
+                  (v) => a.update((x) => x.bigArtworkMode = v),
+                ),
+                const Divider(),
+                _sliderTile(
+                  'Font size',
+                  a.fontSize,
+                  14,
+                  36,
+                  divisions: 22,
+                  label: (v) => v.round().toString(),
+                  onChanged: (v) => a.update((x) => x.fontSize = v),
+                ),
+                _sliderTile(
+                  'Glow strength',
+                  a.glowScale,
+                  0,
+                  2,
+                  onChanged: (v) => a.update((x) => x.glowScale = v),
+                ),
+                _sliderTile(
+                  'Blur strength',
+                  a.blurScale,
+                  0,
+                  2,
+                  onChanged: (v) => a.update((x) => x.blurScale = v),
+                ),
+                _sliderTile(
+                  'Inactive brightness',
+                  a.inactiveBrightness,
+                  0.5,
+                  1.5,
+                  onChanged: (v) => a.update((x) => x.inactiveBrightness = v),
+                ),
+                _sliderTile(
+                  'Line spacing',
+                  a.lineSpacingScale,
+                  0.5,
+                  2,
+                  onChanged: (v) => a.update((x) => x.lineSpacingScale = v),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      const Expanded(child: Text('Weight')),
+                      ...[0, 1, 2].map((i) {
+                        final labels = ['Medium', 'Semibold', 'Bold'];
+                        final selected = a.weightIndex == i;
+                        return Padding(
+                          padding: const EdgeInsets.only(left: 6),
+                          child: selected
+                              ? PrimaryButton(
+                                  onPressed: () {},
+                                  child: Text(labels[i]).xSmall(),
+                                )
+                              : OutlineButton(
+                                  onPressed: () =>
+                                      a.update((x) => x.weightIndex = i),
+                                  child: Text(labels[i]).xSmall(),
+                                ),
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
         const Text('Sources').large().semiBold(),
         const SizedBox(height: 8),
         const Text(
@@ -99,6 +292,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _builtInRow(
                   'Spicy Lyrics',
                   'Syllable / line sync · attribution required',
+                ),
+                const SizedBox(height: 6),
+                _builtInRow(
+                  'LRCLIB',
+                  'Synced LRC fallback when Spicy has nothing',
                 ),
                 const SizedBox(height: 6),
                 _builtInRow(
