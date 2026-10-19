@@ -179,11 +179,13 @@ class _KaraokeLyricsState extends State<KaraokeLyrics> {
 class _LyricLineView extends StatelessWidget {
   final LyricLine line;
   final double t;
+  final bool isActiveLine;
   final bool isPast;
 
   const _LyricLineView({
     required this.line,
     required this.t,
+    required this.isActiveLine,
     required this.isPast,
   });
 
@@ -226,7 +228,6 @@ class _LyricLineView extends StatelessWidget {
                 isActive: i == activeSyl,
                 isPast: isPast ||
                     (isActiveLine && activeSyl >= 0 && i < activeSyl),
-                isActiveLine: isActiveLine,
                 compact: false,
               ),
           ],
