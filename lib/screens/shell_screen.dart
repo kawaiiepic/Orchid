@@ -3,6 +3,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import '../models/addon.dart';
 import '../services/addon_service.dart';
+import '../services/lyrics_appearance.dart';
 import '../services/player_service.dart';
 import '../widgets/mini_player_bar.dart';
 import 'search_screen.dart';
@@ -31,6 +32,7 @@ class _ShellScreenState extends State<ShellScreen> {
   @override
   void initState() {
     super.initState();
+    LyricsAppearance.instance.load();
     _loadAddons();
     _player = PlayerService(addonService: _addonService);
   }
@@ -39,6 +41,7 @@ class _ShellScreenState extends State<ShellScreen> {
     try {
       final addons = await _addonService.load();
       setState(() => _addons = addons);
+      _player.setAddons(addons);
     } catch (e) {
       debugPrint('Error loading addons: $e');
     }
@@ -60,37 +63,63 @@ class _ShellScreenState extends State<ShellScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final pageIndex = (selected as ValueKey<int>?)?.value ?? 0;
+    // 0 Search/Home · last tab Settings for now
+    final pages = [
+      SearchScreen(
+        addonService: _addonService,
+        player: _player,
+        addons: _addons,
+      ),
+      SearchScreen(
+        addonService: _addonService,
+        player: _player,
+        addons: _addons,
+      ),
+      SearchScreen(
+        addonService: _addonService,
+        player: _player,
+        addons: _addons,
+      ),
+      SearchScreen(
+        addonService: _addonService,
+        player: _player,
+        addons: _addons,
+      ),
+      SettingsScreen(
+        addonService: _addonService,
+        addons: _addons,
+        onAddonsChanged: (installed) {
+          setState(() => _addons = installed);
+          _player.setAddons(installed);
+        },
+      ),
+    ];
+
     return Scaffold(
       footers: [
         MiniPlayerBar(player: _player),
         const Divider(),
         NavigationBar(
-            alignment: alignment,
-            labelType: labelType,
-            expanded: expanded,
-            onSelected: (key) {
-              setState(() {
-                selected = key;
-              });
-            },
-            selectedKey: selected,
-            children: [
-              buildButton('Home', BootstrapIcons.house, const ValueKey(0)),
-              buildButton('Explore', BootstrapIcons.compass, const ValueKey(1)),
-              buildButton(
-                'Library',
-                BootstrapIcons.musicNoteList,
-                const ValueKey(2),
-              ),
-              buildButton('Profile', BootstrapIcons.person, const ValueKey(3)),
-              buildButton(
-                'App',
-                BootstrapIcons.appIndicator,
-                const ValueKey(4),
-              ),
-            ])
+          alignment: alignment,
+          labelType: labelType,
+          expanded: expanded,
+          onSelected: (key) => setState(() => selected = key),
+          selectedKey: selected,
+          children: [
+            buildButton('Home', BootstrapIcons.house, const ValueKey(0)),
+            buildButton('Explore', BootstrapIcons.compass, const ValueKey(1)),
+            buildButton(
+              'Library',
+              BootstrapIcons.musicNoteList,
+              const ValueKey(2),
+            ),
+            buildButton('Profile', BootstrapIcons.person, const ValueKey(3)),
+            buildButton('App', BootstrapIcons.gear, const ValueKey(4)),
+          ],
+        ),
       ],
-      child: [SearchScreen(addonService: _addonService, player: _player, addons: _addons,), SettingsScreen(addonService: _addonService, addons: _addons, onAddonsChanged: (installedAddons) {}) ][(selected as ValueKey<int>).value],
+      child: pages[pageIndex.clamp(0, pages.length - 1)],
     );
   }
 }
