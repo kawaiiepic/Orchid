@@ -1,5 +1,4 @@
 import 'package:flutter/scheduler.dart';
-import 'package:just_audio/just_audio.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -96,8 +95,6 @@ class FloatingLyricsController extends ChangeNotifier {
   }
 
   void showFrom(BuildContext context) {
-    final player = _player;
-    if (player == null) return;
     enabled = true;
     SharedPreferences.getInstance().then((p) {
       p.setBool('lyrics.floatingEnabled', true);
@@ -148,7 +145,9 @@ class _FloatingLyricsBubbleState extends State<_FloatingLyricsBubble>
 
   String _currentLine(LyricsResult? lyrics, double t) {
     if (lyrics == null || lyrics.lines.isEmpty) {
-      return lyrics?.displayText.split('\n').firstOrNull ?? 'No lyrics';
+      final plain = lyrics?.displayText ?? '';
+      if (plain.isEmpty) return 'No lyrics';
+      return plain.split('\n').first;
     }
     final i = lyrics.lineIndexAt(t);
     if (i < 0) return lyrics.lines.first.text;
@@ -189,95 +188,91 @@ class _FloatingLyricsBubbleState extends State<_FloatingLyricsBubble>
           });
         },
         onPanEnd: (_) => widget.onOffset(_pos),
-        child: Material(
-          color: Colors.transparent,
-          child: Container(
-            width: 268,
-            padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
-            decoration: BoxDecoration(
-              color: scheme.card.withOpacity(0.92),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: scheme.border),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.35),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        track?.title ?? '',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ).xSmall().muted(),
-                    ),
-                    IconButton(
-                      variance: ButtonVariance.ghost,
-                      onPressed: widget.onClose,
-                      icon: const Icon(LucideIcons.x, size: 16),
-                    ),
-                  ],
-                ),
-                Text(
-                  line,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: scheme.foreground,
-                    height: 1.25,
+        child: Container(
+          width: 268,
+          padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+          decoration: BoxDecoration(
+            color: scheme.card.withOpacity(0.94),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: scheme.border),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF000000).withOpacity(0.35),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      track?.title ?? '',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ).xSmall().muted(),
                   ),
-                ),
-                if (next.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    next,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: scheme.mutedForeground,
-                    ),
+                  IconButton(
+                    variance: ButtonVariance.ghost,
+                    onPressed: widget.onClose,
+                    icon: const Icon(LucideIcons.x, size: 16),
                   ),
                 ],
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      variance: ButtonVariance.ghost,
-                      onPressed: () => player.playPrevious(),
-                      icon: const Icon(LucideIcons.skipBack, size: 16),
-                    ),
-                    IconButton(
-                      variance: ButtonVariance.ghost,
-                      onPressed: () => player.togglePlayPause(),
-                      icon: Icon(
-                        player.player.playing
-                            ? LucideIcons.pause
-                            : LucideIcons.play,
-                        size: 18,
-                      ),
-                    ),
-                    IconButton(
-                      variance: ButtonVariance.ghost,
-                      onPressed:
-                          player.hasNext ? () => player.playNext() : null,
-                      icon: const Icon(LucideIcons.skipForward, size: 16),
-                    ),
-                  ],
+              ),
+              Text(
+                line,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: scheme.foreground,
+                  height: 1.25,
+                ),
+              ),
+              if (next.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  next,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: scheme.mutedForeground,
+                  ),
                 ),
               ],
-            ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    variance: ButtonVariance.ghost,
+                    onPressed: () => player.playPrevious(),
+                    icon: const Icon(LucideIcons.skipBack, size: 16),
+                  ),
+                  IconButton(
+                    variance: ButtonVariance.ghost,
+                    onPressed: () => player.togglePlayPause(),
+                    icon: Icon(
+                      player.player.playing
+                          ? LucideIcons.pause
+                          : LucideIcons.play,
+                      size: 18,
+                    ),
+                  ),
+                  IconButton(
+                    variance: ButtonVariance.ghost,
+                    onPressed: player.hasNext ? () => player.playNext() : null,
+                    icon: const Icon(LucideIcons.skipForward, size: 16),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
