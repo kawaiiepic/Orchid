@@ -4,30 +4,72 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../models/addon.dart';
 import '../services/player_service.dart';
 
+/// Opens the queue / history panel. Uses a custom route so we don't depend on
+/// Material's [showModalBottomSheet] (not exported by shadcn_flutter).
 Future<void> showQueueSheet(BuildContext context, PlayerService player) {
-  return showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    builder: (ctx) {
-      return ListenableBuilder(
-        listenable: player,
-        builder: (context, _) {
-          final scheme = Theme.of(context).colorScheme;
-          final queue = player.queue;
-          final history = player.history;
-          final idx = player.queueIndex;
+  return Navigator.of(context).push<void>(
+    PageRouteBuilder<void>(
+      opaque: false,
+      barrierDismissible: true,
+      barrierColor: const Color(0x88000000),
+      transitionDuration: const Duration(milliseconds: 280),
+      reverseTransitionDuration: const Duration(milliseconds: 220),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return Align(
+          alignment: Alignment.bottomCenter,
+          child: _QueueSheetPanel(player: player),
+        );
+      },
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 1),
+            end: Offset.zero,
+          ).animate(curved),
+          child: child,
+        );
+      },
+    ),
+  );
+}
 
-          return Container(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.sizeOf(context).height * 0.72,
-            ),
+class _QueueSheetPanel extends StatelessWidget {
+  final PlayerService player;
+
+  const _QueueSheetPanel({required this.player});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: player,
+      builder: (context, _) {
+        final scheme = Theme.of(context).colorScheme;
+        final queue = player.queue;
+        final history = player.history;
+        final idx = player.queueIndex;
+        final maxH = MediaQuery.sizeOf(context).height * 0.72;
+
+        return Material(
+          color: Colors.transparent,
+          child: Container(
+            width: double.infinity,
+            constraints: BoxConstraints(maxHeight: maxH),
             decoration: BoxDecoration(
               color: scheme.card,
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(16)),
+              border: Border(
+                top: BorderSide(color: scheme.border),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 const SizedBox(height: 10),
                 Center(
@@ -41,18 +83,24 @@ Future<void> showQueueSheet(BuildContext context, PlayerService player) {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                  padding: const EdgeInsets.fromLTRB(16, 14, 8, 8),
                   child: Row(
                     children: [
                       const Text('Queue').large().semiBold(),
                       const Spacer(),
                       Text('${queue.length} tracks').xSmall().muted(),
+                      IconButton(
+                        variance: ButtonVariance.ghost,
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(LucideIcons.x, size: 18),
+                      ),
                     ],
                   ),
                 ),
-                Expanded(
+                Flexible(
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(8, 0, 8, 24),
+                    shrinkWrap: true,
                     children: [
                       if (history.isNotEmpty) ...[
                         Padding(
@@ -63,7 +111,10 @@ Future<void> showQueueSheet(BuildContext context, PlayerService player) {
                           (t) => _TrackTile(
                             track: t,
                             subtitle: 'History',
-                            onTap: () => player.playTrack(t),
+                            onTap: () {
+                              player.playTrack(t);
+                              Navigator.of(context).pop();
+                            },
                           ),
                         ),
                         const Divider(),
@@ -87,10 +138,10 @@ Future<void> showQueueSheet(BuildContext context, PlayerService player) {
                                 ? 'Now playing'
                                 : (i < idx ? 'Played' : 'Up next'),
                             highlighted: isCurrent,
-                            onTap: () => player.playTrack(
-                              t,
-                              fromQueue: queue,
-                            ),
+                            onTap: () {
+                              player.playTrack(t, fromQueue: queue);
+                              Navigator.of(context).pop();
+                            },
                           );
                         }),
                     ],
@@ -98,11 +149,11 @@ Future<void> showQueueSheet(BuildContext context, PlayerService player) {
                 ),
               ],
             ),
-          );
-        },
-      );
-    },
-  );
+          ),
+        );
+      },
+    );
+  }
 }
 
 class _TrackTile extends StatelessWidget {
@@ -121,11 +172,11 @@ class _TrackTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Button(
-      variance: ButtonVariance.ghost,
-      onPressed: onTap,
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
         child: Row(
           children: [
             if (track.artworkUrl != null)
