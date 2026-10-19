@@ -1,12 +1,10 @@
-import 'dart:ui' as ui;
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 /// Soft album-art wash behind the player.
 ///
-/// Intentionally static and downscaled — animated multi-layer blurs were too
-/// expensive (full-res ImageFiltered every frame).
+/// No [ImageFiltered] / runtime blur — those were laggy and could trip
+/// painting asserts when layout sizes were not finite yet.
 class LiquidArtworkBackground extends StatelessWidget {
   final String? imageUrl;
   final Widget child;
@@ -16,49 +14,46 @@ class LiquidArtworkBackground extends StatelessWidget {
     super.key,
     required this.imageUrl,
     required this.child,
-    this.intensity = 0.45,
+    this.intensity = 0.35,
   });
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final url = imageUrl;
+    final op = intensity.clamp(0.12, 0.55);
 
     return Stack(
       fit: StackFit.expand,
       children: [
         ColoredBox(color: scheme.background),
         if (url != null)
-          // One small decoded image + one blur pass, cached by Flutter.
           Positioned.fill(
             child: Opacity(
-              opacity: intensity.clamp(0.15, 0.7),
-              child: ImageFiltered(
-                imageFilter: ui.ImageFilter.blur(sigmaX: 36, sigmaY: 36),
-                child: Transform.scale(
-                  scale: 1.2,
-                  child: CachedNetworkImage(
-                    imageUrl: url,
-                    fit: BoxFit.cover,
-                    // Decode tiny — blur hides detail and cuts GPU cost.
-                    memCacheWidth: 96,
-                    memCacheHeight: 96,
-                    fadeInDuration: Duration.zero,
-                    errorWidget: (_, __, ___) => const SizedBox.shrink(),
-                  ),
+              opacity: op,
+              child: Transform.scale(
+                scale: 1.15,
+                child: CachedNetworkImage(
+                  imageUrl: url,
+                  fit: BoxFit.cover,
+                  memCacheWidth: 128,
+                  memCacheHeight: 128,
+                  fadeInDuration: Duration.zero,
+                  errorWidget: (_, __, ___) => const SizedBox.shrink(),
                 ),
               ),
             ),
           ),
+        // Scrim for readable foreground text.
         DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                scheme.background.withOpacity(0.4),
-                scheme.background.withOpacity(0.62),
-                scheme.background.withOpacity(0.82),
+                scheme.background.withValues(alpha: 0.45),
+                scheme.background.withValues(alpha: 0.65),
+                scheme.background.withValues(alpha: 0.88),
               ],
             ),
           ),
