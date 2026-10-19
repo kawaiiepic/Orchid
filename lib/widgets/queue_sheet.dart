@@ -4,43 +4,30 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../models/addon.dart';
 import '../services/player_service.dart';
 
-/// Opens the queue / history panel without Material widgets.
-Future<void> showQueueSheet(BuildContext context, PlayerService player) {
-  return Navigator.of(context).push<void>(
-    PageRouteBuilder<void>(
-      opaque: false,
-      barrierDismissible: true,
-      barrierColor: const Color(0x88000000),
-      transitionDuration: const Duration(milliseconds: 280),
-      reverseTransitionDuration: const Duration(milliseconds: 220),
-      pageBuilder: (context, animation, secondaryAnimation) {
-        return Align(
-          alignment: Alignment.bottomCenter,
-          child: _QueueSheetPanel(player: player),
-        );
-      },
-      transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        final curved = CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeOutCubic,
-          reverseCurve: Curves.easeInCubic,
-        );
-        return SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(0, 1),
-            end: Offset.zero,
-          ).animate(curved),
-          child: child,
-        );
-      },
+const Symbol _queueDrawerAnchor = #orchidQueueDrawer;
+
+/// Opens the queue / history panel as a shadcn drawer overlay.
+void showQueueSheet(BuildContext context, PlayerService player) {
+  showOverlay(
+    context,
+    DrawerConfiguration(
+      anchor: const LinkedAnchor(_queueDrawerAnchor),
+      expands: true,
+      position: OverlayPosition.end,
     ),
+    builder: (context) {
+      return OverlayAnchor(
+        anchor: _queueDrawerAnchor,
+        child: _QueueDrawerBody(player: player),
+      );
+    },
   );
 }
 
-class _QueueSheetPanel extends StatelessWidget {
+class _QueueDrawerBody extends StatelessWidget {
   final PlayerService player;
 
-  const _QueueSheetPanel({required this.player});
+  const _QueueDrawerBody({required this.player});
 
   @override
   Widget build(BuildContext context) {
@@ -51,36 +38,15 @@ class _QueueSheetPanel extends StatelessWidget {
         final queue = player.queue;
         final history = player.history;
         final idx = player.queueIndex;
-        final maxH = MediaQuery.sizeOf(context).height * 0.72;
 
         return Container(
-          width: double.infinity,
-          constraints: BoxConstraints(maxHeight: maxH),
-          decoration: BoxDecoration(
-            color: scheme.card,
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(16)),
-            border: Border(
-              top: BorderSide(color: scheme.border),
-            ),
-          ),
+          width: 340,
+          color: scheme.card,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(height: 10),
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: scheme.border,
-                    borderRadius: BorderRadius.circular(99),
-                  ),
-                ),
-              ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 8, 8),
+                padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
                 child: Row(
                   children: [
                     const Text('Queue').large().semiBold(),
@@ -88,20 +54,20 @@ class _QueueSheetPanel extends StatelessWidget {
                     Text('${queue.length} tracks').xSmall().muted(),
                     IconButton(
                       variance: ButtonVariance.ghost,
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: () => closeOverlay(context),
                       icon: const Icon(LucideIcons.x, size: 18),
                     ),
                   ],
                 ),
               ),
-              Flexible(
+              const Divider(),
+              Expanded(
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 24),
-                  shrinkWrap: true,
+                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 24),
                   children: [
                     if (history.isNotEmpty) ...[
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
+                        padding: const EdgeInsets.fromLTRB(8, 4, 8, 6),
                         child: Text('Recently played').small().muted(),
                       ),
                       ...history.reversed.map(
@@ -110,7 +76,7 @@ class _QueueSheetPanel extends StatelessWidget {
                           subtitle: 'History',
                           onTap: () {
                             player.playTrack(t);
-                            Navigator.of(context).pop();
+                            closeOverlay(context);
                           },
                         ),
                       ),
@@ -137,7 +103,7 @@ class _QueueSheetPanel extends StatelessWidget {
                           highlighted: isCurrent,
                           onTap: () {
                             player.playTrack(t, fromQueue: queue);
-                            Navigator.of(context).pop();
+                            closeOverlay(context);
                           },
                         );
                       }),
