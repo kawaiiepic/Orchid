@@ -335,23 +335,31 @@ class _KaraokeLyricsState extends State<KaraokeLyrics> with SingleTickerProvider
                   insets = EdgeInsets.only(right: cqw * 5);
                 }
 
+                // The detector wraps the padding (not the other way round) and
+                // is opaque, so the whole row (gaps between words, the space
+                // beside short lines, the space between lines) is one click
+                // target, and the cursor shows it.
                 return KeyedSubtree(
                   key: _keyFor(i),
                   child: RepaintBoundary(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 6 * a.lineSpacingScale).add(insets),
+                    child: MouseRegion(
+                      cursor: SystemMouseCursors.click,
                       child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
                         onTap: () => _seekTo(line.start),
                         onLongPress: () => _shareOrCopyLine(line.text),
-                        child: Opacity(
-                          opacity: opacity,
-                          child: _maybeBlur(
-                            blur,
-                            _LyricLineView(
-                              line: line, t: t, dt: _lastDt,
-                              isActiveLine: isFocus && effectiveState == _SylState.active,
-                              isPast: effectiveState == _SylState.sung || (focusIdx >= 0 && i < focusIdx),
-                              fontSize: fontSize, appearance: a,
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 6 * a.lineSpacingScale).add(insets),
+                          child: Opacity(
+                            opacity: opacity,
+                            child: _maybeBlur(
+                              blur,
+                              _LyricLineView(
+                                line: line, t: t, dt: _lastDt,
+                                isActiveLine: isFocus && effectiveState == _SylState.active,
+                                isPast: effectiveState == _SylState.sung || (focusIdx >= 0 && i < focusIdx),
+                                fontSize: fontSize, appearance: a,
+                              ),
                             ),
                           ),
                         ),
@@ -454,6 +462,23 @@ class _LyricLineView extends StatelessWidget {
   final LyricsAppearance appearance;
   const _LyricLineView({required this.line, required this.t, required this.dt, required this.isActiveLine, required this.isPast, required this.fontSize, required this.appearance});
 
+  /// Groups syllable indices into words. A syllable with `isPartOfWord` set
+  /// continues into the next one; the word ends at the first syllable without
+  /// it (that one also carries the trailing space).
+  static List<List<int>> _wordGroups(List<LyricSyllable> syls) {
+    final groups = <List<int>>[];
+    var current = <int>[];
+    for (var i = 0; i < syls.length; i++) {
+      current.add(i);
+      if (!syls[i].isPartOfWord) {
+        groups.add(current);
+        current = <int>[];
+      }
+    }
+    if (current.isNotEmpty) groups.add(current);
+    return groups;
+  }
+
   @override
   Widget build(BuildContext context) {
     final centered = appearance.centered;
@@ -482,32 +507,41 @@ class _LyricLineView extends StatelessWidget {
       );
     } else {
       final activeSyl = isActiveLine ? line.activeLeadIndex(t) : -1;
+      // Spacing between words comes from the trailing space on each word's
+      // last syllable, so the Wrap adds none of its own and syllables of one
+      // word are kept together in a Row (no gap, no mid-word line break).
       body = Column(crossAxisAlignment: align, children: [
-        Wrap(alignment: wrapAlign, crossAxisAlignment: WrapCrossAlignment.center, spacing: fontSize * 0.6 * 0.32, children: [
-          for (var i = 0; i < line.lead.length; i++)
-            _SyllableGlyph(
-              key: ValueKey('L${line.start}_$i'),
-              syllable: line.lead[i], t: t, dt: dt,
-              forceActive: i == activeSyl && isActiveLine,
-              forcePast: isPast || (isActiveLine && activeSyl >= 0 && i < activeSyl),
-              compact: false,
-              nextStart: i + 1 < line.lead.length ? line.lead[i + 1].start : null,
-              fontSize: fontSize, appearance: appearance,
-            ),
+        Wrap(alignment: wrapAlign, crossAxisAlignment: WrapCrossAlignment.center, spacing: 0, children: [
+          for (final group in _wordGroups(line.lead))
+            Row(mainAxisSize: MainAxisSize.min, children: [
+              for (final i in group)
+                _SyllableGlyph(
+                  key: ValueKey('L${line.start}_$i'),
+                  syllable: line.lead[i], t: t, dt: dt,
+                  forceActive: i == activeSyl && isActiveLine,
+                  forcePast: isPast || (isActiveLine && activeSyl >= 0 && i < activeSyl),
+                  compact: false,
+                  nextStart: i + 1 < line.lead.length ? line.lead[i + 1].start : null,
+                  fontSize: fontSize, appearance: appearance,
+                ),
+            ]),
         ]),
         if (line.background.isNotEmpty) ...[
           const SizedBox(height: 2),
-          Wrap(alignment: wrapAlign, spacing: fontSize * 0.45 * 0.32, children: [
-            for (var i = 0; i < line.background.length; i++)
-              _SyllableGlyph(
-                key: ValueKey('B${line.start}_$i'),
-                syllable: line.background[i], t: t, dt: dt,
-                forceActive: line.background[i].timedAt(t),
-                forcePast: t >= line.background[i].end,
-                compact: true,
-                nextStart: i + 1 < line.background.length ? line.background[i + 1].start : null,
-                fontSize: fontSize * 0.75, appearance: appearance,
-              ),
+          Wrap(alignment: wrapAlign, spacing: 0, children: [
+            for (final group in _wordGroups(line.background))
+              Row(mainAxisSize: MainAxisSize.min, children: [
+                for (final i in group)
+                  _SyllableGlyph(
+                    key: ValueKey('B${line.start}_$i'),
+                    syllable: line.background[i], t: t, dt: dt,
+                    forceActive: line.background[i].timedAt(t),
+                    forcePast: t >= line.background[i].end,
+                    compact: true,
+                    nextStart: i + 1 < line.background.length ? line.background[i + 1].start : null,
+                    fontSize: fontSize * 0.75, appearance: appearance,
+                  ),
+              ]),
           ]),
         ],
       ]);
