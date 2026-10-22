@@ -118,6 +118,21 @@ _SylState _state(double t, double start, double end) {
   return _SylState.active;
 }
 
+double _safe01(double v, [double fallback = 1.0]) {
+  if (!v.isFinite) return fallback;
+  return v.clamp(0.0, 1.0);
+}
+
+double _safeScale(double v, [double fallback = 1.0]) {
+  if (!v.isFinite) return fallback;
+  return v.clamp(0.5, 2.5);
+}
+
+double _safeOffset(double v) {
+  if (!v.isFinite) return 0.0;
+  return v.clamp(-40.0, 40.0);
+}
+
 class KaraokeLyrics extends StatefulWidget {
   final AudioPlayer player;
   final LyricsResult? lyrics;
@@ -215,11 +230,9 @@ class _KaraokeLyricsState extends State<KaraokeLyrics> with SingleTickerProvider
   }
 
   Widget _maybeBlur(double blur, Widget child) {
-    if (blur <= 0.05) return child;
-    return ImageFiltered(
-      imageFilter: ui.ImageFilter.blur(sigmaX: blur * 0.35, sigmaY: blur * 0.35),
-      child: child,
-    );
+    // Distance blur disabled: ImageFiltered on every ListView row + 60fps ticker
+    // was spamming painting asserts and killing frame times on full-screen lyrics.
+    return child;
   }
 
   @override
@@ -302,7 +315,9 @@ class _KaraokeLyricsState extends State<KaraokeLyrics> with SingleTickerProvider
                   case _SylState.active: opacity = _Curves.activeOpacity;
                   case _SylState.sung: opacity = _Curves.sungOpacity;
                 }
-                opacity = (1 - (1 - opacity) * (2 - a.inactiveBrightness)).clamp(0.05, 1.0);
+                final bright = a.inactiveBrightness.isFinite ? a.inactiveBrightness : 1.0;
+                opacity = _safe01(1 - (1 - opacity) * (2 - bright), 0.5);
+                if (opacity < 0.05) opacity = 0.05;
 
                 final blur = (a.blurEnabled && !isFocus && distance > 1)
                     ? math.min(_Curves.blurMultiplier * (distance - 1), _Curves.maxBlur) * a.blurScale
@@ -376,12 +391,14 @@ class _InterludeDotsState extends State<_InterludeDots> {
       _springs.add(GlyphSprings());
     }
     final targetGroup = widget.active ? 1.0 : 0.0;
-    _groupScale += (targetGroup - _groupScale) * (1 - math.exp(-widget.dt / (widget.active ? 0.3 : 0.4)));
+    final dt = widget.dt.isFinite && widget.dt > 0 ? widget.dt.clamp(0.0, 0.05) : 1 / 60;
+    _groupScale += (targetGroup - _groupScale) * (1 - math.exp(-dt / (widget.active ? 0.3 : 0.4)));
+    if (!_groupScale.isFinite) _groupScale = targetGroup;
     final scheme = Theme.of(context).colorScheme;
     return Opacity(
-      opacity: _groupScale.clamp(0.0, 1.0),
+      opacity: _safe01(_groupScale, 0.0),
       child: Transform.scale(
-        scale: 0.85 + 0.15 * _groupScale,
+        scale: _safeScale(0.85 + 0.15 * (_groupScale.isFinite ? _groupScale : 0)),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 12),
           child: Row(
@@ -398,19 +415,19 @@ class _InterludeDotsState extends State<_InterludeDots> {
                   };
                   final (sc, y, gl) = widget.simple
                       ? (1.0, 0.0, 0.0)
-                      : _springs[i].step(scaleGoal: _Curves.dotScale.at(p), yGoal: _Curves.dotYOffset.at(p), glowGoal: _Curves.dotGlow.at(p), dt: widget.dt);
+                      : _springs[i].step(scaleGoal: _Curves.dotScale.at(p), yGoal: _Curves.dotYOffset.at(p), glowGoal: _Curves.dotGlow.at(p), dt: dt);
                   final op = _Curves.dotOpacity.at(p);
                   return Transform.translate(
-                    offset: Offset(0, -y * 22),
+                    offset: Offset(0, _safeOffset(-y * 22)),
                     child: Transform.scale(
-                      scale: sc,
+                      scale: _safeScale(sc),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 6),
                         child: Text('•', style: TextStyle(
                           fontSize: 22, fontWeight: FontWeight.w700,
-                          color: scheme.foreground.withValues(alpha: op),
-                          shadows: gl * widget.glowScale > 0.05
-                              ? [Shadow(color: scheme.foreground.withValues(alpha: gl * 0.9 * widget.glowScale), blurRadius: (4 + 6 * gl) / 2)]
+                          color: scheme.foreground.withOpacity(_safe01(op, 0.5)),
+                          shadows: (gl.isFinite && widget.glowScale.isFinite && gl * widget.glowScale > 0.05)
+                              ? [Shadow(color: scheme.foreground.withOpacity(_safe01(gl * 0.9 * widget.glowScale, 0)), blurRadius: ((4 + 6 * gl) / 2).clamp(0.0, 24.0))]
                               : null,
                         )),
                       ),
@@ -555,9 +572,10 @@ class _SyllableGlyphState extends State<_SyllableGlyph> {
       yGoal = st == _SylState.notSung ? 0.0 : _Curves.yOffset.at(p);
       glowGoal = st == _SylState.notSung ? 0.0 : _Curves.glow.at(p);
     }
-    final (scale, y, glowRaw) = _springs.step(scaleGoal: scaleGoal, yGoal: yGoal, glowGoal: glowGoal, dt: widget.dt);
-    final glow = glowRaw * widget.appearance.glowScale;
-    final fontSize = widget.fontSize;
+    final dt = widget.dt.isFinite && widget.dt > 0 ? widget.dt.clamp(0.0, 0.05) : 1 / 60;
+    final (scale, y, glowRaw) = _springs.step(scaleGoal: scaleGoal, yGoal: yGoal, glowGoal: glowGoal, dt: dt);
+    final glow = glowRaw * (widget.appearance.glowScale.isFinite ? widget.appearance.glowScale : 1.0);
+    final fontSize = widget.fontSize.isFinite && widget.fontSize > 0 ? widget.fontSize : 18.0;
     final lit = widget.compact ? _Curves.bgLit : (simple ? _Curves.simpleLeadLit : _Curves.leadLit);
     final unlit = widget.compact ? _Curves.bgUnlit : (simple ? _Curves.simpleLeadUnlit : _Curves.leadUnlit);
     final fade = simple ? _Curves.simpleFillFade : _Curves.fillFade;
@@ -570,9 +588,9 @@ class _SyllableGlyphState extends State<_SyllableGlyph> {
       return _EmphasizedWord(text: display, t: t, start: syllable.start, end: emphEnd, fontSize: fontSize, lit: lit, unlit: unlit, glowScale: widget.appearance.glowScale, weight: widget.appearance.weight);
     }
     return Transform.translate(
-      offset: Offset(0, -y * fontSize),
+      offset: Offset(0, _safeOffset(-y * fontSize)),
       child: Transform.scale(
-        scale: scale, filterQuality: FilterQuality.medium,
+        scale: _safeScale(scale), filterQuality: FilterQuality.medium,
         child: _FilledText(text: display, fontSize: fontSize, fontWeight: widget.compact ? FontWeight.w600 : widget.appearance.weight, gradient: gradient, lit: lit, unlit: unlit, fade: fade, glow: glow, glowKind: _GlowKind.syllable),
       ),
     );
@@ -627,9 +645,9 @@ class _EmphasizedWord extends StatelessWidget {
             gradient = st == _SylState.sung ? 1.0 : -0.2;
           }
           return Transform.translate(
-            offset: Offset(0, -targetY * fontSize),
+            offset: Offset(0, _safeOffset(-targetY * fontSize)),
             child: Transform.scale(
-              scale: targetScale, filterQuality: FilterQuality.medium,
+              scale: _safeScale(targetScale), filterQuality: FilterQuality.medium,
               child: _FilledText(text: chars[i], fontSize: fontSize, fontWeight: weight, gradient: gradient, lit: lit, unlit: unlit, fade: _Curves.fillFade, glow: targetGlow * glowScale, glowKind: _GlowKind.letter),
             ),
           );
@@ -643,22 +661,45 @@ class _FilledText extends StatelessWidget {
   const _FilledText({required this.text, required this.fontSize, required this.fontWeight, required this.gradient, required this.lit, required this.unlit, required this.fade, required this.glow, required this.glowKind, this.textAlign = TextAlign.left});
   double _glowRadius() => switch (glowKind) { _GlowKind.syllable => (4 + 2 * glow) / 2, _GlowKind.letter => (4 + 12 * glow) / 2, _GlowKind.line => (4 + 8 * glow) / 2 };
   double _glowOpacity() {
+    if (!glow.isFinite) return 0.0;
     final v = switch (glowKind) { _GlowKind.syllable => glow * 0.35, _GlowKind.letter => glow * 1.85, _GlowKind.line => glow * 0.5 };
-    return v.clamp(0.0, 1.0);
+    return _safe01(v, 0.0);
   }
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final fillPos = gradient.clamp(-0.5, 1.2);
-    final begin = Alignment(fillPos * 2 - 1, 0);
-    final end = Alignment((fillPos + fade) * 2 - 1, 0);
-    final gOpacity = _glowOpacity();
+    final g = gradient.isFinite ? gradient : 0.0;
+    final f = fade.isFinite ? fade : 0.2;
+    final fillPos = g.clamp(-0.5, 1.2);
+    final beginX = (fillPos * 2 - 1).clamp(-2.0, 2.0);
+    final endX = ((fillPos + f) * 2 - 1).clamp(-2.0, 2.0);
+    final begin = Alignment(beginX, 0);
+    final end = Alignment(endX, 0);
+    final gOpacity = _safe01(_glowOpacity(), 0);
+    final litA = _safe01(lit, 0.85);
+    final unlitA = _safe01(unlit, 0.4);
+    final fs = fontSize.isFinite && fontSize > 0 ? fontSize : 18.0;
+    final radius = _glowRadius();
     return ShaderMask(
       blendMode: BlendMode.srcIn,
-      shaderCallback: (bounds) => LinearGradient(begin: begin, end: end, colors: [scheme.foreground.withValues(alpha: lit), scheme.foreground.withValues(alpha: unlit)]).createShader(bounds),
+      shaderCallback: (bounds) {
+        if (!bounds.isFinite) {
+          return LinearGradient(colors: [scheme.foreground, scheme.foreground]).createShader(const Rect.fromLTWH(0, 0, 1, 1));
+        }
+        return LinearGradient(
+          begin: begin,
+          end: end,
+          colors: [
+            scheme.foreground.withOpacity(litA),
+            scheme.foreground.withOpacity(unlitA),
+          ],
+        ).createShader(bounds);
+      },
       child: Text(text, textAlign: textAlign, style: TextStyle(
-        fontSize: fontSize, fontWeight: fontWeight, color: scheme.foreground, height: 1.25,
-        shadows: gOpacity > 0.004 ? [Shadow(color: scheme.foreground.withValues(alpha: gOpacity), blurRadius: _glowRadius())] : const [],
+        fontSize: fs, fontWeight: fontWeight, color: scheme.foreground, height: 1.25,
+        shadows: gOpacity > 0.004
+            ? [Shadow(color: scheme.foreground.withOpacity(gOpacity), blurRadius: radius.clamp(0.0, 32.0))]
+            : const [],
       )),
     );
   }

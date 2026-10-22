@@ -22,6 +22,7 @@ class LyricsSpring {
         velocity = 0;
 
   void setGoal(double g, {bool replacePosition = false}) {
+    if (!g.isFinite) return;
     goal = g;
     if (replacePosition) {
       position = g;
@@ -30,17 +31,27 @@ class LyricsSpring {
   }
 
   bool get canSleep {
+    if (!position.isFinite || !velocity.isFinite) return true;
     if (velocity * velocity > _sleepVelocitySq) return false;
     final o = position - goal;
     return o * o <= _sleepOffsetSq;
   }
 
+  static double _safe(double v, double fallback) =>
+      v.isFinite ? v : fallback;
+
   double step(double dt) {
+    if (!dt.isFinite || dt <= 0) return position;
+    dt = dt.clamp(0.0, 0.05);
+
     final d = dampingRatio;
     final f = frequency * 2 * math.pi;
     final g = goal;
     var p = position;
     var v = velocity;
+
+    if (!p.isFinite) p = g;
+    if (!v.isFinite) v = 0;
 
     if (d == 1) {
       final q = math.exp(-f * dt);
@@ -53,7 +64,7 @@ class LyricsSpring {
       v = v * c2 - o * c3;
     } else if (d < 1) {
       final q = math.exp(-d * f * dt);
-      final c = math.sqrt(1 - d * d);
+      final c = math.sqrt(math.max(0.0, 1 - d * d));
       final i = math.cos(dt * f * c);
       final j = math.sin(dt * f * c);
       final z = c > _eps
@@ -76,17 +87,21 @@ class LyricsSpring {
       p = (o * (i + z * d) + v * y) * q + g;
       v = (v * (i - z * d) - o * (z * f)) * q;
     } else {
-      final c = math.sqrt(d * d - 1);
+      final c = math.sqrt(math.max(0.0, d * d - 1));
       final r1 = -f * (d + c);
       final r2 = -f * (d - c);
       final ec1 = math.exp(r1 * dt);
       final ec2 = math.exp(r2 * dt);
       final o = p - g;
-      final co2 = (v - o * r1) / (2 * f * c);
+      final den = 2 * f * c;
+      final co2 = den.abs() > _eps ? (v - o * r1) / den : 0.0;
       final co1 = ec1 * (o - co2);
       p = co1 + co2 * ec2 + g;
       v = co1 * r1 + co2 * ec2 * r2;
     }
+
+    p = _safe(p, g);
+    v = _safe(v, 0);
 
     if (_canSleepAfter(p, v, g)) {
       p = g;
@@ -128,7 +143,14 @@ class GlyphSprings {
     scale.setGoal(scaleGoal, replacePosition: snap);
     yOffset.setGoal(yGoal, replacePosition: snap);
     glow.setGoal(glowGoal, replacePosition: snap);
-    return (scale.step(dt), yOffset.step(dt), glow.step(dt));
+    final s = scale.step(dt);
+    final y = yOffset.step(dt);
+    final g = glow.step(dt);
+    return (
+      s.isFinite ? s.clamp(0.5, 2.0) : 1.0,
+      y.isFinite ? y.clamp(-1.0, 1.0) : 0.0,
+      g.isFinite ? g.clamp(0.0, 2.0) : 0.0,
+    );
   }
 
   bool get isSettled => scale.canSleep && yOffset.canSleep && glow.canSleep;
