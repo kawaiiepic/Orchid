@@ -10,11 +10,11 @@ class OrchidApp extends StatelessWidget {
     return const ShadcnApp(
       title: 'Orchid',
       debugShowCheckedModeBanner: false,
-      theme: const ThemeData(
+      theme: ThemeData(
         colorScheme: ColorSchemes.darkZinc,
         radius: 0.6,
       ),
-      home: const ShellScreen(),
+      home: ShellScreen(),
     );
   }
 }

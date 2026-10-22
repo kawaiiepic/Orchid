@@ -10,8 +10,8 @@ const Symbol _queueDrawerAnchor = #orchidQueueDrawer;
 void showQueueSheet(BuildContext context, PlayerService player) {
   showOverlay(
     context,
-    DrawerConfiguration(
-      anchor: const LinkedAnchor(_queueDrawerAnchor),
+    const DrawerConfiguration(
+      anchor: LinkedAnchor(_queueDrawerAnchor),
       expands: true,
       position: OverlayPosition.end,
     ),
@@ -68,7 +68,7 @@ class _QueueDrawerBody extends StatelessWidget {
                     if (history.isNotEmpty) ...[
                       Padding(
                         padding: const EdgeInsets.fromLTRB(8, 4, 8, 6),
-                        child: Text('Recently played').small().muted(),
+                        child: const Text('Recently played').small().muted(),
                       ),
                       ...history.reversed.map(
                         (t) => _TrackTile(
@@ -84,12 +84,12 @@ class _QueueDrawerBody extends StatelessWidget {
                     ],
                     Padding(
                       padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
-                      child: Text('Up next').small().muted(),
+                      child: const Text('Up next').small().muted(),
                     ),
                     if (queue.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Text('Queue is empty').muted(),
+                       Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: const Text('Queue is empty').muted(),
                       )
                     else
                       ...List.generate(queue.length, (i) {

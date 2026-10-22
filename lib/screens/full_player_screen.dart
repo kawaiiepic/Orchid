@@ -112,7 +112,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
             final line = _currentLine(widget.player.lyrics, t);
             if (line == null) {
               if (widget.player.lyricsLoading) {
-                return Text('Loading lyrics…').small().muted();
+                return const Text('Loading lyrics…').small().muted();
               }
               return const SizedBox(height: 20);
             }
@@ -294,7 +294,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                           icon: Icon(
                             _showLyrics
                                 ? LucideIcons.image
-                                : LucideIcons.mic2,
+                                : LucideIcons.mic,
                           ),
                         ),
                       ),

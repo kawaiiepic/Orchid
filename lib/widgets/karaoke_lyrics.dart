@@ -24,7 +24,9 @@ class _Spline {
   double at(double x) {
     if (xs.length <= 1) return ys.isEmpty ? 0 : ys.first;
     var i = 1;
-    while (i < xs.length - 1 && xs[i] < x) i++;
+    while (i < xs.length - 1 && xs[i] < x) {
+      i++;
+    }
     final x0 = xs[i - 1], x1 = xs[i];
     final y0 = ys[i - 1], y1 = ys[i];
     final h = x1 - x0;
@@ -63,7 +65,9 @@ class _Spline {
     }
     final k = List.filled(n, 0.0);
     k[n - 1] = r[n - 1] / b[n - 1];
-    for (var i = n - 2; i >= 0; i--) k[i] = (r[i] - c[i] * k[i + 1]) / b[i];
+    for (var i = n - 2; i >= 0; i--) {
+      k[i] = (r[i] - c[i] * k[i + 1]) / b[i];
+    }
     return k;
   }
 }
@@ -251,8 +255,9 @@ class _KaraokeLyricsState extends State<KaraokeLyrics> with SingleTickerProvider
           },
           child: NotificationListener<ScrollNotification>(
             onNotification: (n) {
-              if (n is ScrollStartNotification && n.dragDetails != null) _userScrolling = true;
-              else if (n is ScrollEndNotification) _userScrolling = false;
+              if (n is ScrollStartNotification && n.dragDetails != null) {
+                _userScrolling = true;
+              } else if (n is ScrollEndNotification) _userScrolling = false;
               return false;
             },
             child: ListView.builder(
@@ -367,7 +372,9 @@ class _InterludeDotsState extends State<_InterludeDots> {
   double _groupScale = 0;
   @override
   Widget build(BuildContext context) {
-    while (_springs.length < widget.dots.length) _springs.add(GlyphSprings());
+    while (_springs.length < widget.dots.length) {
+      _springs.add(GlyphSprings());
+    }
     final targetGroup = widget.active ? 1.0 : 0.0;
     _groupScale += (targetGroup - _groupScale) * (1 - math.exp(-widget.dt / (widget.active ? 0.3 : 0.4)));
     final scheme = Theme.of(context).colorScheme;
@@ -401,9 +408,9 @@ class _InterludeDotsState extends State<_InterludeDots> {
                         padding: const EdgeInsets.symmetric(horizontal: 6),
                         child: Text('•', style: TextStyle(
                           fontSize: 22, fontWeight: FontWeight.w700,
-                          color: scheme.foreground.withOpacity(op),
+                          color: scheme.foreground.withValues(alpha: op),
                           shadows: gl * widget.glowScale > 0.05
-                              ? [Shadow(color: scheme.foreground.withOpacity(gl * 0.9 * widget.glowScale), blurRadius: (4 + 6 * gl) / 2)]
+                              ? [Shadow(color: scheme.foreground.withValues(alpha: gl * 0.9 * widget.glowScale), blurRadius: (4 + 6 * gl) / 2)]
                               : null,
                         )),
                       ),
@@ -498,7 +505,7 @@ class _LyricLineView extends StatelessWidget {
           child: Text(translation,
             textAlign: centered ? TextAlign.center : (line.oppositeAligned ? TextAlign.right : TextAlign.left),
             style: TextStyle(fontSize: fontSize * 0.55 * appearance.translationScale, fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.foreground.withOpacity(0.55)),
+              color: Theme.of(context).colorScheme.foreground.withValues(alpha: 0.55)),
           ),
         ),
     ]);
@@ -612,8 +619,9 @@ class _EmphasizedWord extends StatelessWidget {
             targetScale = restScale + (baseScale - restScale) * falloff;
             targetY = restY + (baseY - restY) * falloff;
             targetGlow = restGlow + (baseGlow - restGlow) * glowFalloff;
-            if (st == _SylState.active && i == activeLetter) gradient = -0.2 + 1.2 * math.sin(activeP * math.pi / 2);
-            else if (st == _SylState.sung) gradient = 1;
+            if (st == _SylState.active && i == activeLetter) {
+              gradient = -0.2 + 1.2 * math.sin(activeP * math.pi / 2);
+            } else if (st == _SylState.sung) gradient = 1;
             else gradient = -0.2;
           } else {
             gradient = st == _SylState.sung ? 1.0 : -0.2;
@@ -647,10 +655,10 @@ class _FilledText extends StatelessWidget {
     final gOpacity = _glowOpacity();
     return ShaderMask(
       blendMode: BlendMode.srcIn,
-      shaderCallback: (bounds) => LinearGradient(begin: begin, end: end, colors: [scheme.foreground.withOpacity(lit), scheme.foreground.withOpacity(unlit)]).createShader(bounds),
+      shaderCallback: (bounds) => LinearGradient(begin: begin, end: end, colors: [scheme.foreground.withValues(alpha: lit), scheme.foreground.withValues(alpha: unlit)]).createShader(bounds),
       child: Text(text, textAlign: textAlign, style: TextStyle(
         fontSize: fontSize, fontWeight: fontWeight, color: scheme.foreground, height: 1.25,
-        shadows: gOpacity > 0.004 ? [Shadow(color: scheme.foreground.withOpacity(gOpacity), blurRadius: _glowRadius())] : const [],
+        shadows: gOpacity > 0.004 ? [Shadow(color: scheme.foreground.withValues(alpha: gOpacity), blurRadius: _glowRadius())] : const [],
       )),
     );
   }
