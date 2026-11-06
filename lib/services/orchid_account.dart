@@ -22,6 +22,8 @@ class OrchidAccount extends ChangeNotifier {
  bool loading=true;
  bool _verified=false;
  bool connecting=false;
+ /// Increments after a listen is persisted in Petal's D1 history.
+ final ValueNotifier<int> listeningRevision=ValueNotifier<int>(0);
  String? restoreError;
  bool get hasStoredSession=>_token!=null;
  bool get signedIn=>_token!=null && _verified;
@@ -202,6 +204,7 @@ class OrchidAccount extends ChangeNotifier {
     if(songId!=null)'songId':songId,
     if(duration!=null)'duration':duration,
   });
+  listeningRevision.value++;
  }
  Future<Map<String,dynamic>> lastfmHome() async {
   if(!signedIn||!lastfmConnected)throw StateError('Connect Last.fm first');
@@ -269,4 +272,10 @@ class OrchidAccount extends ChangeNotifier {
   try{await _request('POST','/orchid/lastfm/scrobble',{'artist':artist,'track':title,'timestamp':timestamp,if(album!=null)'album':album,if(duration!=null)'duration':duration});}
   catch(e){debugPrint('[Orchid] Last.fm scrobble: $e');}
  }
+ @override
+ void dispose() {
+  listeningRevision.dispose();
+  super.dispose();
+ }
+
 }
