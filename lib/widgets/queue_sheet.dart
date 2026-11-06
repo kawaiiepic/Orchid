@@ -64,7 +64,7 @@ class _QueueDrawerBody extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
                 child: Row(
                   children: [
-                    const Icon(LucideIcons.radio, size: 18),
+                    const Icon(LucideIcons.audioLines, size: 18),
                     const SizedBox(width: 10),
                     Expanded(child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
