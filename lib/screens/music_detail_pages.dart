@@ -8,6 +8,7 @@ import '../services/player_service.dart';
 import '../widgets/mini_player_bar.dart';
 import 'song_detail_screen.dart';
 import '../widgets/orchid_style.dart';
+import '../widgets/artist_artwork.dart';
 
 void openArtistPage(BuildContext context, {
   required String artist,
@@ -161,9 +162,11 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
             const SizedBox(height: 20),
             Align(
               alignment: Alignment.centerLeft,
-              child: _cover(context,
-                widget.artwork ?? (catalog?.albums.isNotEmpty == true
-                    ? catalog!.albums.first.artwork : null), size: 160),
+              child: ArtistArtwork(
+                artist: widget.artist,
+                size: 160,
+                radius: 18,
+              ),
             ),
             const SizedBox(height: 28),
             if (snapshot.connectionState != ConnectionState.done)
