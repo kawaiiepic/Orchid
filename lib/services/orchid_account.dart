@@ -228,6 +228,7 @@ class OrchidAccount extends ChangeNotifier {
     if(artwork!=null)'artwork':artwork,
     if(songId!=null)'songId':songId,
     if(duration!=null)'duration':duration,
+    if(genres!=null && genres.isNotEmpty)'genres':genres,
   });
   listeningRevision.value++;
  }
