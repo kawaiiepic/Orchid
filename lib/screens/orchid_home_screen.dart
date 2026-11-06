@@ -22,7 +22,7 @@ class OrchidHomeScreen extends StatefulWidget {
   final VoidCallback openExplore;
   final VoidCallback openLibrary;
   final ValueChanged<int?> openDailyMixes;
-  final VoidCallback openReply;
+  final VoidCallback openReplay;
   final VoidCallback openProfile;
 
   const OrchidHomeScreen({
@@ -35,7 +35,7 @@ class OrchidHomeScreen extends StatefulWidget {
     required this.openExplore,
     required this.openLibrary,
     required this.openDailyMixes,
-    required this.openReply,
+    required this.openReplay,
     required this.openProfile,
   });
 
@@ -311,7 +311,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
   );
 
   Widget _madeForYouCard() => _clickable(
-    onTap:widget.openReply,
+    onTap:widget.openReplay,
     child:Container(
       width:168,height:245,padding:const EdgeInsets.all(12),
       decoration:OrchidStyle.panelDecoration(radius:18),
@@ -332,7 +332,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
           ]),
         ),
         const SizedBox(height:10),
-        const Text('Reply').semiBold(),
+        const Text('Replay').semiBold(),
         const SizedBox(height:4),
         const Text('Your listening story').small().muted(),
       ]),
