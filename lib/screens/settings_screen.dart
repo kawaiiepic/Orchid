@@ -1,4 +1,6 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:flutter/cupertino.dart' as ios;
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
 import '../models/addon.dart';
 import '../services/addon_service.dart';
@@ -107,7 +109,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
           ),
-          Switch(value: value, onChanged: onChanged),
+          if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)
+            ios.CupertinoSwitch(
+              value: value,
+              activeTrackColor: const Color(0xFF9369BE),
+              onChanged: onChanged,
+            )
+          else Switch(value: value, onChanged: onChanged),
         ],
       ),
     );
@@ -135,7 +143,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   .muted(),
             ],
           ),
-          Slider(
+          if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)
+            ios.CupertinoSlider(
+              value: value.clamp(min, max),
+              min: min,
+              max: max,
+              divisions: divisions,
+              activeColor: const Color(0xFFC8A2FF),
+              onChanged: onChanged,
+            )
+          else Slider(
             value: SliderValue.single(value),
             min: min,
             max: max,
