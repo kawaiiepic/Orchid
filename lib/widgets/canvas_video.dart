@@ -13,7 +13,10 @@ import '../services/hls_variant_service.dart';
 class CanvasVideo extends StatefulWidget {
   final String url;
   final String? fallbackArtworkUrl;
-  const CanvasVideo({super.key, required this.url, this.fallbackArtworkUrl});
+  final VoidCallback? onFailure;
+  const CanvasVideo({
+    super.key, required this.url, this.fallbackArtworkUrl, this.onFailure,
+  });
 
   @override
   State<CanvasVideo> createState() => _CanvasVideoState();
@@ -27,6 +30,15 @@ class _CanvasVideoState extends State<CanvasVideo> {
   bool _ready = false;
   bool _failed = false;
   int _generation = 0;
+  bool _failureReported = false;
+
+  void _reportFailure() {
+    if (_failureReported) return;
+    _failureReported = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onFailure?.call();
+    });
+  }
 
   @override
   void initState() {
@@ -40,6 +52,7 @@ class _CanvasVideoState extends State<CanvasVideo> {
         _failed = true;
         _ready = false;
       });
+      _reportFailure();
       unawaited(_video.stop());
     });
     _playingSubscription = _video.stream.playing.listen((playing) {
@@ -52,6 +65,7 @@ class _CanvasVideoState extends State<CanvasVideo> {
 
   Future<void> _start() async {
     final generation = ++_generation;
+    _failureReported = false;
     if (mounted) {
       setState(() {
         _ready = false;
@@ -78,6 +92,7 @@ class _CanvasVideoState extends State<CanvasVideo> {
           _failed = true;
           _ready = false;
         });
+        _reportFailure();
       }
     }
   }
