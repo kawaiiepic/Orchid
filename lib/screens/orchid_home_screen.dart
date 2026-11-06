@@ -22,7 +22,7 @@ class OrchidHomeScreen extends StatefulWidget {
   final OrchidAccount account;
   final VoidCallback openExplore;
   final VoidCallback openLibrary;
-  final ValueChanged<int> openDailyMixes;
+  final ValueChanged<int?> openDailyMixes;
   final VoidCallback openProfile;
 
   const OrchidHomeScreen({
@@ -558,7 +558,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                 runSpacing: 10,
                 children: [
                   PrimaryButton(
-                    onPressed: widget.openDailyMixes,
+                    onPressed: () => widget.openDailyMixes(null),
                     child: const Text('Explore Daily Mixes'),
                   ),
                   OutlineButton(
