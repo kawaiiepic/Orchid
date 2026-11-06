@@ -6,6 +6,8 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import '../services/lyrics_service.dart';
 import '../services/player_service.dart';
+import '../services/canvas_service.dart';
+import '../widgets/canvas_video.dart';
 
 class FullPlayerScreen extends StatefulWidget {
   final PlayerService player;
@@ -17,7 +19,92 @@ class FullPlayerScreen extends StatefulWidget {
 }
 
 class _FullPlayerScreen extends State<FullPlayerScreen> {
-  bool _showLyrics = true;
+  // 0 = lyrics, 1 = album cover, 2 = Canvas video.
+  int _viewMode = 0;
+  String? _canvasUrl;
+  bool _canvasLoading = false;
+  String? _canvasTrackKey;
+  int _canvasRequest = 0;
+  final _canvas = CanvasService.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.player.addListener(_onTrackChanged);
+    _canvas.addListener(_onCanvasSettingsChanged);
+    _canvas.load().then((_) {
+      if (mounted) _onTrackChanged();
+    });
+    _onTrackChanged();
+  }
+
+  void _onCanvasSettingsChanged() {
+    _canvasTrackKey = null;
+    _onTrackChanged();
+  }
+
+  void _onTrackChanged() {
+    final track = widget.player.current;
+    final id = track?.spotifyTrackId ??
+        (track?.sourceId == 'spotify-addon' ? track?.id : null);
+    final key = '${_canvas.endpoint}|${id ?? ''}';
+    if (key == _canvasTrackKey) return;
+    _canvasTrackKey = key;
+    final request = ++_canvasRequest;
+    if (mounted) {
+      setState(() {
+        _canvasUrl = null;
+        _canvasLoading = id != null && _canvas.endpoint.isNotEmpty;
+      });
+    }
+    if (id == null || _canvas.endpoint.isEmpty) return;
+    _canvas.fetch(id).then((url) {
+      if (!mounted || request != _canvasRequest) return;
+      setState(() {
+        _canvasUrl = url;
+        _canvasLoading = false;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    ++_canvasRequest;
+    widget.player.removeListener(_onTrackChanged);
+    _canvas.removeListener(_onCanvasSettingsChanged);
+    super.dispose();
+  }
+
+  Widget _canvasBody(ColorScheme scheme) {
+    if (_canvasUrl == null) {
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _artworkBody(scheme),
+          const SizedBox(height: 12),
+          Text(_canvasLoading
+              ? 'Finding Canvas…'
+              : _canvas.endpoint.isEmpty
+                  ? 'Configure Canvas API in Settings'
+                  : 'Canvas unavailable for this song').small().muted(),
+        ],
+      );
+    }
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 380),
+        child: AspectRatio(
+          aspectRatio: 9 / 16,
+          child: CanvasVideo(key: ValueKey(_canvasUrl), url: _canvasUrl!),
+        ),
+      ),
+    );
+  }
+
+  void _nextView() {
+    setState(() => _viewMode = (_viewMode + 1) % 3);
+  }
+
 
   String _fmt(Duration d) {
     final m = d.inMinutes.remainder(60).toString().padLeft(1, '0');
@@ -204,9 +291,11 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: _showLyrics
+                      child: _viewMode == 0
                           ? _lyricsBody()
-                          : _artworkBody(scheme),
+                          : _viewMode == 1
+                              ? _artworkBody(scheme)
+                              : _canvasBody(scheme),
                     ),
                   ),
 
@@ -304,12 +393,14 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                         child: IconButton(
                           variance: ButtonVariance.ghost,
                           onPressed: () {
-                            setState(() => _showLyrics = !_showLyrics);
+                            _nextView();
                           },
                           icon: Icon(
-                            _showLyrics
+                            _viewMode == 0
                                 ? LucideIcons.image
-                                : LucideIcons.mic,
+                                : _viewMode == 1
+                                    ? LucideIcons.film
+                                    : LucideIcons.mic,
                           ),
                         ),
                       ),
