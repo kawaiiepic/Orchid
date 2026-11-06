@@ -2,11 +2,13 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../models/addon.dart';
 import '../services/addon_service.dart';
 import '../services/player_service.dart';
+import '../services/music_library.dart';
 import '../widgets/mini_player_bar.dart';
 
 /// Native song page. Last.fm records are metadata, not direct audio streams.
 class SongDetailScreen extends StatefulWidget {
  final PlayerService player;
+ final MusicLibrary? library;
  final AddonService addonService;
  final List<InstalledAddon> addons;
  final String title,artist;
@@ -14,7 +16,7 @@ class SongDetailScreen extends StatefulWidget {
  final DateTime? listenedAt;
  final bool nowPlaying;
  final TrackResult? track;
- const SongDetailScreen({super.key,required this.player,required this.addonService,
+ const SongDetailScreen({super.key,required this.player,this.library,required this.addonService,
   required this.addons,required this.title,required this.artist,this.album,
   this.artworkUrl,this.listenedAt,this.nowPlaying=false,this.track});
  @override State<SongDetailScreen> createState()=>_SongDetailScreenState();
@@ -56,6 +58,47 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
   if(matches.isEmpty)await find();
   if(mounted&&matches.isNotEmpty)await play(matches.first);
  }
+ SavedSong get savedSong => SavedSong(widget.title,widget.artist,
+    album:widget.album,artwork:widget.artworkUrl);
+
+ Widget _libraryActions() {
+  final library=widget.library;
+  if(library==null)return const SizedBox.shrink();
+  final song=savedSong;
+  return ListenableBuilder(listenable:library,builder:(context,_)=>Column(
+   children:[
+    Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+     OutlineButton(
+      onPressed:()=>library.toggleFavorite(song),
+      child:Row(mainAxisSize:MainAxisSize.min,children:[
+       Icon(library.isFavorite(song)?LucideIcons.heartHandshake:LucideIcons.heart,size:16),
+       const SizedBox(width:8),
+       Text(library.isFavorite(song)?'Favorited':'Add to Favorites'),
+      ]),
+     ),
+    ]),
+    const SizedBox(height:12),
+    if(library.playlists.isNotEmpty)...[
+     const Align(alignment:Alignment.centerLeft,
+       child:Text('Add to playlist').semiBold()),
+     const SizedBox(height:8),
+     ...library.playlists.map((playlist)=>Padding(
+      padding:const EdgeInsets.symmetric(vertical:3),
+      child:OutlineButton(
+       onPressed:()=>library.contains(playlist,song)
+         ?library.removeFromPlaylist(playlist,song)
+         :library.addToPlaylist(playlist,song),
+       child:Row(children:[
+        Expanded(child:Text(playlist.name)),
+        Icon(library.contains(playlist,song)?LucideIcons.check:LucideIcons.plus,size:16),
+       ]),
+      ),
+     )),
+    ]else const Text('Create playlists in Library to save this song.').small().muted(),
+   ],
+  ));
+ }
+
  Widget artwork(){
   final url=widget.artworkUrl??widget.track?.artworkUrl;
   if(url==null||!url.startsWith('https://')){
@@ -89,6 +132,8 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
      'Listened: ${widget.listenedAt!.toLocal()}').small().muted()),
    ],
    const SizedBox(height:24),
+   _libraryActions(),
+   const SizedBox(height:20),
    PrimaryButton(onPressed:busy?null:playFirst,
     child:Text(searching?'Finding sources…':playing?'Starting playback…':'Play')),
    const SizedBox(height:8),
