@@ -159,6 +159,7 @@ class _ShellScreenState extends State<ShellScreen>{
       player:_player,addonService:_addonService,addons:_addons,account:_account,
       openExplore:()=>setState(()=>selected=const ValueKey(1)),
       openProfile:()=>setState(()=>selected=const ValueKey(3)),
+      openLibrary:()=>setState(()=>selected=const ValueKey(2)),
       library:_library,
      ),
      SearchScreen(addonService:_addonService,player:_player,addons:_addons,library:_library),
