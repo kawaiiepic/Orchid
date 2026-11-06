@@ -536,6 +536,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
               ),
               ),
               ),
+              ),
             ],
           ),
         );
