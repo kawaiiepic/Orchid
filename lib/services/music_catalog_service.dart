@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/addon.dart';
@@ -72,7 +71,9 @@ class MusicCatalogService {
 
   MusicAlbum? _album(Map<String, dynamic> item) {
     if (item['wrapperType'] != 'collection' ||
-        item['collectionType'] != 'Album') return null;
+        item['collectionType'] != 'Album') {
+      return null;
+    }
     final id = item['collectionId'];
     if (id is! num) return null;
     return MusicAlbum(
