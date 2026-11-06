@@ -256,7 +256,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
       onTap:()=>_showMusicDetail(item,isAlbum:isAlbum),
       child:SizedBox(
         width:156,
-        height:232,
+        height:252,
         child:Padding(
           padding:const EdgeInsets.all(10),
           child:Column(
