@@ -207,22 +207,60 @@ class _SearchScreenState extends State<SearchScreen> {
     ),
   );
 
-  Widget _albumTile(MusicAlbum album) => _tile(
-    artwork:_art(album.artwork),
-    title:album.title, subtitle:'${album.artist} · Album',
-    onTap:()=>openAlbumPage(context,
-      artist:album.artist, album:album.title, artwork:album.artwork,
-      collectionId:album.id, player:widget.player,
-      addonService:widget.addonService, addons:widget.addons,
-      library:widget.library),
+  void _openAlbum(MusicAlbum album) => openAlbumPage(context,
+    artist:album.artist, album:album.title, artwork:album.artwork,
+    collectionId:album.id, player:widget.player,
+    addonService:widget.addonService, addons:widget.addons,
+    library:widget.library);
+
+  Widget _albumTile(MusicAlbum album) => GestureDetector(
+    behavior:HitTestBehavior.opaque,
+    onTap:()=>_openAlbum(album),
+    child:Column(
+      crossAxisAlignment:CrossAxisAlignment.start,
+      children:[
+        AspectRatio(
+          aspectRatio:1,
+          child:LayoutBuilder(builder:(context,constraints) =>
+            AppleCover(
+              artist:album.artist,
+              name:album.title,
+              isAlbum:true,
+              fallbackUrl:album.artwork,
+              size:constraints.maxWidth,
+              radius:13,
+            ),
+          ),
+        ),
+        const SizedBox(height:8),
+        Text(album.title,maxLines:1,overflow:TextOverflow.ellipsis).semiBold(),
+        Text(album.artist,maxLines:1,overflow:TextOverflow.ellipsis).small().muted(),
+      ],
+    ),
   );
 
-  Widget _artistTile(String artist) => _tile(
-    artwork:ArtistArtwork(artist:artist,size:50,radius:8),
-    title:artist, subtitle:'Artist',
+  Widget _artistTile(String artist) => GestureDetector(
+    behavior:HitTestBehavior.opaque,
     onTap:()=>openArtistPage(context,artist:artist,
       player:widget.player,addonService:widget.addonService,
       addons:widget.addons,library:widget.library),
+    child:Container(
+      padding:const EdgeInsets.all(16),
+      decoration:OrchidStyle.panelDecoration(radius:18),
+      child:Row(children:[
+        ArtistArtwork(artist:artist,size:112,radius:18),
+        const SizedBox(width:18),
+        Expanded(child:Column(
+          crossAxisAlignment:CrossAxisAlignment.start,
+          children:[
+            const Text('TOP ARTIST').xSmall().muted(),
+            const SizedBox(height:9),
+            Text(artist,maxLines:2,overflow:TextOverflow.ellipsis).xLarge().semiBold(),
+          ],
+        )),
+        const Icon(LucideIcons.chevronRight),
+      ]),
+    ),
   );
 
   Widget _playlistTile(MusicPlaylist p) => _tile(
@@ -300,7 +338,21 @@ class _SearchScreenState extends State<SearchScreen> {
             ],
             if(_albumsOn && _albums.isNotEmpty)...[
               _section('Albums',_albums.length),
-              ..._albums.map(_albumTile),
+              LayoutBuilder(builder:(context,constraints) {
+                final columns=(constraints.maxWidth / 165).floor().clamp(2,6);
+                return GridView.builder(
+                  shrinkWrap:true,
+                  physics:const NeverScrollableScrollPhysics(),
+                  itemCount:_albums.length,
+                  gridDelegate:SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount:columns,
+                    crossAxisSpacing:12,
+                    mainAxisSpacing:16,
+                    childAspectRatio:0.72,
+                  ),
+                  itemBuilder:(context,index)=>_albumTile(_albums[index]),
+                );
+              }),
             ],
             if(_tracksOn && _tracks.isNotEmpty)...[
               _section('Tracks',_tracks.length),
