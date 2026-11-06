@@ -190,8 +190,8 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
             const SizedBox(height: 8),
             const Text('A new rotation every day, based on your listening.').muted(),
             const SizedBox(height: 16),
-            OutlineButton(onPressed: _loading ? null : _refresh,
-              child: Text(_loading ? 'Refreshing…' : 'Refresh')),
+            if (_loading)
+              const Text('Preparing your mixes…').small().muted(),
             if (_error != null) ...[
               const SizedBox(height: 10),
               Text(_error!).small().muted(),
