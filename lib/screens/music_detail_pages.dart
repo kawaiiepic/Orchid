@@ -83,6 +83,74 @@ void _openTrack(BuildContext context, TrackResult track, {
     album:track.album, artworkUrl:track.artworkUrl, track:track);
 }
 
+String _catalogDuration(List<TrackResult> tracks) {
+  final available=tracks.where((t)=>(t.duration??0)>0).toList();
+  if(available.isEmpty)return '';
+  final total=available.fold<int>(0,(sum,t)=>sum+t.duration!);
+  final minutes=total~/60;
+  return minutes>=60 ? '${minutes~/60} hr ${minutes%60} min' : '$minutes min';
+}
+
+Widget _catalogActions({
+  required List<TrackResult> tracks,
+  required PlayerService player,
+  required List<InstalledAddon> addons,
+}) {
+  if(tracks.isEmpty)return const SizedBox.shrink();
+  return Wrap(spacing:10,runSpacing:10,children:[
+    PrimaryButton(
+      onPressed:(){
+        player.setAddons(addons);
+        player.playTrack(tracks.first,fromQueue:tracks).catchError((Object e){
+          debugPrint('[Orchid Catalog] Play all failed: $e');
+        });
+      },
+      child:const Row(mainAxisSize:MainAxisSize.min,children:[
+        Icon(LucideIcons.play,size:17),
+        SizedBox(width:9),
+        Text('Play all'),
+      ]),
+    ),
+    OutlineButton(
+      onPressed:(){
+        for(final track in tracks)player.addToQueue(track);
+      },
+      child:const Row(mainAxisSize:MainAxisSize.min,children:[
+        Icon(LucideIcons.listMusic,size:17),
+        SizedBox(width:9),
+        Text('Add to queue'),
+      ]),
+    ),
+  ]);
+}
+
+Widget _musicHeader(BuildContext context, {
+  required String eyebrow,
+  required String title,
+  required String subtitle,
+  required Widget artwork,
+  required Widget actions,
+}) => Container(
+  width:double.infinity,
+  padding:const EdgeInsets.all(18),
+  decoration:OrchidStyle.gradientDecoration(radius:22),
+  child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+    Center(child:artwork),
+    const SizedBox(height:20),
+    Text(eyebrow.toUpperCase(),style:const TextStyle(
+      fontSize:11,letterSpacing:2,fontWeight:FontWeight.w600,
+      color:OrchidStyle.lilac,
+    )),
+    const SizedBox(height:8),
+    Text(title,style:const TextStyle(fontSize:27,
+      height:1.12,fontWeight:FontWeight.w700)),
+    const SizedBox(height:8),
+    Text(subtitle).small().muted(),
+    const SizedBox(height:20),
+    actions,
+  ]),
+);
+
 Widget _trackTile(BuildContext context, TrackResult song, {
   required PlayerService player, required AddonService addonService,
   required List<InstalledAddon> addons, required MusicLibrary library,
@@ -165,22 +233,19 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
           children: [
             _back(context),
             const SizedBox(height: 12),
-            OrchidHero(
-              eyebrow: 'Artist',
-              title: widget.artist,
-              description: 'The records, deep cuts and songs that make this artist worth exploring.',
-              icon: LucideIcons.music2,
+            _musicHeader(context,
+              eyebrow:'Artist',
+              title:widget.artist,
+              subtitle:catalog==null
+                ? 'Explore the discography'
+                : '${catalog.albums.length} releases · ${catalog.songs.length} catalog tracks',
+              artwork:ArtistArtwork(
+                artist:widget.artist,size:190,radius:95),
+              actions:_catalogActions(
+                tracks:catalog?.songs??<TrackResult>[],
+                player:widget.player,addons:widget.addons),
             ),
-            const SizedBox(height: 20),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: ArtistArtwork(
-                artist: widget.artist,
-                size: 160,
-                radius: 18,
-              ),
-            ),
-            const SizedBox(height: 28),
+            const SizedBox(height:28),
             if (snapshot.connectionState != ConnectionState.done)
               const Center(child: Text('Loading artist discography…'))
             else if (snapshot.hasError)
@@ -227,7 +292,7 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
                   )).toList(),
                 ),
               const SizedBox(height: 28),
-              OrchidSectionHeader(title: 'Songs', subtitle: '${catalog.songs.length} tracks'),
+              OrchidSectionHeader(title: 'Popular tracks', subtitle: '${catalog.songs.length} songs · ${_catalogDuration(catalog.songs)}'),
               const SizedBox(height: 8),
               if (catalog.songs.isEmpty)
                 const Text('No songs found in the music catalog.').muted()
@@ -282,26 +347,31 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
           children: [
             _back(context),
             const SizedBox(height: 12),
-            OrchidHero(
-              eyebrow: 'Album',
-              title: widget.album,
-              description: 'A whole world of music by ${widget.artist}.',
-              icon: LucideIcons.disc3,
-              action: OutlineButton(
-                onPressed: () => openArtistPage(context, artist: widget.artist,
-                  player: widget.player, addonService: widget.addonService,
-                  addons: widget.addons, library: widget.library),
-                child: const Text('View artist'),
+            _musicHeader(context,
+              eyebrow:'Album',
+              title:widget.album,
+              subtitle:'${widget.artist} · ${tracks.length} tracks'
+                '${_catalogDuration(tracks).isNotEmpty ? ' · ${_catalogDuration(tracks)}' : ''}',
+              artwork:_cover(context,
+                widget.artwork ?? (tracks.isNotEmpty ? tracks.first.artworkUrl:null),
+                size:210),
+              actions:Column(
+                crossAxisAlignment:CrossAxisAlignment.start,
+                children:[
+                  _catalogActions(tracks:tracks,player:widget.player,
+                    addons:widget.addons),
+                  const SizedBox(height:12),
+                  GhostButton(
+                    onPressed:()=>openArtistPage(context,
+                      artist:widget.artist,player:widget.player,
+                      addonService:widget.addonService,addons:widget.addons,
+                      library:widget.library),
+                    child:const Text('View artist'),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 24),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: _cover(context,
-                widget.artwork ?? (tracks.isNotEmpty ? tracks.first.artworkUrl : null),
-                size: 200),
-            ),
-            const SizedBox(height: 28),
+            const SizedBox(height:28),
             if (snapshot.connectionState != ConnectionState.done)
               const Center(child: Text('Loading album tracks…'))
             else if (snapshot.hasError) ...[
