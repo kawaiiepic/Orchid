@@ -25,6 +25,7 @@ class OrchidHomeScreen extends StatefulWidget {
   final VoidCallback openReplay;
   final VoidCallback openRadio;
   final VoidCallback openTopSongs;
+  final VoidCallback openAiDj;
   final VoidCallback openProfile;
 
   const OrchidHomeScreen({
@@ -40,6 +41,7 @@ class OrchidHomeScreen extends StatefulWidget {
     required this.openReplay,
     required this.openRadio,
     required this.openTopSongs,
+    required this.openAiDj,
     required this.openProfile,
   });
 
@@ -658,6 +660,11 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                   LucideIcons.radio,
                   const [Color(0xFF0E9E91),Color(0xFF265D83),Color(0xFF202244)],
                   widget.openRadio),
+                const SizedBox(width:10),
+                _personalCard('AI DJ','Your music companion',
+                  LucideIcons.bot,
+                  const [Color(0xFF9B4DCC),Color(0xFF543E85),Color(0xFF201A3B)],
+                  widget.openAiDj),
               ])),
             const SizedBox(height:28),
             const OrchidSectionHeader(
