@@ -143,7 +143,7 @@ class _ShellScreenState extends State<ShellScreen>{
     index:page.clamp(0,3),
     children:[
      OrchidHomeScreen(
-      player:_player,account:_account,
+      player:_player,addonService:_addonService,addons:_addons,account:_account,
       openExplore:()=>setState(()=>selected=const ValueKey(1)),
       openProfile:()=>setState(()=>selected=const ValueKey(3)),
      ),
