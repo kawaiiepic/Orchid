@@ -176,6 +176,13 @@ class OrchidAccount extends ChangeNotifier {
   if(!signedIn||!lastfmConnected)throw StateError('Connect Last.fm first');
   return _request('GET','/orchid/lastfm/home');
  }
+ Future<Map<String,dynamic>> searchApplePlaylists(String query) async {
+  if (!signedIn || query.trim().length < 2) {
+   return {'playlists': <dynamic>[], 'configured': false};
+  }
+  final uri=Uri(queryParameters: {'q':query.trim()});
+  return _request('GET','/orchid/apple/playlists?${uri.query}');
+ }
  Future<Map<String,dynamic>> dailyMixes() async {
   if(!signedIn||!lastfmConnected)throw StateError('Connect Last.fm first');
   return _request('GET','/orchid/daily-mixes');
