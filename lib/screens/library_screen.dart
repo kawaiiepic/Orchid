@@ -66,7 +66,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       {MusicPlaylist? playlist}) {
     Navigator.of(context).push(ShadcnPageRoute<void>(
       builder: (_) => Scaffold(
-        footers: [MiniPlayerBar(player: widget.player)],
+        footers: [MiniPlayerBar(player: widget.player, library: widget.library)],
         child: ListenableBuilder(
           listenable: widget.library,
           builder: (context, _) {
