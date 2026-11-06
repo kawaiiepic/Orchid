@@ -140,24 +140,28 @@ class OrchidAccount extends ChangeNotifier {
  }
  Future<void> uploadAccountAvatar(Uint8List image, String contentType) async {
   if(!signedIn || _token == null)throw StateError('Sign in first');
-  final result = await http.put(
+  final result=await http.put(
     Uri.parse('$baseUrl/users/avatar'),
-    headers: {'Cookie':'auth=${_token!}','Content-Type':contentType},
+    headers:{'Cookie':'auth=${_token!}','Content-Type':contentType},
     body:image,
   ).timeout(const Duration(seconds:25));
-  if(result.statusCode != 200) {
-    String message = 'Avatar upload failed (HTTP ${result.statusCode})';
-    try {
-      final data = jsonDecode(result.body) as Map;
-      message = data['error']?.toString() ?? message;
-    } catch(_) {}
-    throw Exception(message);
+  Map<String,dynamic>? data;
+  try {
+   final decoded=jsonDecode(result.body);
+   if(decoded is Map)data=Map<String,dynamic>.from(decoded);
+  }catch(_){}
+  if(result.statusCode!=200 || data?['success']!=true) {
+   throw Exception(data?['error']?.toString()
+     ?? 'Avatar upload failed (HTTP ${result.statusCode})');
   }
-  await refresh();
-  if(avatarUrl != null) {
-    avatarUrl = '$avatarUrl?v=${DateTime.now().millisecondsSinceEpoch}';
-    notifyListeners();
-  }
+  final path=data?['avatar']?.toString();
+  if(path==null||path.isEmpty)throw StateError('Avatar upload returned no image URL');
+  // The upload response is authoritative. Update the UI immediately instead
+  // of relying on a subsequent /users/verify request to succeed.
+  avatarUrl=Uri.parse(baseUrl).resolve(path).replace(
+    queryParameters:{'v':'${DateTime.now().millisecondsSinceEpoch}'},
+  ).toString();
+  notifyListeners();
  }
 
  Future<void> removeAccountAvatar() async {
