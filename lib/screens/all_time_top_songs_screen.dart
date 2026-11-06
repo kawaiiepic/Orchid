@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../models/addon.dart';
 import '../services/orchid_account.dart';
@@ -36,8 +37,7 @@ class _AllTimeTopSongsScreenState extends State<AllTimeTopSongsScreen>{
     final tracks=songs.map(_track).toList();
     widget.player.setAddons(widget.addons);
     try{await widget.player.playTrack(tracks[index],fromQueue:tracks);}
-    catch(e){if(mounted)ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      SnackBar(content:Text('Could not play song: $e')));}
+    catch(e){debugPrint('[Orchid Top Songs] Playback failed: $e');}
   }
   @override Widget build(BuildContext context)=>ListView(
     padding:const EdgeInsets.all(24),children:[
