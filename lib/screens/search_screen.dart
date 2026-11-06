@@ -367,9 +367,9 @@ class _SearchScreenState extends State<SearchScreen> {
             ],
             if(_playlistsOn && _controller.text.trim().isNotEmpty &&
                 !_applePlaylistsConfigured)
-              const Padding(
-                padding:EdgeInsets.symmetric(vertical:8),
-                child:Text('Apple Music playlists require a server-side developer token.').small().muted(),
+              Padding(
+                padding:const EdgeInsets.symmetric(vertical:8),
+                child:const Text('Apple Music playlists require a server-side developer token.').small().muted(),
               ),
             if(_artistsOn && _artists.isNotEmpty)...[
               _section('Artists',_artists.length),
@@ -378,7 +378,7 @@ class _SearchScreenState extends State<SearchScreen> {
             if(_albumsOn && _albums.isNotEmpty)...[
               _section('Albums',_albums.length),
               LayoutBuilder(builder:(context,constraints) {
-                final columns=(constraints.maxWidth / 165).floor().clamp(2,6);
+                final columns=(constraints.maxWidth / 165).floor().clamp(2,6).toInt();
                 return GridView.builder(
                   shrinkWrap:true,
                   physics:const NeverScrollableScrollPhysics(),
