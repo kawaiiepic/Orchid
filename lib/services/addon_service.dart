@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -116,7 +117,7 @@ class AddonService {
         'media': 'music',
         'limit': '25',
       });
-      final res = await _client.get(uri).timeout(const Duration(seconds: 12));
+      final res = await _getWithRetry(uri);
       _log('itunes search HTTP ${res.statusCode}');
       if (res.statusCode != 200) return [];
       final body = jsonDecode(res.body) as Map<String, dynamic>;
@@ -327,6 +328,26 @@ class AddonService {
 
     _log('step3: no preview either — giving up');
     throw Exception('No stream addon could play this track');
+  }
+
+  // Retry only transient transport failures, not valid 'not found' answers.
+  Future<http.Response> _getWithRetry(Uri uri) async {
+    for (var attempt = 0; attempt < 3; attempt++) {
+      try {
+        final response = await _client.get(uri)
+            .timeout(const Duration(seconds: 12));
+        if (![429, 500, 502, 503, 504].contains(response.statusCode) ||
+            attempt == 2) {
+          return response;
+        }
+        _log('Temporary source HTTP ${response.statusCode}; retry ${attempt + 1}/2');
+      } catch (e) {
+        if (attempt == 2) rethrow;
+        _log('Temporary source error: $e; retry ${attempt + 1}/2');
+      }
+      await Future<void>.delayed(Duration(milliseconds: 450 * (attempt + 1)));
+    }
+    throw StateError('Source request retry exhausted');
   }
 
   Future<String?> _matchOnAddon(
