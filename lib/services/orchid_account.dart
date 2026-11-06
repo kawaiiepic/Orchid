@@ -130,6 +130,7 @@ class OrchidAccount extends ChangeNotifier {
   await (await SharedPreferences.getInstance()).remove('orchid_petal_token');
   notifyListeners();
  }
+ Future<void> clearSavedSession() => _clear();
  Future<void> logout() async {
   try{await _request('POST','/users/sessions/logout');}finally{await _clear();}
  }
