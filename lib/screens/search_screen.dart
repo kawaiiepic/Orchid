@@ -7,6 +7,7 @@ import '../services/player_service.dart';
 import '../services/music_library.dart';
 import 'song_detail_screen.dart';
 import '../widgets/orchid_style.dart';
+import '../widgets/song_context_menu.dart';
 
 class SearchScreen extends StatefulWidget {
   final AddonService addonService;
@@ -146,7 +147,9 @@ class _SearchScreenState extends State<SearchScreen> {
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
-      child: GestureDetector(
+      child: SongContextMenu(
+        track: t, player: widget.player, library: widget.library,
+        child: GestureDetector(
         onTap: () => _openSong(t),
         child: Container(
           decoration: OrchidStyle.panelDecoration(radius: 15),
@@ -194,6 +197,7 @@ class _SearchScreenState extends State<SearchScreen> {
             if (playing)
               const Icon(LucideIcons.volume2, size: 16),
           ],
+        ),
         ),
         ),
       ),
