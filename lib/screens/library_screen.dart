@@ -1,4 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/addon.dart';
 import '../services/addon_service.dart';
@@ -31,6 +32,7 @@ class LibraryScreen extends StatefulWidget {
 class _LibraryScreenState extends State<LibraryScreen> {
   final _name = TextEditingController();
   List<SavedSong> _lastfm = [];
+  List<List<SavedSong>> _serverMixes = [];
   bool _loadingMixes = false;
   String? _mixError;
 
@@ -65,6 +67,33 @@ class _LibraryScreenState extends State<LibraryScreen> {
         }
       }
       setState(() => _lastfm = result);
+      // The backend returns recommendations, including new related tracks.
+      // Keep local mixes available when its migration has not been deployed.
+      try {
+        final server = await widget.account.dailyMixes();
+        if (!mounted) return;
+        final rawMixes = server['mixes'];
+        if (rawMixes is List) {
+          final parsed = <List<SavedSong>>[];
+          for (final mix in rawMixes) {
+            if (mix is! Map || mix['tracks'] is! List) {
+              parsed.add([]);
+              continue;
+            }
+            parsed.add((mix['tracks'] as List).whereType<Map>().map((song) =>
+              SavedSong(
+                (song['title'] ?? '').toString(),
+                (song['artist'] ?? '').toString(),
+                album: song['album']?.toString(),
+                artwork: song['image']?.toString(),
+              )).where((song) => song.title.isNotEmpty &&
+                  song.artist.isNotEmpty).toList());
+          }
+          setState(() => _serverMixes = parsed);
+        }
+      } catch (e) {
+        debugPrint('[Orchid] Using local mixes until backend is available: $e');
+      }
     } catch (e) {
       if (mounted) setState(() => _mixError = 'Last.fm mixes unavailable: $e');
     } finally {
@@ -224,13 +253,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
         for (var i = 0; i < 3; i++)
           Builder(builder: (context) {
             final mixIndex = i;
-            final songs = widget.library.dailyMix(mixIndex, _lastfm);
-            final titles = ['Favorites Mix', 'Artist Rotation', 'Daily Shuffle'];
+            final songs = _mixSongs(mixIndex);
+            final titles = ['Favorites Mix', 'Similar Sounds', 'Discover'];
             return _collectionTile(
               titles[i],
               _loadingMixes ? 'Updating…' : '${songs.length} songs · changes daily',
               () => _openCollection(titles[mixIndex],
-                () => widget.library.dailyMix(mixIndex, _lastfm)),
+                () => _mixSongs(mixIndex)),
               icon: LucideIcons.sparkles,
             );
           }),
@@ -244,6 +273,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
       ],
     ),
   );
+
+  List<SavedSong> _mixSongs(int index) {
+    if (index < _serverMixes.length && _serverMixes[index].isNotEmpty) {
+      return _serverMixes[index];
+    }
+    return widget.library.dailyMix(index, _lastfm);
+  }
 
   Future<void> _createPlaylist() async {
     final value = _name.text.trim();
