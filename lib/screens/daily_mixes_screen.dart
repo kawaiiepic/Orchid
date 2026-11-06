@@ -142,7 +142,7 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
   Widget _mixDetails(int index) {
     final titles = ['Favorites Mix', 'Similar Sounds', 'Discover'];
     return Scaffold(
-        footers: [MiniPlayerBar(player: widget.player)],
+        footers: [MiniPlayerBar(player: widget.player, library: widget.library)],
         child: ListView(padding: const EdgeInsets.all(24), children: [
           Align(alignment: Alignment.centerLeft, child: IconButton.ghost(
             onPressed: () {
