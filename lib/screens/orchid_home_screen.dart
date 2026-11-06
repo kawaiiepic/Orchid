@@ -1,4 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../services/orchid_account.dart';
 import '../services/player_service.dart';
@@ -123,8 +124,24 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     );
   }
 
+  Future<void> _openLastfm(dynamic rawUrl) async {
+    if (rawUrl is! String) return;
+    final uri=Uri.tryParse(rawUrl);
+    if(uri==null||uri.scheme!='https'||!['last.fm','www.last.fm'].contains(uri.host.toLowerCase()))return;
+    await launchUrl(uri,mode:LaunchMode.externalApplication);
+  }
+
+  Widget _clickable({required Widget child,required VoidCallback onTap}) {
+    return MouseRegion(
+      cursor:SystemMouseCursors.click,
+      child:GestureDetector(behavior:HitTestBehavior.opaque,onTap:onTap,child:child),
+    );
+  }
+
   Widget _stat(String title, dynamic count) {
-    return SizedBox(
+    return _clickable(
+      onTap:()=>_openLastfm('https://www.last.fm/user/${Uri.encodeComponent(widget.account.lastfmUsername ?? '')}'),
+      child:SizedBox(
       width: 138,
       child: Card(
         child: Padding(
@@ -139,7 +156,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
           ),
         ),
       ),
-    );
+    ));
   }
 
   Widget _recentRow(Map<String, dynamic> track) {
@@ -152,7 +169,9 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     final time = timestamp == null
         ? ''
         : _relativeTime(DateTime.fromMillisecondsSinceEpoch(timestamp * 1000));
-    return Padding(
+    return _clickable(
+      onTap:()=>_openLastfm(track['url']),
+      child:Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
@@ -169,9 +188,11 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
           ),
           const SizedBox(width: 8),
           Text(nowPlaying ? 'Now playing' : time).xSmall().muted(),
+          const SizedBox(width:6),
+          const Icon(LucideIcons.externalLink,size:13),
         ],
       ),
-    );
+    ));
   }
 
   String _relativeTime(DateTime when) {
@@ -186,21 +207,36 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
   Widget _topCard(Map<String, dynamic> item, {required bool isAlbum}) {
     final title = item['name']?.toString() ?? 'Unknown';
     final artist = item['artist']?.toString() ?? '';
-    return SizedBox(
-      width: 156,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _art(item['image'] as String?, size: 132),
-              const SizedBox(height: 10),
-              Text(title, maxLines: 2, overflow: TextOverflow.ellipsis).semiBold(),
-              if (isAlbum)
-                Text(artist, maxLines: 1, overflow: TextOverflow.ellipsis).small().muted(),
-              Text('${_count(item['plays'])} plays').xSmall().muted(),
-            ],
+    return _clickable(
+      onTap:()=>_openLastfm(item['url']),
+      child:SizedBox(
+        width:156,
+        height:246,
+        child:Card(
+          child:Padding(
+            padding:const EdgeInsets.all(10),
+            child:Column(
+              crossAxisAlignment:CrossAxisAlignment.start,
+              children:[
+                _art(item['image'] as String?,size:132),
+                const SizedBox(height:10),
+                SizedBox(
+                  height:38,
+                  child:Text(title,maxLines:2,overflow:TextOverflow.ellipsis).semiBold(),
+                ),
+                if(isAlbum)
+                  Text(artist,maxLines:1,overflow:TextOverflow.ellipsis).small().muted()
+                else
+                  const SizedBox(height:17),
+                const Spacer(),
+                Row(
+                  children:[
+                    Expanded(child:Text('${_count(item['plays'])} plays').xSmall().muted()),
+                    const Icon(LucideIcons.externalLink,size:13),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
