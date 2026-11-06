@@ -156,7 +156,7 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
               eyebrow: 'Artist',
               title: widget.artist,
               description: 'The records, deep cuts and songs that make this artist worth exploring.',
-              icon: LucideIcons.mic2,
+              icon: LucideIcons.micVocal,
             ),
             const SizedBox(height: 20),
             Align(
