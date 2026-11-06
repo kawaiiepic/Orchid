@@ -4,7 +4,6 @@ import '../models/addon.dart';
 import '../services/addon_service.dart';
 import '../services/music_library.dart';
 import '../services/orchid_account.dart';
-import '../services/apple_catalog_service.dart';
 import '../services/player_service.dart';
 import '../widgets/mini_player_bar.dart';
 import '../widgets/apple_cover.dart';
@@ -30,7 +29,7 @@ class DailyMixesScreen extends StatefulWidget {
 
 class _DailyMixesScreenState extends State<DailyMixesScreen> {
   List<List<SavedSong>> _serverMixes = [];
-  List<SavedSong> _lastfmSongs = [];
+  List<SavedSong> _recentHistory = [];
   int? _selectedMix;
   bool _loading = false;
   String? _error;
@@ -48,7 +47,7 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
   List<SavedSong> _mix(int i) =>
       i < _serverMixes.length
           ? _serverMixes[i]
-          : i == 2 ? <SavedSong>[] : widget.library.dailyMix(i, _lastfmSongs);
+          : i == 2 ? <SavedSong>[] : widget.library.dailyMix(i, _recentHistory);
 
   Future<void> _loadAppleArtwork(List<List<SavedSong>> mixes) async {
     final generation = ++_artworkGeneration;
@@ -87,67 +86,40 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
   }
 
   Future<void> _refresh() async {
-    if (!widget.account.lastfmConnected) {
-      setState(() {
-        _error = 'Connect Last.fm to improve your Daily Mixes.';
-      });
+    if (!widget.account.signedIn) {
+      setState(() => _error = 'Sign in to create your Daily Mixes.');
       return;
     }
     ++_artworkGeneration;
     _appleArtwork.clear();
     setState(() { _loading = true; _error = null; _mixError = null; });
     try {
-      final home = await widget.account.lastfmHome();
-      final recent = home['recent'];
-      final tracks = <SavedSong>[];
-      if (recent is List) {
-        final items = recent.whereType<Map>().toList();
-        final enriched = await Future.wait(items.map((raw) async {
-          final title = (raw['title'] ?? '').toString();
-          final artist = (raw['artist'] ?? '').toString();
-          if (title.isEmpty || artist.isEmpty) return null;
-          final canonical = await AppleCatalogService.instance.matchTrack(
-            artist: artist,
-            title: title,
-            album: raw['album']?.toString(),
-          );
-          return SavedSong(
-            canonical?.title ?? title,
-            canonical?.artist ?? artist,
-            album: canonical?.album ?? raw['album']?.toString(),
-            artwork: canonical?.artwork ?? raw['image']?.toString(),
-          );
-        }));
-        tracks.addAll(enriched.whereType<SavedSong>());
+      // Orchid history lives in Petal D1. Last.fm is not needed for mixes.
+      final response = await widget.account.dailyMixes();
+      final rawMixes = response['mixes'];
+      if (rawMixes is! List) {
+        throw StateError('Unexpected Daily Mixes response.');
       }
       if (!mounted) return;
-      setState(() => _lastfmSongs = tracks);
-
-      try {
-        final response = await widget.account.dailyMixes();
-        final rawMixes = response['mixes'];
-        if (rawMixes is List && mounted) {
-          setState(() => _serverMixes = rawMixes.map((raw) {
-            if (raw is! Map || raw['tracks'] is! List) return <SavedSong>[];
-            return (raw['tracks'] as List).whereType<Map>().map((item) =>
-                SavedSong((item['title'] ?? '').toString(),
-                  (item['artist'] ?? '').toString(),
-                  album: item['album']?.toString(),
-                  artwork: item['image']?.toString(),
-                )).where((s) => s.title.isNotEmpty && s.artist.isNotEmpty)
-                .toList();
-          }).toList());
-          // Populate covers progressively without delaying the mix list.
-          _loadAppleArtwork(_serverMixes);
-        }
-      } catch (e) {
-        debugPrint('[Orchid] Backend Daily Mixes unavailable: $e');
-        if (mounted) {
-          setState(() => _mixError = 'Could not generate Daily Mixes: $e');
-        }
+      final mixes = rawMixes.map((raw) {
+        if (raw is! Map || raw['tracks'] is! List) return <SavedSong>[];
+        return (raw['tracks'] as List).whereType<Map>().map((item) =>
+          SavedSong(
+            (item['title'] ?? '').toString(),
+            (item['artist'] ?? '').toString(),
+            album:item['album']?.toString(),
+            artwork:item['image']?.toString(),
+          ),
+        ).where((song) => song.title.isNotEmpty && song.artist.isNotEmpty)
+        .toList();
+      }).toList();
+      setState(() => _serverMixes = mixes);
+      _loadAppleArtwork(mixes);
+    } catch (error) {
+      debugPrint('[Orchid] Database Daily Mixes unavailable: $error');
+      if (mounted) {
+        setState(() => _mixError = 'Could not generate Daily Mixes: $error');
       }
-    } catch (e) {
-      if (mounted) setState(() => _error = 'Could not refresh Last.fm history: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -198,7 +170,7 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
             const Text('Preparing your mix…').muted(),
           if (!_loading && _mix(index).isEmpty) ...[
             Text(_mixError ?? (index == 2
-                ? 'No unheard recommendations matched this time. Try refreshing to discover different songs.'
+                ? 'No unheard Apple Music recommendations are available right now. Try again later.'
                 : 'No songs available in this mix yet.')).muted(),
             const SizedBox(height:12),
             OutlineButton(
