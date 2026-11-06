@@ -74,7 +74,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
         });
       });
     }
-    if (needsApple) {
+    if (needsApple && track != null) {
       AnimatedArtworkService.instance.fetch(
         artist: track.artist,
         album: track.album!,
