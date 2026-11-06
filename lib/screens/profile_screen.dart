@@ -1,0 +1,80 @@
+import 'package:shadcn_flutter/shadcn_flutter.dart';
+import '../services/orchid_account.dart';
+
+class ProfileScreen extends StatefulWidget {
+ final OrchidAccount account;
+ const ProfileScreen({super.key,required this.account});
+ @override State<ProfileScreen> createState()=>_ProfileScreenState();
+}
+class _ProfileScreenState extends State<ProfileScreen> {
+ final email=TextEditingController(),password=TextEditingController(),username=TextEditingController();
+ bool registering=false,busy=false;
+ String? error;
+ @override void initState(){super.initState();widget.account.addListener(_changed);}
+ void _changed(){if(mounted)setState((){});}
+ @override void dispose(){widget.account.removeListener(_changed);email.dispose();password.dispose();username.dispose();super.dispose();}
+ Future<void> _run(Future<void> Function() action) async{
+  setState((){busy=true;error=null;});
+  try{await action();}catch(e){if(mounted)setState(()=>error=e.toString());}
+  finally{if(mounted)setState(()=>busy=false);}
+ }
+ @override Widget build(BuildContext context){
+  final a=widget.account;
+  return ListView(padding:const EdgeInsets.all(20),children:[
+   const Text('Your account').x2Large().semiBold(),
+   const SizedBox(height:8),
+   const Text('One Petal account for Petal and Orchid.').muted(),
+   const SizedBox(height:24),
+   if(a.loading)const Text('Loading account…')
+   else if(!a.signedIn)...[
+    if(registering)...[
+     const Text('Username'),const SizedBox(height:6),
+     TextField(controller:username,placeholder:const Text('Username')),
+     const SizedBox(height:12),
+    ],
+    const Text('Email'),const SizedBox(height:6),
+    TextField(controller:email,placeholder:const Text('you@example.com')),
+    const SizedBox(height:12),
+    const Text('Password'),const SizedBox(height:6),
+    TextField(controller:password,obscureText:true,placeholder:const Text('Password')),
+    const SizedBox(height:14),
+    PrimaryButton(onPressed:busy?null:()=>_run(()=>registering?
+      a.register(username.text,email.text,password.text):a.login(email.text,password.text)),
+      child:Text(busy?'Working…':registering?'Create account':'Sign in')),
+    const SizedBox(height:8),
+    GhostButton(onPressed:busy?null:()=>setState(()=>registering=!registering),
+      child:Text(registering?'Already have a Petal account? Sign in':'Create a Petal account')),
+   ]else...[
+    Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(
+     crossAxisAlignment:CrossAxisAlignment.start,children:[
+      Text(a.username??'Account').large().semiBold(),
+      Text(a.email??'').muted(),
+      const SizedBox(height:12),
+      OutlineButton(onPressed:busy?null:()=>_run(a.logout),child:const Text('Sign out')),
+    ]))),
+    const SizedBox(height:22),
+    const Text('Connected services').large().semiBold(),
+    const SizedBox(height:10),
+    Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(
+     crossAxisAlignment:CrossAxisAlignment.start,children:[
+      const Text('Last.fm').large().semiBold(),
+      const SizedBox(height:5),
+      Text(a.lastfmConnected?'Connected as ${a.lastfmUsername}':'Connect Last.fm to scrobble music you play.').muted(),
+      const SizedBox(height:12),
+      if(a.lastfmConnected)
+       OutlineButton(onPressed:busy?null:()=>_run(a.unlinkLastfm),child:const Text('Disconnect'))
+      else ...[
+       PrimaryButton(onPressed:busy?null:()=>_run(a.startLastfm),child:const Text('Authorize Last.fm')),
+       if(a.connecting)...[
+        const SizedBox(height:10),
+        const Text('After approving access in your browser, return here.').small().muted(),
+        const SizedBox(height:8),
+        OutlineButton(onPressed:busy?null:()=>_run(a.completeLastfm),child:const Text('I approved, finish linking')),
+       ]
+      ],
+     ]))),
+   ],
+   if(error!=null)...[const SizedBox(height:14),Text(error!).small()],
+  ]);
+ }
+}
