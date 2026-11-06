@@ -668,12 +668,19 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
               subtitle: 'Talk music with your personal DJ',
             ),
             const SizedBox(height:12),
-            Align(
-              alignment:Alignment.centerLeft,
-              child:_personalCard('AI DJ','Your music companion',
-                LucideIcons.bot,
-                const [Color(0xFF9B4DCC),Color(0xFF543E85),Color(0xFF201A3B)],
-                widget.openAiDj),
+            _clickable(
+              onTap:widget.openAiDj,
+              child:Container(
+                width:double.infinity,
+                padding:const EdgeInsets.symmetric(horizontal:18,vertical:14),
+                decoration:OrchidStyle.panelDecoration(radius:15),
+                child:Row(children:[
+                  const Icon(LucideIcons.bot,size:22,color:OrchidStyle.lilac),
+                  const SizedBox(width:12),
+                  const Expanded(child:Text('Chat with AI DJ').semiBold()),
+                  const Icon(LucideIcons.chevronRight,size:19,color:OrchidStyle.lilac),
+                ]),
+              ),
             ),
             const SizedBox(height:28),
             const OrchidSectionHeader(
