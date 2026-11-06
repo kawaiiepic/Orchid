@@ -48,6 +48,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
    // Desktop file_picker may return a path without eagerly loading bytes.
    // XFile works for Linux/Windows/mobile/web without a dart:io dependency.
    final bytes=file.bytes ?? await file.xFile.readAsBytes();
+   if(!mounted)return;
    if(bytes.isEmpty) {
     setState(()=>error='Could not read the selected image.');
     return;
