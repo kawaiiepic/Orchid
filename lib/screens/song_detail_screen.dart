@@ -4,6 +4,7 @@ import '../services/addon_service.dart';
 import '../services/player_service.dart';
 import '../services/music_library.dart';
 import '../widgets/mini_player_bar.dart';
+import 'music_detail_pages.dart';
 
 /// Native song page. Last.fm records are metadata, not direct audio streams.
 class SongDetailScreen extends StatefulWidget {
@@ -122,9 +123,23 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
    const SizedBox(height:20),
    Center(child:Text(widget.title,textAlign:TextAlign.center).x2Large().semiBold()),
    const SizedBox(height:6),
-   Center(child:Text(widget.artist).large().muted()),
+   Center(child:Button(
+    style:const ButtonStyle.ghost(),
+    onPressed:widget.library==null?null:()=>openArtistPage(context,
+     artist:widget.artist,player:widget.player,addonService:widget.addonService,
+     addons:widget.addons,library:widget.library!),
+    child:Text(widget.artist).large().muted(),
+   )),
    if(widget.album?.isNotEmpty==true)...[
-    const SizedBox(height:4),Center(child:Text(widget.album!).muted()),
+    const SizedBox(height:4),
+    Center(child:Button(style:const ButtonStyle.ghost(),
+     onPressed:widget.library==null?null:()=>openAlbumPage(context,
+      artist:widget.artist,album:widget.album!,
+      artwork:widget.artworkUrl,player:widget.player,
+      addonService:widget.addonService,addons:widget.addons,
+      library:widget.library!),
+     child:Text(widget.album!).muted(),
+    )),
    ],
    if(widget.nowPlaying||widget.listenedAt!=null)...[
     const SizedBox(height:10),
