@@ -1,5 +1,4 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../services/orchid_account.dart';
 import '../services/player_service.dart';
@@ -397,13 +396,6 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     );
   }
 
-  Future<void> _openLastfm(dynamic rawUrl) async {
-    if (rawUrl is! String) return;
-    final uri=Uri.tryParse(rawUrl);
-    if(uri==null||uri.scheme!='https'||!['last.fm','www.last.fm'].contains(uri.host.toLowerCase()))return;
-    await launchUrl(uri,mode:LaunchMode.externalApplication);
-  }
-
   Widget _clickable({required Widget child,required VoidCallback onTap}) {
     return MouseRegion(
       cursor:SystemMouseCursors.click,
@@ -677,7 +669,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                 child:Row(children:[
                   const Icon(LucideIcons.bot,size:22,color:OrchidStyle.lilac),
                   const SizedBox(width:12),
-                  const Expanded(child:Text('Chat with AI DJ').semiBold()),
+                  Expanded(child:const Text('Chat with AI DJ').semiBold()),
                   const Icon(LucideIcons.chevronRight,size:19,color:OrchidStyle.lilac),
                 ]),
               ),
