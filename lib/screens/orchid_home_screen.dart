@@ -1,4 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../services/orchid_account.dart';
@@ -134,6 +135,76 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
           artwork: item['image']?.toString(),
         ),
   ];
+
+  Widget _pinnedPlaylists() => ListenableBuilder(
+    listenable:widget.library,
+    builder:(context,_) {
+      final playlists=widget.library.playlists.where((p)=>p.pinned).toList();
+      if(playlists.isEmpty)return const SizedBox.shrink();
+      return Column(
+        crossAxisAlignment:CrossAxisAlignment.start,
+        children:[
+          const OrchidSectionHeader(
+            title:'Pinned playlists',
+            subtitle:'Your favorites, right where you left them',
+          ),
+          const SizedBox(height:12),
+          SingleChildScrollView(
+            scrollDirection:Axis.horizontal,
+            child:Row(children:[
+              for(final playlist in playlists)...[
+                _clickable(
+                  onTap:(){
+                    if(playlist.songs.isEmpty)return;
+                    widget.player.setAddons(widget.addons);
+                    final queue=playlist.songs.map((song)=>TrackResult(
+                      id:song.key,title:song.title,artist:song.artist,
+                      album:song.album,artworkUrl:song.artwork,
+                      sourceId:'orchid-library',sourceName:'Library',
+                    )).toList();
+                    widget.player.playTrack(queue.first,fromQueue:queue)
+                      .catchError((Object e) {
+                        debugPrint('[Orchid] Cannot play pinned playlist: $e');
+                      });
+                  },
+                  child:Container(
+                    width:168,height:232,
+                    padding:const EdgeInsets.all(12),
+                    decoration:OrchidStyle.panelDecoration(radius:18),
+                    child:Column(
+                      crossAxisAlignment:CrossAxisAlignment.start,
+                      children:[
+                        Stack(children:[
+                          _art(playlist.songs.isNotEmpty
+                            ? playlist.songs.first.artwork:null,size:144),
+                          Positioned(right:7,bottom:7,
+                            child:Container(
+                              padding:const EdgeInsets.all(7),
+                              decoration:BoxDecoration(
+                                color:OrchidStyle.panel,
+                                borderRadius:BorderRadius.circular(9)),
+                              child:const Icon(LucideIcons.pin,
+                                color:OrchidStyle.lilac,size:16)),
+                          ),
+                        ]),
+                        const SizedBox(height:10),
+                        Text(playlist.name,maxLines:2,
+                          overflow:TextOverflow.ellipsis).semiBold(),
+                        const Spacer(),
+                        Text('${playlist.songs.length} songs').xSmall().muted(),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width:10),
+              ],
+            ]),
+          ),
+          const SizedBox(height:28),
+        ],
+      );
+    },
+  );
 
   Widget _dailyMixCards() => ListenableBuilder(
     listenable: widget.library,
@@ -300,7 +371,18 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
       player: widget.player,
       library: widget.library,
       child: _clickable(
-      onTap:()=>_openSong(track),
+      onTap:(){
+        widget.player.setAddons(widget.addons);
+        widget.player.playTrack(TrackResult(
+          id:'${artist.toLowerCase()}|${(track['title'] ?? '').toString().toLowerCase()}',
+          title:track['title']?.toString() ?? '',
+          artist:artist, album:album,
+          artworkUrl:track['image']?.toString(),
+          sourceId:'lastfm', sourceName:'Last.fm',
+        )).catchError((Object e) {
+          debugPrint('[Orchid] Recent track playback failed: $e');
+        });
+      },
       child:Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Container(
@@ -322,7 +404,10 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
           const SizedBox(width: 8),
           Text(nowPlaying ? 'Now playing' : time).xSmall().muted(),
           const SizedBox(width:6),
-          const Icon(LucideIcons.chevronRight,size:16),
+          IconButton.ghost(
+            onPressed:()=>_openSong(track),
+            icon:const Icon(LucideIcons.info,size:17),
+          ),
         ],
       )),
     )),
@@ -424,6 +509,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
         return ListView(
           padding: const EdgeInsets.all(20),
           children: [
+            _pinnedPlaylists(),
             OrchidHero(
               eyebrow: 'Your listening space',
               title: 'Made for your ears.',
