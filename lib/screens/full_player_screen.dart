@@ -187,50 +187,6 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
     );
   }
 
-  /// Full-bleed animation for narrow/mobile player layouts. The video fills
-  /// the viewport, with dark gradients keeping controls readable.
-  Widget _mobileAnimatedBackdrop() {
-    final artwork = _appleArtwork;
-    final cover = widget.player.current?.artworkUrl;
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        if (artwork != null)
-          CanvasVideo(
-            key: ValueKey('mobile-${artwork.url}'),
-            url: artwork.url,
-            fallbackArtworkUrl: cover,
-            onFailure: _artworkFailed,
-          )
-        else if (cover != null && cover.startsWith('https://'))
-          CachedNetworkImage(
-            imageUrl: cover,
-            fit: BoxFit.cover,
-            errorWidget: (_, __, ___) =>
-                const ColoredBox(color: Color(0xFF14111D)),
-          )
-        else
-          const ColoredBox(color: Color(0xFF14111D)),
-        const DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              stops: [0.0, 0.23, 0.48, 0.73, 1.0],
-              colors: [
-                Color(0xC9000000),
-                Color(0x31000000),
-                Color(0x16000000),
-                Color(0xA9000000),
-                Color(0xEE000000),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _libraryActions() {
     final library=widget.library;
     if(library==null)return const SizedBox.shrink();
