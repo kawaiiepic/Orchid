@@ -5,6 +5,7 @@ import '../services/apple_artwork_service.dart';
 class AppleCover extends StatelessWidget {
   final String artist;
   final String name;
+  final String? album;
   final String? fallbackUrl;
   final bool isAlbum;
   final double size;
@@ -14,17 +15,29 @@ class AppleCover extends StatelessWidget {
     super.key,
     required this.artist,
     required this.name,
+    this.album,
     this.fallbackUrl,
     this.isAlbum = false,
     this.size = 48,
     this.radius = 8,
   });
 
+  /// Prefer the matching Apple track; fall back to the identified Apple
+  /// album for editions Apple lists under a slightly different song title.
+  Future<String?> _resolveTrackArtwork() async {
+    final trackCover = await AppleArtworkService.instance.track(
+      artist: artist, title: name);
+    if (trackCover != null) return trackCover;
+    if (album == null || album!.trim().isEmpty) return null;
+    return AppleArtworkService.instance.album(
+      artist: artist, album: album!);
+  }
+
   @override
   Widget build(BuildContext context) {
     final lookup = isAlbum
         ? AppleArtworkService.instance.album(artist: artist, album: name)
-        : AppleArtworkService.instance.track(artist: artist, title: name);
+        : _resolveTrackArtwork();
     return FutureBuilder<String?>(
       future: lookup,
       builder: (context, snapshot) {
