@@ -81,7 +81,7 @@ class _RadioScreenState extends State<RadioScreen>{
         description:'Choose a vibe. Orchid keeps the music flowing.',
         icon:LucideIcons.radio),
       const SizedBox(height:20),
-      Text('Choose your station').large().semiBold(),
+      const Text('Choose your station').large().semiBold(),
       const SizedBox(height:12),
       Wrap(spacing:8,runSpacing:8,children:[
         for(final label in choices.keys)
