@@ -244,10 +244,12 @@ class _ShellScreenState extends State<ShellScreen>{
       openLibrary:()=>setState(()=>selected=const ValueKey(2)),
       openDailyMixes:(index)=>Navigator.of(context).push(
        ShadcnPageRoute<void>(
-        builder:(_)=>DailyMixesScreen(
-         initialMixIndex:index,
-         account:_account,library:_library,player:_player,
-         addonService:_addonService,addons:_addons,
+        builder:(_)=>DrawerOverlay(
+         child:DailyMixesScreen(
+          initialMixIndex:index,
+          account:_account,library:_library,player:_player,
+          addonService:_addonService,addons:_addons,
+         ),
         ),
        ),
       ),
