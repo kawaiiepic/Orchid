@@ -16,7 +16,9 @@ class HlsVariantService {
   Future<String> _resolve(String url) async {
     final uri = Uri.tryParse(url);
     if (uri == null || uri.scheme != 'https' ||
-        !uri.path.toLowerCase().endsWith('.m3u8')) return url;
+        !uri.path.toLowerCase().endsWith('.m3u8')) {
+      return url;
+    }
     try {
       final response = await http.get(uri, headers: const {
         'Accept': 'application/vnd.apple.mpegurl, application/x-mpegURL, */*',
@@ -27,7 +29,9 @@ class HlsVariantService {
       }
       final body = response.body;
       if (!body.startsWith('#EXTM3U') ||
-          !body.contains('#EXT-X-STREAM-INF')) return url;
+          !body.contains('#EXT-X-STREAM-INF')) {
+        return url;
+      }
 
       // The CODECS attribute belongs to the stream declaration; the next
       // non-comment line supplies the relative or absolute variant URI.
@@ -37,7 +41,9 @@ class HlsVariantService {
         final line = lines[i].trim();
         if (!line.startsWith('#EXT-X-STREAM-INF:')) continue;
         var j = i + 1;
-        while (j < lines.length && lines[j].trim().isEmpty) j++;
+        while (j < lines.length && lines[j].trim().isEmpty) {
+          j++;
+        }
         if (j >= lines.length) continue;
         final target = lines[j].trim();
         if (target.isEmpty || target.startsWith('#')) continue;
