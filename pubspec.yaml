@@ -12,6 +12,9 @@ dependencies:
   shadcn_flutter: ^0.0.53
   shadcn_flutter_material: ^0.0.53
   http: ^1.2.2
+  media_kit: ^1.2.6
+  media_kit_video: ^2.0.1
+  media_kit_libs_video: ^1.0.7
   just_audio: ^0.10.6
   just_audio_media_kit: ^2.1.0
   media_kit_libs_linux: any
