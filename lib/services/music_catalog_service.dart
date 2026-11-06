@@ -84,6 +84,29 @@ class MusicCatalogService {
     );
   }
 
+  /// Search catalog entities independently of track searches.
+  Future<List<MusicAlbum>> searchAlbums(String query) async {
+    final results = await _request(Uri.https('itunes.apple.com', '/search', {
+      'term': query, 'entity': 'album', 'media': 'music', 'limit': '50',
+    }));
+    final seen = <int>{};
+    return results.whereType<Map>().map((item) =>
+        _album(Map<String, dynamic>.from(item)))
+        .whereType<MusicAlbum>().where((album) => seen.add(album.id))
+        .toList();
+  }
+
+  Future<List<String>> searchArtists(String query) async {
+    final results = await _request(Uri.https('itunes.apple.com', '/search', {
+      'term': query, 'entity': 'musicArtist', 'media': 'music', 'limit': '50',
+    }));
+    final seen = <String>{};
+    return results.whereType<Map>().map((item) =>
+        (item['artistName'] ?? '').toString().trim())
+        .where((name) => name.isNotEmpty && seen.add(_norm(name)))
+        .toList();
+  }
+
   Future<ArtistCatalog> artist(String artist, {bool refresh = false}) {
     final key = _norm(artist);
     if (refresh) _artists.remove(key);
