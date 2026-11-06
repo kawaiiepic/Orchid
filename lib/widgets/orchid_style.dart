@@ -13,7 +13,7 @@ abstract final class OrchidStyle {
       BoxDecoration(
         color: panel,
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: const Color(0xFF58466F).withOpacity(0.24)),
+        border: Border.all(color: const Color(0xFF58466F).withValues(alpha: 0.24)),
       );
 
   static BoxDecoration gradientDecoration({double radius = 24}) =>
@@ -24,7 +24,7 @@ abstract final class OrchidStyle {
           end: Alignment.bottomRight,
           colors: [Color(0xFF493268), Color(0xFF30233F), Color(0xFF211E36)],
         ),
-        border: Border.all(color: violet.withOpacity(0.26)),
+        border: Border.all(color: violet.withValues(alpha: 0.26)),
       );
 }
 
@@ -96,14 +96,14 @@ class OrchidHero extends StatelessWidget {
             width: 240, height: 240,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: OrchidStyle.violet.withOpacity(0.11),
+              color: OrchidStyle.violet.withValues(alpha: 0.11),
             ),
           ),
         ),
         Positioned(
           right: 24, top: 18,
           child: Icon(icon, size: 102,
-            color: OrchidStyle.lilac.withOpacity(0.12)),
+            color: OrchidStyle.lilac.withValues(alpha: 0.12)),
         ),
         Padding(
           padding: const EdgeInsets.all(24),
