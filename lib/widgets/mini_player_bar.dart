@@ -3,6 +3,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import '../screens/full_player_screen.dart';
 import '../services/player_service.dart';
+import 'orchid_style.dart';
 
 class MiniPlayerBar extends StatelessWidget {
   final PlayerService player;
@@ -29,8 +30,9 @@ class MiniPlayerBar extends StatelessWidget {
         final scheme = Theme.of(context).colorScheme;
 
         return Container(
-          color: scheme.card,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          margin: const EdgeInsets.fromLTRB(10, 6, 10, 5),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: OrchidStyle.panelDecoration(radius: 18),
           child: Row(
             children: [
               Expanded(
@@ -41,7 +43,7 @@ class MiniPlayerBar extends StatelessWidget {
                     children: [
                       if (track.artworkUrl != null)
                         ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(11),
                           child: CachedNetworkImage(
                             imageUrl: track.artworkUrl!,
                             width: 44,
@@ -82,10 +84,19 @@ class MiniPlayerBar extends StatelessWidget {
                 onPressed: () => player.playPrevious(),
                 icon: const Icon(LucideIcons.skipBack, size: 18),
               ),
-              IconButton.ghost(
-                onPressed: () => player.togglePlayPause(),
-                icon: Icon(player.player.playing
-                    ? LucideIcons.pause : LucideIcons.play),
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: OrchidStyle.violet,
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: IconButton.ghost(
+                  onPressed: () => player.togglePlayPause(),
+                  icon: Icon(player.player.playing
+                    ? LucideIcons.pause : LucideIcons.play,
+                    color: OrchidStyle.ink, size: 20),
+                ),
               ),
               IconButton.ghost(
                 onPressed: player.hasNext ? () => player.playNext() : null,
