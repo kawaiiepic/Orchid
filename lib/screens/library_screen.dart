@@ -6,6 +6,7 @@ import '../services/music_library.dart';
 import '../services/orchid_account.dart';
 import '../services/player_service.dart';
 import '../widgets/mini_player_bar.dart';
+import '../widgets/apple_cover.dart';
 import 'song_detail_screen.dart';
 import '../widgets/orchid_style.dart';
 import '../widgets/song_context_menu.dart';
@@ -138,7 +139,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         });
                       },
                       child: Row(children: [
-                        const Icon(LucideIcons.music2, size: 18),
+                        AppleCover(
+                          artist:song.artist,
+                          name:song.title,
+                          album:song.album,
+                          fallbackUrl:song.artwork,
+                          size:44,
+                          radius:8,
+                        ),
                         const SizedBox(width: 12),
                         Expanded(child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
