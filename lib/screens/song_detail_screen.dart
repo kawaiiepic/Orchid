@@ -79,8 +79,8 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
     ]),
     const SizedBox(height:12),
     if(library.playlists.isNotEmpty)...[
-     const Align(alignment:Alignment.centerLeft,
-       child:Text('Add to playlist').semiBold()),
+     Align(alignment:Alignment.centerLeft,
+       child:const Text('Add to playlist').semiBold()),
      const SizedBox(height:8),
      ...library.playlists.map((playlist)=>Padding(
       padding:const EdgeInsets.symmetric(vertical:3),
