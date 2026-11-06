@@ -144,14 +144,14 @@ class OrchidAccount extends ChangeNotifier {
  static String? avatarMimeType(Uint8List bytes) {
   if(bytes.length>=8 &&
       bytes[0]==0x89 && bytes[1]==0x50 &&
-      bytes[2]==0x4E && bytes[3]==0x47)return 'image/png';
+      bytes[2]==0x4E && bytes[3]==0x47) {return 'image/png';}
   if(bytes.length>=3 && bytes[0]==0xFF &&
-      bytes[1]==0xD8 && bytes[2]==0xFF)return 'image/jpeg';
+      bytes[1]==0xD8 && bytes[2]==0xFF) {return 'image/jpeg';}
   if(bytes.length>=12 &&
       String.fromCharCodes(bytes.sublist(0,4))=='RIFF' &&
-      String.fromCharCodes(bytes.sublist(8,12))=='WEBP')return 'image/webp';
+      String.fromCharCodes(bytes.sublist(8,12))=='WEBP') {return 'image/webp';}
   if(bytes.length>=6 &&
-      String.fromCharCodes(bytes.sublist(0,3))=='GIF')return 'image/gif';
+      String.fromCharCodes(bytes.sublist(0,3))=='GIF') {return 'image/gif';}
   return null;
  }
  Future<void> uploadAccountAvatar(Uint8List image, String contentType) async {
@@ -277,8 +277,9 @@ class OrchidAccount extends ChangeNotifier {
   if(!signedIn || tracks.isEmpty)return List<String?>.filled(tracks.length,null);
   final data=await _request('POST','/orchid/apple/artwork',{'tracks':tracks});
   final raw=data['artworks'];
-  if(raw is! List || raw.length!=tracks.length)
+  if(raw is! List || raw.length!=tracks.length) {
    return List<String?>.filled(tracks.length,null);
+  }
   return raw.map((value)=>value is String&&value.startsWith('https://')
       ?value:null).toList();
  }
