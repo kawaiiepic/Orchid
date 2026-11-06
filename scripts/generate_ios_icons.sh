@@ -1,19 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Render the committed vector artwork into the Xcode asset catalog on macOS.
+# Decode the committed orchid-glass artwork into Xcode's icon catalog on macOS.
 # Apple requires opaque PNG icons (no alpha channel).
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SOURCE="$ROOT/assets/branding/orchid_icon.svg"
+SOURCE="$ROOT/assets/branding/orchid_glass_icon.webp.base64"
 CATALOG="$ROOT/ios/Runner/Assets.xcassets/AppIcon.appiconset"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-if ! command -v rsvg-convert >/dev/null 2>&1; then
-  brew install librsvg
+if ! command -v dwebp >/dev/null 2>&1; then
+  brew install webp
 fi
 
-rsvg-convert --width 1024 --height 1024 --output "$TMP/rendered.png" "$SOURCE"
+base64 -D -i "$SOURCE" -o "$TMP/icon.webp"
+dwebp "$TMP/icon.webp" -o "$TMP/rendered.png"
 # Round-trip through JPEG to guarantee an opaque RGB image for App Store upload.
 sips -s format jpeg -s formatOptions best "$TMP/rendered.png" --out "$TMP/opaque.jpg" >/dev/null
 sips -s format png "$TMP/opaque.jpg" --out "$TMP/master.png" >/dev/null
