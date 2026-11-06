@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../models/addon.dart';
+import 'orchid_account.dart';
 
 class MusicAlbum {
   final int id;
@@ -120,6 +121,46 @@ class MusicCatalogService {
         (item['artistName'] ?? '').toString().trim())
         .where((name) => name.isNotEmpty && seen.add(_norm(name)))
         .toList();
+  }
+
+  /// Artist details from the authenticated Apple Music API. Unlike the
+  /// public iTunes endpoints, this shares the catalog's backend proxy.
+  Future<ArtistCatalog> appleArtist(OrchidAccount account, String name) async {
+    final data=await account.appleArtist(name);
+    final albums=<MusicAlbum>[];
+    final songs=<TrackResult>[];
+    final rawAlbums=data['albums'];
+    if(rawAlbums is List) {
+      for(final raw in rawAlbums.whereType<Map>()) {
+        final item=Map<String,dynamic>.from(raw);
+        final id=int.tryParse(item['id']?.toString()??'');
+        if(id==null)continue;
+        albums.add(MusicAlbum(
+          id:id,title:item['title']?.toString()??'',
+          artist:item['artist']?.toString()??name,
+          artwork:item['image']?.toString(),
+          trackCount:item['trackCount'] is num
+              ?(item['trackCount'] as num).toInt():null,
+        ));
+      }
+    }
+    final rawTracks=data['tracks'];
+    if(rawTracks is List) {
+      for(final raw in rawTracks.whereType<Map>()) {
+        final item=Map<String,dynamic>.from(raw);
+        songs.add(TrackResult(
+          id:item['id']?.toString()??'',
+          title:item['title']?.toString()??'',
+          artist:item['artist']?.toString()??name,
+          album:item['album']?.toString(),
+          artworkUrl:item['image']?.toString(),
+          duration:item['duration'] is num
+              ?(item['duration'] as num).toInt():null,
+          sourceId:'apple-music',sourceName:'Apple Music',
+        ));
+      }
+    }
+    return ArtistCatalog(name:name,albums:albums,songs:songs);
   }
 
   Future<ArtistCatalog> artist(String artist, {bool refresh = false}) {
