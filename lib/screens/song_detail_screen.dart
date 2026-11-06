@@ -7,6 +7,8 @@ import '../widgets/mini_player_bar.dart';
 import 'music_detail_pages.dart';
 import '../widgets/song_context_menu.dart';
 import '../widgets/content_drawer.dart';
+import '../widgets/track_duration.dart';
+import '../widgets/orchid_style.dart';
 
 void showSongDetailDrawer(BuildContext context, {
   required PlayerService player,
@@ -82,6 +84,28 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
   if(matches.isEmpty)await find();
   if(mounted&&matches.isNotEmpty)await play(matches.first);
  }
+ Future<void> queueFirst() async {
+  if (busy) return;
+  if (widget.track != null) {
+    widget.player.addToQueue(widget.track!);
+    return;
+  }
+  if (matches.isEmpty) await find();
+  if (mounted && matches.isNotEmpty) {
+    widget.player.addToQueue(matches.first);
+  }
+ }
+
+ String? get displayedDuration {
+  final direct = trackDurationLabel(widget.track?.duration);
+  if (direct != null) return direct;
+  for (final result in matches) {
+    final seconds = trackDurationLabel(result.duration);
+    if (seconds != null) return seconds;
+  }
+  return null;
+ }
+
  SavedSong get savedSong => SavedSong(widget.title,widget.artist,
     album:widget.album,artwork:widget.artworkUrl);
 
@@ -123,73 +147,169 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
  Widget artwork(){
   final url=widget.artworkUrl??widget.track?.artworkUrl;
   if(url==null||!url.startsWith('https://')){
-   return Container(width:210,height:210,color:Theme.of(context).colorScheme.muted,
-    child:const Icon(LucideIcons.music2,size:48));
+    return Container(width:210,height:210,
+      decoration:OrchidStyle.panelDecoration(radius:16),
+      child:const Icon(LucideIcons.music2,size:48));
   }
-  return ClipRRect(borderRadius:BorderRadius.circular(12),
-   child:Image.network(url,width:210,height:210,fit:BoxFit.cover,
-    errorBuilder:(_,__,___)=>const SizedBox(width:210,height:210,
-     child:Center(child:Icon(LucideIcons.music2,size:48)))));
+  return ClipRRect(borderRadius:BorderRadius.circular(16),
+    child:Image.network(url,width:210,height:210,fit:BoxFit.cover,
+      errorBuilder:(_,__,___)=>const SizedBox(width:210,height:210,
+        child:Center(child:Icon(LucideIcons.music2,size:48)))));
  }
- @override Widget build(BuildContext context)=>Scaffold(
-  footers:[MiniPlayerBar(player:widget.player)],
-  child:ListView(padding:const EdgeInsets.all(24),children:[
-   Align(alignment:Alignment.centerLeft,child:IconButton.ghost(
-    onPressed:()=>dismissContentDrawer(context),
-    icon:const Icon(LucideIcons.arrowLeft),
-   )),
-   const SizedBox(height:12),
-   Center(child:artwork()),
-   const SizedBox(height:20),
-   Center(child:Text(widget.title,textAlign:TextAlign.center).x2Large().semiBold()),
-   const SizedBox(height:6),
-   Center(child:Button(
-    style:const ButtonStyle.ghost(),
-    onPressed:widget.library==null?null:()=>openArtistPage(context,
-     artist:widget.artist,player:widget.player,addonService:widget.addonService,
-     addons:widget.addons,library:widget.library!),
-    child:Text(widget.artist).large().muted(),
-   )),
-   if(widget.album?.isNotEmpty==true)...[
-    const SizedBox(height:4),
-    Center(child:Button(style:const ButtonStyle.ghost(),
-     onPressed:widget.library==null?null:()=>openAlbumPage(context,
-      artist:widget.artist,album:widget.album!,
-      artwork:widget.artworkUrl,player:widget.player,
-      addonService:widget.addonService,addons:widget.addons,
-      library:widget.library!),
-     child:Text(widget.album!).muted(),
-    )),
-   ],
-   if(widget.nowPlaying||widget.listenedAt!=null)...[
-    const SizedBox(height:10),
-    Center(child:Text(widget.nowPlaying?'Now playing on Last.fm':
-     'Listened: ${widget.listenedAt!.toLocal()}').small().muted()),
-   ],
-   const SizedBox(height:24),
-   _libraryActions(),
-   const SizedBox(height:20),
-   PrimaryButton(onPressed:busy?null:playFirst,
-    child:Text(searching?'Finding sources…':playing?'Starting playback…':'Play')),
-   const SizedBox(height:8),
-   OutlineButton(onPressed:busy?null:find,
-    child:Text(searching?'Searching music sources…':'Find playback sources')),
-   if(error!=null)...[const SizedBox(height:12),Text(error!).small()],
-   if(matches.isNotEmpty)...[
-    const SizedBox(height:24),
-    const Text('Available versions').large().semiBold(),
-    const SizedBox(height:8),
-    ...matches.take(10).map((t)=>Button(style:const ButtonStyle.ghost(),
-     onPressed:busy?null:()=>play(t),
-     child:Padding(padding:const EdgeInsets.symmetric(vertical:8),
-      child:Row(children:[
-       Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Text(t.title).semiBold(),
-        Text('${t.artist} · ${t.sourceName}').small().muted(),
-       ])),
-       const Icon(LucideIcons.play,size:18),
-      ])))),
-   ],
-  ]),
+ @override
+ Widget build(BuildContext context) => Scaffold(
+   footers:[MiniPlayerBar(player:widget.player)],
+   child:ListView(
+     padding:const EdgeInsets.fromLTRB(20,12,20,28),
+     children:[
+       Align(alignment:Alignment.centerLeft,child:IconButton.ghost(
+         onPressed:()=>dismissContentDrawer(context),
+         icon:const Icon(LucideIcons.arrowLeft),
+       )),
+       const SizedBox(height:12),
+       Container(
+         width:double.infinity,
+         padding:const EdgeInsets.all(20),
+         decoration:OrchidStyle.gradientDecoration(radius:22),
+         child:Column(
+           crossAxisAlignment:CrossAxisAlignment.start,
+           children:[
+             Center(child:artwork()),
+             const SizedBox(height:20),
+             const Text('SONG',style:TextStyle(
+               fontSize:11,letterSpacing:2,
+               color:OrchidStyle.lilac,fontWeight:FontWeight.w700)),
+             const SizedBox(height:9),
+             Text(widget.title,style:const TextStyle(
+               fontSize:27,height:1.12,fontWeight:FontWeight.w700)),
+             const SizedBox(height:8),
+             Text(widget.artist,style:const TextStyle(
+               fontSize:16,color:OrchidStyle.lilac)),
+             const SizedBox(height:12),
+             Wrap(spacing:8,runSpacing:7,children:[
+               if(displayedDuration!=null)
+                 Text(displayedDuration!).small().muted(),
+               if(widget.track?.sourceName.isNotEmpty==true)
+                 Text(widget.track!.sourceName).small().muted(),
+               if(widget.nowPlaying)
+                 const Text('Now playing').small().muted(),
+             ]),
+             const SizedBox(height:19),
+             Wrap(spacing:10,runSpacing:10,children:[
+               PrimaryButton(
+                 onPressed:busy?null:playFirst,
+                 child:Row(mainAxisSize:MainAxisSize.min,children:[
+                   const Icon(LucideIcons.play,size:17),
+                   const SizedBox(width:9),
+                   Text(playing?'Starting…':'Play'),
+                 ]),
+               ),
+               OutlineButton(
+                 onPressed:busy?null:queueFirst,
+                 child:const Row(mainAxisSize:MainAxisSize.min,children:[
+                   Icon(LucideIcons.listMusic,size:17),
+                   SizedBox(width:8),
+                   Text('Add to queue'),
+                 ]),
+               ),
+               if(widget.library!=null)_libraryActions(),
+             ]),
+           ],
+         ),
+       ),
+       const SizedBox(height:27),
+       const OrchidSectionHeader(title:'About this song'),
+       Container(
+         padding:const EdgeInsets.all(15),
+         decoration:OrchidStyle.panelDecoration(radius:16),
+         child:Column(
+           crossAxisAlignment:CrossAxisAlignment.start,
+           children:[
+             Text('Artist').small().muted(),
+             const SizedBox(height:5),
+             GhostButton(
+               onPressed:widget.library==null?null:()=>openArtistPage(context,
+                 artist:widget.artist,player:widget.player,
+                 addonService:widget.addonService,
+                 addons:widget.addons,library:widget.library!),
+               child:Text(widget.artist).semiBold(),
+             ),
+             if(widget.album?.isNotEmpty==true)...[
+               const Divider(),
+               Text('Album').small().muted(),
+               const SizedBox(height:5),
+               GhostButton(
+                 onPressed:widget.library==null?null:()=>openAlbumPage(context,
+                   artist:widget.artist,album:widget.album!,
+                   artwork:widget.artworkUrl,player:widget.player,
+                   addonService:widget.addonService,addons:widget.addons,
+                   library:widget.library!),
+                 child:Text(widget.album!).semiBold(),
+               ),
+             ],
+             if(displayedDuration!=null)...[
+               const Divider(),
+               Text('Duration').small().muted(),
+               const SizedBox(height:5),
+               Text(displayedDuration!).semiBold(),
+             ],
+             if(widget.listenedAt!=null)...[
+               const Divider(),
+               Text('Last listened').small().muted(),
+               const SizedBox(height:5),
+               Text(widget.listenedAt!.toLocal().toString()).semiBold(),
+             ],
+           ],
+         ),
+       ),
+       const SizedBox(height:26),
+       const OrchidSectionHeader(
+         title:'Playback sources',
+         subtitle:'Find other versions and providers for this song',
+       ),
+       OutlineButton(
+         onPressed:busy?null:find,
+         child:Text(searching?'Finding versions…':'Find available versions'),
+       ),
+       if(error!=null)...[
+         const SizedBox(height:12),
+         Text(error!).small().muted(),
+       ],
+       if(matches.isNotEmpty)...[
+         const SizedBox(height:12),
+         ...matches.take(12).map((t)=>Padding(
+           padding:const EdgeInsets.only(bottom:7),
+           child:Container(
+             decoration:OrchidStyle.panelDecoration(radius:14),
+             child:Row(children:[
+               Expanded(child:Button(
+                 style:const ButtonStyle.ghost(),
+                 onPressed:busy?null:()=>play(t),
+                 child:Padding(
+                   padding:const EdgeInsets.all(12),
+                   child:Column(
+                     crossAxisAlignment:CrossAxisAlignment.start,
+                     children:[
+                       Text(t.title,maxLines:1,
+                         overflow:TextOverflow.ellipsis).semiBold(),
+                       const SizedBox(height:4),
+                       Text('${t.artist} · ${t.sourceName}')
+                         .small().muted(),
+                     ],
+                   ),
+                 ),
+               )),
+               if(trackDurationLabel(t.duration)!=null)
+                 Text(trackDurationLabel(t.duration)!).small().muted(),
+               IconButton.ghost(
+                 onPressed:()=>widget.player.addToQueue(t),
+                 icon:const Icon(LucideIcons.listMusic,size:18),
+               ),
+             ]),
+           ),
+         )),
+       ],
+     ],
+   ),
  );
 }
