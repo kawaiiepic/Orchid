@@ -53,6 +53,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
   void initState() {
     super.initState();
     widget.account.addListener(_accountChanged);
+    widget.account.listeningRevision.addListener(_listeningChanged);
     _accountChanged();
   }
 
@@ -61,9 +62,15 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.account != widget.account) {
       oldWidget.account.removeListener(_accountChanged);
+      oldWidget.account.listeningRevision.removeListener(_listeningChanged);
       widget.account.addListener(_accountChanged);
+      widget.account.listeningRevision.addListener(_listeningChanged);
       _accountChanged();
     }
+  }
+
+  void _listeningChanged() {
+    if(widget.account.signedIn) _refresh();
   }
 
   void _accountChanged() {
@@ -133,6 +140,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
   @override
   void dispose() {
     widget.account.removeListener(_accountChanged);
+    widget.account.listeningRevision.removeListener(_listeningChanged);
     super.dispose();
   }
 
