@@ -69,6 +69,7 @@ class TrackResult {
   final String? artworkUrl;
   final String? format;
   final String? isrc;
+  final List<String> genres;
   /// Direct playable URL when the search source already provides one (e.g. iTunes preview).
   final String? previewUrl;
   /// Spotify track ID (22 base62 chars) for services like Spicy Lyrics.
@@ -90,6 +91,7 @@ class TrackResult {
     this.artworkUrl,
     this.format,
     this.isrc,
+    this.genres = const [],
     this.previewUrl,
     this.spotifyTrackId,
     this.videoId,
@@ -144,6 +146,9 @@ class TrackResult {
       artworkUrl: json['artworkURL'] as String?,
       format: json['format'] as String?,
       isrc: json['isrc'] as String?,
+      genres: json['genres'] is List
+          ? (json['genres'] as List).whereType<String>().toList()
+          : json['genre'] is String ? [json['genre'] as String] : const [],
       previewUrl: json['streamURL'] as String?,
       spotifyTrackId: (spotifyTrackId ?? '').isEmpty ? null : spotifyTrackId,
       videoId: json['videoId'] as String?,
