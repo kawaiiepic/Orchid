@@ -245,14 +245,14 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     Navigator.of(context).push(
       ShadcnPageRoute<void>(
         builder: (_) => Scaffold(
-          headers: [
-            AppBar(
-              title: Text(isAlbum ? 'Album' : 'Artist'),
-            ),
-          ],
           child: ListView(
             padding: const EdgeInsets.all(24),
             children: [
+              Align(alignment:Alignment.centerLeft,child:IconButton.ghost(
+                onPressed:()=>Navigator.of(context).pop(),
+                icon:const Icon(LucideIcons.arrowLeft),
+              )),
+              const SizedBox(height:12),
               Center(child:_art(item['image'] as String?,size:200)),
               const SizedBox(height:20),
               Center(child:Text(name,textAlign:TextAlign.center).x2Large().semiBold()),
