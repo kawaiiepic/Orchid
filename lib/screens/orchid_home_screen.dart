@@ -22,6 +22,7 @@ class OrchidHomeScreen extends StatefulWidget {
   final VoidCallback openExplore;
   final VoidCallback openLibrary;
   final ValueChanged<int?> openDailyMixes;
+  final VoidCallback openReply;
   final VoidCallback openProfile;
 
   const OrchidHomeScreen({
@@ -34,6 +35,7 @@ class OrchidHomeScreen extends StatefulWidget {
     required this.openExplore,
     required this.openLibrary,
     required this.openDailyMixes,
+    required this.openReply,
     required this.openProfile,
   });
 
@@ -306,6 +308,35 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
         ]),
       );
     },
+  );
+
+  Widget _madeForYouCard() => _clickable(
+    onTap:widget.openReply,
+    child:Container(
+      width:168,height:245,padding:const EdgeInsets.all(12),
+      decoration:OrchidStyle.panelDecoration(radius:18),
+      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Container(
+          width:144,height:144,
+          decoration:BoxDecoration(
+            borderRadius:BorderRadius.circular(12),
+            gradient:const LinearGradient(
+              begin:Alignment.topLeft,end:Alignment.bottomRight,
+              colors:[Color(0xFF7A3DB3),Color(0xFF262047),Color(0xFF151326)],
+            ),
+          ),
+          child:const Stack(children:[
+            Center(child:Icon(LucideIcons.audioLines,size:65,color:Color(0xFFEACFFF))),
+            Positioned(right:9,bottom:9,child:Icon(LucideIcons.sparkles,
+              size:21,color:Color(0xFFFFFFFF))),
+          ]),
+        ),
+        const SizedBox(height:10),
+        const Text('Reply').semiBold(),
+        const SizedBox(height:4),
+        const Text('Your listening story').small().muted(),
+      ]),
+    ),
   );
 
   String _count(dynamic value) {
@@ -584,6 +615,13 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
               ),
             ),
             const SizedBox(height: 28),
+            const OrchidSectionHeader(
+              title: 'Made for You',
+              subtitle: 'A little more personal',
+            ),
+            const SizedBox(height:12),
+            Align(alignment:Alignment.centerLeft,child:_madeForYouCard()),
+            const SizedBox(height:28),
             const OrchidSectionHeader(
               title: 'Daily Mixes',
               subtitle: 'Fresh rotations for your listening mood',
