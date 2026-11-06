@@ -192,12 +192,12 @@ class _FloatingLyricsBubbleState extends State<_FloatingLyricsBubble>
           width: 268,
           padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
           decoration: BoxDecoration(
-            color: scheme.card.withOpacity(0.94),
+            color: scheme.card.withValues(alpha: 0.94),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: scheme.border),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF000000).withOpacity(0.35),
+                color: const Color(0xFF000000).withValues(alpha: 0.35),
                 blurRadius: 18,
                 offset: const Offset(0, 8),
               ),
