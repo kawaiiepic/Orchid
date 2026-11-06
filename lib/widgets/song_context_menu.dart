@@ -1,4 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/addon.dart';
 import '../services/music_library.dart';
@@ -155,7 +156,9 @@ class _SongActionPanelState extends State<_SongActionPanel> {
           ),
           _action('Play Now', LucideIcons.play, () {
             widget.dismiss();
-            widget.player.playTrack(widget.track);
+            widget.player.playTrack(widget.track).catchError((Object e) {
+              debugPrint('[Orchid] Play Now failed: $e');
+            });
           }),
           _action('Add to Queue', LucideIcons.listMusic, () {
             widget.player.addToQueue(widget.track);
