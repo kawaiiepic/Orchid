@@ -332,20 +332,15 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     final listenedAt=timestamp is num
       ? DateTime.fromMillisecondsSinceEpoch(timestamp.toInt()*1000)
       : null;
-    Navigator.of(context).push(ShadcnPageRoute<void>(
-      builder:(_)=>SongDetailScreen(
-        player:widget.player,
-        library:widget.library,
-        addonService:widget.addonService,
-        addons:widget.addons,
-        title:track['title']?.toString()??'Unknown',
-        artist:track['artist']?.toString()??'Unknown',
-        album:track['album']?.toString(),
-        artworkUrl:track['image']?.toString(),
-        listenedAt:listenedAt,
-        nowPlaying:track['nowPlaying']==true,
-      ),
-    ));
+    showSongDetailDrawer(context,
+      player:widget.player, library:widget.library,
+      addonService:widget.addonService, addons:widget.addons,
+      title:track['title']?.toString()??'Unknown',
+      artist:track['artist']?.toString()??'Unknown',
+      album:track['album']?.toString(),
+      artworkUrl:track['image']?.toString(),
+      listenedAt:listenedAt, nowPlaying:track['nowPlaying']==true,
+    );
   }
 
   Widget _recentRow(Map<String, dynamic> track) {
