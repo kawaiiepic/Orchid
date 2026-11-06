@@ -139,6 +139,28 @@ class _ShellScreenState extends State<ShellScreen>{
    ),
   );
  }
+ void _openFeatureSheet(String title, Widget child) {
+  showContentDrawer(
+   context,
+   builder:(sheetContext)=>Scaffold(
+    child:Column(children:[
+     Padding(
+      padding:const EdgeInsets.fromLTRB(16,12,16,2),
+      child:Row(children:[
+       const Icon(LucideIcons.music2,color:OrchidStyle.lilac),
+       const SizedBox(width:10),
+       Expanded(child:Text(title).large().semiBold()),
+       IconButton.ghost(
+        onPressed:()=>dismissContentDrawer(sheetContext),
+        icon:const Icon(LucideIcons.x),
+       ),
+      ]),
+     ),
+     Expanded(child:child),
+    ]),
+   ),
+  );
+ }
  void _openSettings() {
   showContentDrawer(context, preferredWidth:700,
     builder:(_) => Scaffold(
@@ -281,30 +303,24 @@ class _ShellScreenState extends State<ShellScreen>{
         ]),
        ),
       ),
-      openRadio:()=>Navigator.of(context).push(
-       ShadcnPageRoute<void>(builder:(_)=>DrawerOverlay(
-        child:RadioScreen(account:_account,player:_player,addons:_addons),
-       )),
+      openRadio:()=>_openFeatureSheet(
+       'Radio',
+       RadioScreen(account:_account,player:_player,addons:_addons),
       ),
-      openTopSongs:()=>Navigator.of(context).push(
-       ShadcnPageRoute<void>(builder:(_)=>DrawerOverlay(
-        child:AllTimeTopSongsScreen(account:_account,player:_player,addons:_addons),
-       )),
+      openTopSongs:()=>_openFeatureSheet(
+       'All-Time Top Songs',
+       AllTimeTopSongsScreen(account:_account,player:_player,addons:_addons),
       ),
-      openReplay:()=>Navigator.of(context).push(
-       ShadcnPageRoute<void>(
-        builder:(_)=>DrawerOverlay(child:ReplayScreen(account:_account)),
-       ),
+      openReplay:()=>_openFeatureSheet(
+       'Replay',
+       ReplayScreen(account:_account),
       ),
-      openDailyMixes:(index)=>Navigator.of(context).push(
-       ShadcnPageRoute<void>(
-        builder:(_)=>DrawerOverlay(
-         child:DailyMixesScreen(
-          initialMixIndex:index,
-          account:_account,library:_library,player:_player,
-          addonService:_addonService,addons:_addons,
-         ),
-        ),
+      openDailyMixes:(index)=>_openFeatureSheet(
+       'Daily Mixes',
+       DailyMixesScreen(
+        initialMixIndex:index,
+        account:_account,library:_library,player:_player,
+        addonService:_addonService,addons:_addons,
        ),
       ),
       library:_library,
