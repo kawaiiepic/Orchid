@@ -156,33 +156,46 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                       horizontal: 8,
                       vertical: 4,
                     ),
-                    child: Row(
+                    child: Stack(
+                      alignment: Alignment.center,
                       children: [
-                        IconButton(
-                          variance: ButtonVariance.ghost,
-                          onPressed: () => Navigator.of(context).pop(),
-                          icon: const Icon(LucideIcons.arrowLeft),
-                        ),
-                        const Spacer(),
-                        if (!widget.player.resolving && widget.player.playingVia != null)
-                          Flexible(
+                        // Center the source label independently of the buttons.
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 56),
+                          child: Center(
                             child: Text(
-                              widget.player.sourceLabel,
+                              !widget.player.resolving &&
+                                      widget.player.playingVia != null
+                                  ? widget.player.sourceLabel
+                                  : 'Now playing',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 14, color: scheme.primary),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: scheme.primary,
+                              ),
                             ),
                           ),
-                        const Spacer(),
-                        // Anchor for shadcn drawer overlay.
-                        OverlayAnchor(
-                          anchor: #orchidQueueDrawer,
-                          child: IconButton(
-                            variance: ButtonVariance.ghost,
-                            onPressed: () =>
-                                showQueueSheet(context, widget.player),
-                            icon: const Icon(LucideIcons.listMusic),
-                          ),
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            IconButton(
+                              variance: ButtonVariance.ghost,
+                              onPressed: () => Navigator.of(context).pop(),
+                              icon: const Icon(LucideIcons.arrowLeft),
+                            ),
+                            OverlayAnchor(
+                              anchor: #orchidQueueDrawer,
+                              child: IconButton(
+                                variance: ButtonVariance.ghost,
+                                onPressed: () =>
+                                    showQueueSheet(context, widget.player),
+                                icon: const Icon(LucideIcons.listMusic),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
