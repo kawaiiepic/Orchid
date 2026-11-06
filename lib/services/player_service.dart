@@ -106,7 +106,7 @@ class PlayerService extends ChangeNotifier {
     if (_disposed || !keepPlaying || current == null) return;
     if (_recommendationRequest != null) {
       await _recommendationRequest;
-      if (!refresh) return;
+      if (recommendations.isNotEmpty) return;
     }
     if (!refresh && recommendations.isNotEmpty) return;
 
@@ -179,7 +179,7 @@ class PlayerService extends ChangeNotifier {
       if (!hasQueuedNext && keepPlaying) {
         await _appendRecommendations();
       }
-      if (_disposed || resolving ||
+      if (_disposed || !hasQueuedNext || resolving ||
           player.processingState != ProcessingState.completed) return;
       await playNext();
     } catch (e) {
@@ -227,9 +227,7 @@ class PlayerService extends ChangeNotifier {
 
   void _pushHistory(TrackResult? track) {
     if (track == null) return;
-    history.removeWhere(
-      (t) => t.id == track.id && t.sourceId == track.sourceId,
-    );
+    history.removeWhere((t) => _trackIdentity(t) == _trackIdentity(track));
     history.add(track);
     if (history.length > 40) {
       history = history.sublist(history.length - 40);
