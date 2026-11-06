@@ -7,6 +7,7 @@ class AppleCover extends StatelessWidget {
   final String name;
   final String? album;
   final String? fallbackUrl;
+  final String? preferredUrl;
   final bool isAlbum;
   final double size;
   final double radius;
@@ -17,6 +18,7 @@ class AppleCover extends StatelessWidget {
     required this.name,
     this.album,
     this.fallbackUrl,
+    this.preferredUrl,
     this.isAlbum = false,
     this.size = 48,
     this.radius = 8,
@@ -36,11 +38,14 @@ class AppleCover extends StatelessWidget {
       builder: (context, snapshot) {
         final apple = snapshot.data;
         final fallback = fallbackUrl;
-        final url = apple != null && apple.startsWith('https://')
-            ? apple
-            : fallback != null && fallback.startsWith('https://')
-                ? fallback
-                : null;
+        final url = preferredUrl != null &&
+                preferredUrl!.startsWith('https://')
+            ? preferredUrl
+            : apple != null && apple.startsWith('https://')
+                ? apple
+                : fallback != null && fallback.startsWith('https://')
+                    ? fallback
+                    : null;
         Widget placeholder() => ColoredBox(
           color: Theme.of(context).colorScheme.muted,
           child: const Center(child: Icon(LucideIcons.music2, size: 20)),
