@@ -116,12 +116,9 @@ class MiniPlayerBar extends StatelessWidget {
                 onPressed: player.hasNext ? () => player.playNext() : null,
                 icon: const Icon(LucideIcons.skipForward, size: 18),
               ),
-              if (!compact) OverlayAnchor(
-                anchor: #orchidQueueDrawer,
-                child: IconButton.ghost(
-                  onPressed: () => showQueueSheet(context, player),
-                  icon: const Icon(LucideIcons.listMusic, size: 18),
-                ),
+              if (!compact) IconButton.ghost(
+                onPressed: () => showQueueSheet(context, player),
+                icon: const Icon(LucideIcons.listMusic, size: 18),
               ),
               if (!compact) ...[
                 const SizedBox(width: 8),
