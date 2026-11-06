@@ -3,6 +3,7 @@ import 'package:orchid/widgets/karaoke_lyrics.dart';
 import 'package:orchid/widgets/liquid_artwork_background.dart';
 import 'package:orchid/widgets/queue_sheet.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/lyrics_service.dart';
 import '../services/player_service.dart';
@@ -19,8 +20,12 @@ class FullPlayerScreen extends StatefulWidget {
 }
 
 class _FullPlayerScreen extends State<FullPlayerScreen> {
-  // 0 = lyrics, 1 = album cover, 2 = animated Apple Music artwork.
-  int _viewMode = 2;
+  // Two views only: animated/static artwork or lyrics.
+  int _viewMode = 1;
+  bool _animatedEnabled = true;
+  bool _animationFailed = false;
+  static const _animatedPreferenceKey = 'orchid_animated_artwork_enabled';
+  OverlayEntry? _optionsOverlay;
   AnimatedArtwork? _appleArtwork;
   bool _appleLoading = false;
   String? _artworkTrackKey;
@@ -31,6 +36,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
     super.initState();
     widget.player.addListener(_onTrackChanged);
     _onTrackChanged();
+    _restoreArtworkPreference();
   }
 
   void _onTrackChanged() {
@@ -45,6 +51,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
     setState(() {
       _appleArtwork = null;
       _appleLoading = canSearch;
+      _animationFailed = false;
     });
     if (!canSearch || track == null) return;
     AnimatedArtworkService.instance.fetch(
@@ -63,23 +70,94 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
   @override
   void dispose() {
     ++_artworkRequest;
+    _closeOptions();
     widget.player.removeListener(_onTrackChanged);
     super.dispose();
   }
 
+  Future<void> _restoreArtworkPreference() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (mounted) setState(() {
+        _animatedEnabled = prefs.getBool(_animatedPreferenceKey) ?? true;
+      });
+    } catch (_) {
+      // Animated covers remain enabled by default if storage is unavailable.
+    }
+  }
+
+  Future<void> _setAnimatedEnabled(bool enabled) async {
+    setState(() {
+      _animatedEnabled = enabled;
+      if (enabled) _animationFailed = false;
+    });
+    _closeOptions();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_animatedPreferenceKey, enabled);
+    } catch (_) {}
+  }
+
+  void _closeOptions() {
+    _optionsOverlay?.remove();
+    _optionsOverlay?.dispose();
+    _optionsOverlay = null;
+  }
+
+  void _showOptions() {
+    _closeOptions();
+    final top = MediaQuery.paddingOf(context).top + 54;
+    _optionsOverlay = OverlayEntry(
+      builder: (_) => Stack(children: [
+        Positioned.fill(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: _closeOptions,
+          ),
+        ),
+        Positioned(
+          top: top, right: 12,
+          child: Container(
+            width: 252,
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF211C2C),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF5D496A)),
+            ),
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _setAnimatedEnabled(!_animatedEnabled),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 15, vertical: 12),
+                child: Row(children: [
+                  Icon(_animatedEnabled
+                      ? LucideIcons.check : LucideIcons.image, size: 18),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text(_animatedEnabled
+                      ? 'Disable animated artwork'
+                      : 'Enable animated artwork').small()),
+                ]),
+              ),
+            ),
+          ),
+        ),
+      ]),
+    );
+    Overlay.of(context).insert(_optionsOverlay!);
+  }
+
+  void _artworkFailed() {
+    if (mounted && !_animationFailed) {
+      setState(() => _animationFailed = true);
+    }
+  }
+
   Widget _animatedArtworkBody(ColorScheme scheme) {
     final artwork = _appleArtwork;
-    if (artwork == null) {
-      return Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Flexible(child: _artworkBody(scheme)),
-          const SizedBox(height: 12),
-          Text(_appleLoading
-              ? 'Finding animated artwork…'
-              : 'No animated artwork available for this song').small().muted(),
-        ],
-      );
+    if (artwork == null || !_animatedEnabled || _animationFailed) {
+      return _artworkBody(scheme);
     }
     return Center(
       child: Column(
@@ -95,6 +173,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                   key: ValueKey(artwork.url),
                   url: artwork.url,
                   fallbackArtworkUrl: widget.player.current?.artworkUrl,
+                  onFailure: _artworkFailed,
                 ),
               ),
             ),
@@ -119,6 +198,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
             key: ValueKey('mobile-${artwork.url}'),
             url: artwork.url,
             fallbackArtworkUrl: cover,
+            onFailure: _artworkFailed,
           )
         else if (cover != null && cover.startsWith('https://'))
           CachedNetworkImage(
@@ -180,7 +260,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
   }
 
   void _nextView() {
-    setState(() => _viewMode = (_viewMode + 1) % 3);
+    setState(() => _viewMode = _viewMode == 0 ? 1 : 0);
   }
 
   String _fmt(Duration d) {
@@ -309,7 +389,8 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
       listenable: widget.player,
       builder: (context, _) {
         final track = widget.player.current;
-        final mobileAnimated = isMobile && _viewMode == 2;
+        final mobileAnimated = isMobile && _viewMode == 1 &&
+            _animatedEnabled && _appleArtwork != null && !_animationFailed;
         return Scaffold(
           child: Stack(
             fit: StackFit.expand,
@@ -365,15 +446,22 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                               onPressed: () => Navigator.of(context).pop(),
                               icon: const Icon(LucideIcons.arrowLeft),
                             ),
-                            OverlayAnchor(
-                              anchor: #orchidQueueDrawer,
-                              child: IconButton(
-                                variance: ButtonVariance.ghost,
-                                onPressed: () =>
-                                    showQueueSheet(context, widget.player),
-                                icon: const Icon(LucideIcons.listMusic),
+                            Row(mainAxisSize: MainAxisSize.min, children: [
+                              OverlayAnchor(
+                                anchor: #orchidQueueDrawer,
+                                child: IconButton(
+                                  variance: ButtonVariance.ghost,
+                                  onPressed: () =>
+                                      showQueueSheet(context, widget.player),
+                                  icon: const Icon(LucideIcons.listMusic),
+                                ),
                               ),
-                            ),
+                              IconButton(
+                                variance: ButtonVariance.ghost,
+                                onPressed: _showOptions,
+                                icon: const Icon(LucideIcons.ellipsis),
+                              ),
+                            ]),
                           ],
                         ),
                       ],
@@ -390,9 +478,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                             child: _viewMode == 0
                                 ? _lyricsBody()
-                                : _viewMode == 1
-                                    ? _artworkBody(scheme)
-                                    : _animatedArtworkBody(scheme),
+                                : _animatedArtworkBody(scheme),
                           ),
                   ),
 
@@ -495,9 +581,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                           icon: Icon(
                             _viewMode == 0
                                 ? LucideIcons.image
-                                : _viewMode == 1
-                                    ? LucideIcons.film
-                                    : LucideIcons.mic,
+                                : LucideIcons.mic,
                           ),
                         ),
                       ),
