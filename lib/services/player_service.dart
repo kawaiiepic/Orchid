@@ -11,6 +11,9 @@ class PlayerService extends ChangeNotifier {
   final AudioPlayer player = AudioPlayer();
   final AddonService addonService;
   final LyricsService lyricsService;
+  StreamSubscription<PlayerState>? _stateSubscription;
+  bool _autoAdvancing = false;
+  bool _disposed = false;
 
   TrackResult? current;
   String? playingVia;
@@ -34,7 +37,29 @@ class PlayerService extends ChangeNotifier {
     required this.addonService,
     LyricsService? lyricsService,
   }) : lyricsService = lyricsService ?? LyricsService() {
-    player.playerStateStream.listen((_) => notifyListeners());
+    _stateSubscription = player.playerStateStream.listen((state) {
+      if (_disposed) return;
+      notifyListeners();
+      if (state.processingState == ProcessingState.completed &&
+          !_autoAdvancing && !resolving && hasNext) {
+        _autoAdvancing = true;
+        unawaited(_advanceAfterCompletion());
+      }
+    });
+  }
+
+  Future<void> _advanceAfterCompletion() async {
+    try {
+      // Let the audio stream finish delivering its last completion event.
+      // The guard prevents duplicate advances while the next source resolves.
+      if (_disposed || !hasNext || resolving ||
+          player.processingState != ProcessingState.completed) return;
+      await playNext();
+    } catch (e) {
+      debugPrint('[Orchid] Unable to auto-play next queue track: $e');
+    } finally {
+      _autoAdvancing = false;
+    }
   }
 
   /// A human-readable playback provider label, never a raw stream URL.
@@ -215,6 +240,8 @@ class PlayerService extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
+    _stateSubscription?.cancel();
     player.dispose();
     super.dispose();
   }
