@@ -9,6 +9,7 @@ import '../models/addon.dart';
 import 'song_detail_screen.dart';
 import 'music_detail_pages.dart';
 import '../widgets/orchid_style.dart';
+import '../widgets/artist_artwork.dart';
 
 class OrchidHomeScreen extends StatefulWidget {
   final PlayerService player;
@@ -279,7 +280,9 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
           child:Column(
             crossAxisAlignment:CrossAxisAlignment.start,
             children:[
-              _art(item['image'] as String?,size:144),
+              isAlbum
+                  ? _art(item['image'] as String?,size:144)
+                  : ArtistArtwork(artist: title, size: 144, radius: 12),
               const SizedBox(height:10),
               SizedBox(
                 height:38,
