@@ -89,10 +89,12 @@ class PlayerService extends ChangeNotifier {
   Future<bool> _appendRecommendations() async {
     final seed = current;
     if (seed == null || !keepPlaying || _disposed) return false;
+    final generation = lyricsGeneration;
     try {
       final found = await addonService.search(_addons, seed.artist)
           .timeout(const Duration(seconds: 22));
-      if (_disposed || !keepPlaying) return false;
+      if (_disposed || !keepPlaying || generation != lyricsGeneration ||
+          current != seed) return false;
       String identity(TrackResult t) =>
           '${t.artist.trim().toLowerCase()}|${t.title.trim().toLowerCase()}';
       final excluded = <String>{
