@@ -39,6 +39,7 @@ class _SearchScreenState extends State<SearchScreen> {
   List<String> _artists = [];
   List<Map<String, dynamic>> _applePlaylists = [];
   bool _applePlaylistsConfigured = false;
+  bool _usingAppleCatalog = false;
   bool _searching = false;
   bool _showAllTracks = false;
   bool _showAllAlbums = false;
@@ -145,6 +146,7 @@ class _SearchScreenState extends State<SearchScreen> {
         _artists=_artistsOn?artists:[];
         _applePlaylists=_playlistsOn?playlists:[];
         _applePlaylistsConfigured=true;
+        _usingAppleCatalog=true;
         _searching=false;
         final count=_tracks.length+_albums.length+_artists.length+
             (_playlistsOn?_playlists.length+_applePlaylists.length:0);
@@ -169,6 +171,7 @@ class _SearchScreenState extends State<SearchScreen> {
             _artists=(fallback[2] as List<String>).take(1).toList();
             _applePlaylists=[];
             _applePlaylistsConfigured=false;
+            _usingAppleCatalog=false;
             _searching=false;
             _status='Showing public catalog results. Update Petal for Apple Music search.';
           });
@@ -311,7 +314,7 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget _artistTile(String artist) => GestureDetector(
     behavior:HitTestBehavior.opaque,
     onTap:()=>openArtistPage(context,artist:artist,
-      account:widget.account,
+      account:_usingAppleCatalog ? widget.account : null,
       player:widget.player,addonService:widget.addonService,
       addons:widget.addons,library:widget.library),
     child:Container(
