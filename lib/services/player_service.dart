@@ -119,6 +119,7 @@ class PlayerService extends ChangeNotifier {
 
   Future<void> _loadAndPlay(TrackResult track) async {
     resolving = true;
+    playingVia = null;
     error = null;
     lyrics = null;
     lyricsLoading = true;
