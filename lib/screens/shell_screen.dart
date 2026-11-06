@@ -253,7 +253,7 @@ class _ShellScreenState extends State<ShellScreen>{
       ),
       library:_library,
      ),
-     SearchScreen(addonService:_addonService,player:_player,addons:_addons,library:_library),
+     SearchScreen(addonService:_addonService,player:_player,addons:_addons,library:_library,account:_account),
      LibraryScreen(
       library:_library,
       account:_account,
