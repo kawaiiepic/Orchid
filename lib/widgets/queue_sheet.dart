@@ -13,6 +13,7 @@ void showQueueSheet(BuildContext context, PlayerService player) {
       position: OverlayPosition.bottom,
       useSafeArea: true,
       barrierDismissible: true,
+      draggable: true,
     ),
     builder: (sheetContext) => SizedBox(
       width: MediaQuery.sizeOf(sheetContext).width,
