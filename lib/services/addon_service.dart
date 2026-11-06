@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/addon.dart';
 import './internal_addons/spotify_addon_service.dart';
+import 'search_ranker.dart';
 
 class AddonService {
   static const _storageKey = 'orchid_addons_v1';
@@ -106,7 +107,7 @@ class AddonService {
     _log('raw hits: itunes=${buckets[0].length} addons=${buckets[1].length} spotify=${buckets[2].length}');
     final deduped = _dedupe(merged);
     _log('after dedupe: ${deduped.length}');
-    return deduped;
+    return SearchRanker.rank(q, deduped);
   }
 
   Future<List<TrackResult>> _searchItunes(String q) async {
