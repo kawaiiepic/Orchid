@@ -10,6 +10,7 @@ import '../services/player_service.dart';
 import '../widgets/artist_artwork.dart';
 import '../widgets/orchid_style.dart';
 import '../widgets/song_context_menu.dart';
+import '../widgets/track_duration.dart';
 import 'music_detail_pages.dart';
 import 'song_detail_screen.dart';
 
@@ -172,10 +173,16 @@ class _SearchScreenState extends State<SearchScreen> {
       title:t.title,
       subtitle:'${t.artist} · ${t.sourceName}',
       onTap:()=>_play(t),
-      trailing:IconButton.ghost(
-        onPressed:()=>_songDetails(t),
-        icon:const Icon(LucideIcons.info,size:18),
-      ),
+      trailing:Row(mainAxisSize:MainAxisSize.min,children:[
+        if(trackDurationLabel(t.duration)!=null)...[
+          Text(trackDurationLabel(t.duration)!).xSmall().muted(),
+          const SizedBox(width:8),
+        ],
+        IconButton.ghost(
+          onPressed:()=>_songDetails(t),
+          icon:const Icon(LucideIcons.info,size:18),
+        ),
+      ]),
     ),
   );
 
