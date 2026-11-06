@@ -6,6 +6,7 @@ import '../services/addon_service.dart';
 import '../services/player_service.dart';
 import '../services/music_library.dart';
 import 'song_detail_screen.dart';
+import '../widgets/orchid_style.dart';
 
 class SearchScreen extends StatefulWidget {
   final AddonService addonService;
@@ -78,14 +79,23 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(20, 20, 20, 14),
+          child: OrchidHero(
+            eyebrow: 'Explore',
+            title: 'Find your next favorite.',
+            description: 'Artists, albums and songs are only a search away.',
+            icon: LucideIcons.search,
+          ),
+        ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
           child: Row(
             children: [
               Expanded(
                 child: TextField(
                   controller: _searchController,
-                  placeholder: const Text('Search songs…'),
+                  placeholder: const Text('Search a song or artist…'),
                   onSubmitted: (_) => _search(),
                 ),
               ),
@@ -108,7 +118,7 @@ class _SearchScreenState extends State<SearchScreen> {
         const SizedBox(height: 4),
         Expanded(
           child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             itemCount: _results.length,
             itemBuilder: (context, i) => _trackTile(_results[i]),
           ),
@@ -121,11 +131,13 @@ class _SearchScreenState extends State<SearchScreen> {
     final playing = widget.player.current?.id == t.id &&
         widget.player.current?.sourceId == t.sourceId;
 
-    return Button(
-      style: const ButtonStyle.ghost(),
-      onPressed: () => _openSong(t),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: GestureDetector(
+        onTap: () => _openSong(t),
+        child: Container(
+          decoration: OrchidStyle.panelDecoration(radius: 15),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
         child: Row(
           children: [
             if (t.artworkUrl != null)
@@ -169,6 +181,7 @@ class _SearchScreenState extends State<SearchScreen> {
             if (playing)
               const Icon(LucideIcons.volume2, size: 16),
           ],
+        ),
         ),
       ),
     );
