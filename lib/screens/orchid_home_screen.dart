@@ -16,6 +16,7 @@ class OrchidHomeScreen extends StatefulWidget {
   final List<InstalledAddon> addons;
   final OrchidAccount account;
   final VoidCallback openExplore;
+  final VoidCallback openLibrary;
   final VoidCallback openProfile;
 
   const OrchidHomeScreen({
@@ -26,6 +27,7 @@ class OrchidHomeScreen extends StatefulWidget {
     required this.addons,
     required this.account,
     required this.openExplore,
+    required this.openLibrary,
     required this.openProfile,
   });
 
@@ -349,6 +351,30 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
             const SizedBox(height: 5),
             const Text('Your music, your space.').muted(),
             const SizedBox(height: 24),
+            Row(children:[
+              Expanded(child: const Text('Made for you').large().semiBold()),
+              OutlineButton(
+                onPressed:widget.openLibrary,
+                child:const Text('Open Library'),
+              ),
+            ]),
+            const SizedBox(height:8),
+            const Text('Your favorites, playlists and daily listening mixes.').small().muted(),
+            const SizedBox(height:12),
+            Row(children:[
+              Expanded(child:Button(
+                style:const ButtonStyle.ghost(),
+                onPressed:widget.openLibrary,
+                child:const Text('Daily Mixes'),
+              )),
+              const SizedBox(width:8),
+              Expanded(child:Button(
+                style:const ButtonStyle.ghost(),
+                onPressed:widget.openLibrary,
+                child:const Text('Favorites'),
+              )),
+            ]),
+            const SizedBox(height:24),
             const Text('Jump back in').large().semiBold(),
             const SizedBox(height: 12),
             Card(
