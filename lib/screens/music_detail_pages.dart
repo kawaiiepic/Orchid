@@ -3,6 +3,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../models/addon.dart';
 import '../services/addon_service.dart';
 import '../services/music_catalog_service.dart';
+import '../services/orchid_account.dart';
 import '../services/music_library.dart';
 import '../services/player_service.dart';
 import '../widgets/mini_player_bar.dart';
@@ -16,13 +17,14 @@ import '../widgets/track_duration.dart';
 void openArtistPage(BuildContext context, {
   required String artist,
   String? artwork,
+  OrchidAccount? account,
   required PlayerService player,
   required AddonService addonService,
   required List<InstalledAddon> addons,
   required MusicLibrary library,
 }) {
   showContentDrawer(context, builder: (_) => ArtistDetailPage(
-    artist:artist, artwork:artwork, player:player,
+    artist:artist, artwork:artwork, account:account, player:player,
     addonService:addonService, addons:addons, library:library,
   ));
 }
@@ -200,12 +202,13 @@ Widget _trackTile(BuildContext context, TrackResult song, {
 class ArtistDetailPage extends StatefulWidget {
   final String artist;
   final String? artwork;
+  final OrchidAccount? account;
   final PlayerService player;
   final AddonService addonService;
   final List<InstalledAddon> addons;
   final MusicLibrary library;
   const ArtistDetailPage({
-    super.key, required this.artist, this.artwork,
+    super.key, required this.artist, this.artwork, this.account,
     required this.player, required this.addonService,
     required this.addons, required this.library,
   });
@@ -219,7 +222,9 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
   @override
   void initState() {
     super.initState();
-    _catalog = MusicCatalogService.instance.artist(widget.artist);
+    _catalog = widget.account == null
+        ? MusicCatalogService.instance.artist(widget.artist)
+        : MusicCatalogService.instance.appleArtist(widget.account!,widget.artist);
   }
 
   @override
@@ -254,8 +259,11 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
                 Text('Could not load artist: ${snapshot.error}').muted(),
                 const SizedBox(height: 12),
                 OutlineButton(onPressed: () => setState(() {
-                  _catalog = MusicCatalogService.instance.artist(widget.artist,
-                    refresh: true);
+                  _catalog = widget.account == null
+                      ? MusicCatalogService.instance.artist(widget.artist,
+                          refresh:true)
+                      : MusicCatalogService.instance.appleArtist(
+                          widget.account!,widget.artist);
                 }), child: const Text('Retry')),
               ])
             else if (catalog != null) ...[
