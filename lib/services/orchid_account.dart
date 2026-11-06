@@ -4,6 +4,13 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+class OrchidAuthException implements Exception {
+ final int status;
+ final String message;
+ const OrchidAuthException(this.status,this.message);
+ @override String toString()=>message;
+}
+
 /// Orchid uses the same account and session endpoints as Petal.
 class OrchidAccount extends ChangeNotifier {
  static const baseUrl=String.fromEnvironment('PETAL_BACKEND_URL',defaultValue:'https://petal-backend.blossomvale.dev');
@@ -14,6 +21,8 @@ class OrchidAccount extends ChangeNotifier {
  bool loading=true;
  bool _verified=false;
  bool connecting=false;
+ String? restoreError;
+ bool get hasStoredSession=>_token!=null;
  bool get signedIn=>_token!=null && _verified;
  bool get lastfmConnected=>lastfmUsername!=null;
 
@@ -30,24 +39,64 @@ class OrchidAccount extends ChangeNotifier {
   final data=Map<String,dynamic>.from(value);
   if(response.statusCode>=400||data['success']==false) {
    final result=data['result'];
-   throw Exception(data['error']??(result is Map?result['error']:null)??'Request failed (${response.statusCode})');
+   throw OrchidAuthException(response.statusCode, (data['error']??(result is Map?result['error']:null)??'Request failed (${response.statusCode})').toString());
   }
   return data;
  }
 
  Future<void> restore() async {
+  loading=true;
+  restoreError=null;
+  notifyListeners();
   try{
    final prefs=await SharedPreferences.getInstance();
    _token=prefs.getString('orchid_petal_token');
-   if(_token!=null){
-    try{await refresh();}catch(_){await _clear();}
-   }
-  }finally{loading=false;notifyListeners();}
+   _verified=false;
+   if(_token!=null)await _verifySavedSession();
+  }catch(e){
+   restoreError='Could not restore your saved session: $e';
+   debugPrint('[Orchid] Session restore failed: $e');
+  }finally{
+   loading=false;
+   notifyListeners();
+  }
  }
+
+ Future<void> retryRestore() async {
+  if(_token==null){
+   await restore();
+   return;
+  }
+  loading=true;
+  restoreError=null;
+  notifyListeners();
+  try{
+   await _verifySavedSession();
+  }catch(e){
+   restoreError='Could not connect to Petal: $e';
+  }finally{
+   loading=false;
+   notifyListeners();
+  }
+ }
+
+ Future<void> _verifySavedSession() async {
+  try{
+   await refresh();
+  }on OrchidAuthException catch(e){
+   if(e.status==401 || e.status==403){
+    await _clear();
+    return;
+   }
+   rethrow;
+  }
+ }
+
  Future<void> refresh() async {
   final response=await _request('GET','/users/verify');
   final user=Map<String,dynamic>.from(response['user'] as Map);
   _verified=true;
+  restoreError=null;
   username=user['username'] as String?;
   email=user['email'] as String?;
   notifyListeners();
@@ -71,7 +120,7 @@ class OrchidAccount extends ChangeNotifier {
   try{await refresh();}catch(e){await _clear();rethrow;}
  }
  Future<void> _clear() async {
-  _token=null;_verified=false;username=null;email=null;lastfmUsername=null;connecting=false;
+  _token=null;_verified=false;username=null;email=null;lastfmUsername=null;connecting=false;restoreError=null;
   await (await SharedPreferences.getInstance()).remove('orchid_petal_token');
   notifyListeners();
  }
