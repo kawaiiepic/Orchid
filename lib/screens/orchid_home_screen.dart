@@ -7,7 +7,7 @@ import '../services/music_library.dart';
 import '../services/addon_service.dart';
 import '../models/addon.dart';
 import 'song_detail_screen.dart';
-import '../widgets/mini_player_bar.dart';
+import 'music_detail_pages.dart';
 
 class OrchidHomeScreen extends StatefulWidget {
   final PlayerService player;
@@ -17,6 +17,7 @@ class OrchidHomeScreen extends StatefulWidget {
   final OrchidAccount account;
   final VoidCallback openExplore;
   final VoidCallback openLibrary;
+  final VoidCallback openDailyMixes;
   final VoidCallback openProfile;
 
   const OrchidHomeScreen({
@@ -28,6 +29,7 @@ class OrchidHomeScreen extends StatefulWidget {
     required this.account,
     required this.openExplore,
     required this.openLibrary,
+    required this.openDailyMixes,
     required this.openProfile,
   });
 
@@ -239,49 +241,24 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
   }
 
   void _showMusicDetail(Map<String, dynamic> item, {required bool isAlbum}) {
-    final name=item['name']?.toString()??'Unknown';
-    final artist=item['artist']?.toString()??'';
-    final recent=_items('recent').where((track) {
-      final trackArtist=track['artist']?.toString()??'';
-      final trackAlbum=track['album']?.toString()??'';
-      return isAlbum
-          ? trackAlbum.toLowerCase()==name.toLowerCase() &&
-              trackArtist.toLowerCase()==artist.toLowerCase()
-          : trackArtist.toLowerCase()==name.toLowerCase();
-    }).toList();
-    Navigator.of(context).push(
-      ShadcnPageRoute<void>(
-        builder: (_) => Scaffold(
-          footers:[MiniPlayerBar(player:widget.player)],
-          child: ListView(
-            padding: const EdgeInsets.all(24),
-            children: [
-              Align(alignment:Alignment.centerLeft,child:IconButton.ghost(
-                onPressed:()=>Navigator.of(context).pop(),
-                icon:const Icon(LucideIcons.arrowLeft),
-              )),
-              const SizedBox(height:12),
-              Center(child:_art(item['image'] as String?,size:200)),
-              const SizedBox(height:20),
-              Center(child:Text(name,textAlign:TextAlign.center).x2Large().semiBold()),
-              if(isAlbum)...[
-                const SizedBox(height:6),
-                Center(child:Text(artist).muted()),
-              ],
-              const SizedBox(height:12),
-              Center(child:Text('${_count(item['plays'])} Last.fm plays').muted()),
-              const SizedBox(height:28),
-              Text('Recent listening').large().semiBold(),
-              const SizedBox(height:10),
-              if(recent.isEmpty)
-                const Text('No matching tracks in your latest Last.fm history.').muted()
-              else
-                ...recent.map(_recentRow),
-            ],
-          ),
-        ),
-      ),
-    );
+    if (isAlbum) {
+      openAlbumPage(context,
+        artist: item['artist']?.toString() ?? '',
+        album: item['name']?.toString() ?? '',
+        artwork: item['image']?.toString(),
+        player: widget.player,
+        addonService: widget.addonService,
+        addons: widget.addons,
+        library: widget.library);
+    } else {
+      openArtistPage(context,
+        artist: item['name']?.toString() ?? '',
+        artwork: item['image']?.toString(),
+        player: widget.player,
+        addonService: widget.addonService,
+        addons: widget.addons,
+        library: widget.library);
+    }
   }
 
   Widget _topCard(Map<String, dynamic> item, {required bool isAlbum}) {
@@ -339,7 +316,6 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     return AnimatedBuilder(
       animation: widget.player,
       builder: (context, _) {
-        final current = widget.player.current;
         final linked = widget.account.lastfmConnected;
         final stats = _history?['stats'] is Map
             ? Map<String, dynamic>.from(_history!['stats'] as Map)
@@ -364,7 +340,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
             Row(children:[
               Expanded(child:Button(
                 style:const ButtonStyle.ghost(),
-                onPressed:widget.openLibrary,
+                onPressed:widget.openDailyMixes,
                 child:const Text('Daily Mixes'),
               )),
               const SizedBox(width:8),
@@ -375,31 +351,6 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
               )),
             ]),
             const SizedBox(height:24),
-            const Text('Jump back in').large().semiBold(),
-            const SizedBox(height: 12),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(current?.title ?? 'Nothing playing yet').semiBold(),
-                    const SizedBox(height: 4),
-                    Text(current?.artist ?? 'Find something you love and press play.').muted(),
-                    const SizedBox(height: 12),
-                    PrimaryButton(
-                      onPressed: current == null
-                          ? widget.openExplore
-                          : () => widget.player.togglePlayPause(),
-                      child: Text(current == null
-                          ? 'Explore music'
-                          : widget.player.player.playing ? 'Pause' : 'Resume'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
             Row(
               children: [
                 Expanded(child: const Text('Your Last.fm').large().semiBold()),
@@ -473,34 +424,6 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
               ],
             ],
             const SizedBox(height: 24),
-            const Text('Your connections').large().semiBold(),
-            const SizedBox(height: 10),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Petal account connected').semiBold(),
-                          Text(linked
-                                  ? 'Last.fm: ${widget.account.lastfmUsername}'
-                                  : 'Link Last.fm for listening stats and scrobbles.')
-                              .small()
-                              .muted(),
-                        ],
-                      ),
-                    ),
-                    OutlineButton(
-                      onPressed: widget.openProfile,
-                      child: const Text('Manage'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
           ],
         );
       },
