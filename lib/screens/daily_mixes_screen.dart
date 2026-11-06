@@ -139,16 +139,16 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
             player: widget.player, library: widget.library,
             child: Button(
             style: const ButtonStyle.ghost(),
-            onPressed: () => Navigator.of(context).push(ShadcnPageRoute<void>(
-              builder: (_) => SongDetailScreen(
-                player: widget.player,
-                addonService: widget.addonService,
-                addons: widget.addons,
-                library: widget.library,
-                title: song.title, artist: song.artist,
-                album: song.album, artworkUrl: song.artwork,
-              ),
-            )),
+            onPressed: () {
+              widget.player.setAddons(widget.addons);
+              widget.player.playTrack(TrackResult(
+                id:song.key,title:song.title,artist:song.artist,
+                album:song.album,artworkUrl:song.artwork,
+                sourceId:'orchid-mix',sourceName:'Daily Mix',
+              )).catchError((Object e) {
+                debugPrint('[Orchid Mix] Playback failed: $e');
+              });
+            },
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Row(children: [
@@ -161,7 +161,17 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
                     Text(song.artist).small().muted(),
                   ],
                 )),
-                const Icon(LucideIcons.chevronRight, size: 18),
+                IconButton.ghost(
+                  onPressed:()=>showSongDetailDrawer(context,
+                    player:widget.player,
+                    addonService:widget.addonService,
+                    addons:widget.addons,
+                    library:widget.library,
+                    title:song.title, artist:song.artist,
+                    album:song.album, artworkUrl:song.artwork,
+                  ),
+                  icon:const Icon(LucideIcons.info,size:18),
+                ),
               ]),
             ),
             ),
