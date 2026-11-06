@@ -6,6 +6,7 @@ import '../services/player_service.dart';
 import '../services/addon_service.dart';
 import '../models/addon.dart';
 import 'song_detail_screen.dart';
+import '../widgets/mini_player_bar.dart';
 
 class OrchidHomeScreen extends StatefulWidget {
   final PlayerService player;
@@ -245,6 +246,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     Navigator.of(context).push(
       ShadcnPageRoute<void>(
         builder: (_) => Scaffold(
+          footers:[MiniPlayerBar(player:widget.player)],
           child: ListView(
             padding: const EdgeInsets.all(24),
             children: [
