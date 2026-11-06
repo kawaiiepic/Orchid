@@ -4,6 +4,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../models/addon.dart';
 import '../services/addon_service.dart';
 import '../services/player_service.dart';
+import 'song_detail_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   final AddonService addonService;
@@ -52,21 +53,21 @@ class _SearchScreenState extends State<SearchScreen> {
     });
   }
 
-  Future<void> _play(TrackResult track) async {
-    setState(() => _status = 'Resolving…');
-    try {
-      widget.player.setAddons(widget.addons);
-      await widget.player.playTrack(track, fromQueue: _results);
-      if (!mounted) return;
-      setState(() {
-        _status = widget.player.playingVia != null
-            ? 'Playing via ${widget.player.playingVia}'
-            : null;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _status = 'Play failed: $e');
-    }
+  void _openSong(TrackResult track) {
+    Navigator.of(context).push(
+      ShadcnPageRoute<void>(
+        builder:(_)=>SongDetailScreen(
+          player:widget.player,
+          addonService:widget.addonService,
+          addons:widget.addons,
+          title:track.title,
+          artist:track.artist,
+          album:track.album,
+          artworkUrl:track.artworkUrl,
+          track:track,
+        ),
+      ),
+    );
   }
 
   @override
@@ -118,7 +119,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
     return Button(
       style: const ButtonStyle.ghost(),
-      onPressed: () => _play(t),
+      onPressed: () => _openSong(t),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
         child: Row(
