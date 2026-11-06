@@ -176,6 +176,33 @@ class OrchidAccount extends ChangeNotifier {
   lastfmUsername=data['connected']==true?data['username'] as String?:null;
   notifyListeners();
  }
+ Future<Map<String,dynamic>> orchidHome() async {
+  if(!signedIn)throw StateError('Sign in first');
+  return _request('GET','/orchid/home');
+ }
+ Future<Map<String,dynamic>> listeningHistory() async {
+  if(!signedIn)throw StateError('Sign in first');
+  return _request('GET','/orchid/history');
+ }
+ Future<void> recordListen({
+  required String eventId,
+  required String title,
+  required String artist,
+  required int startedAt,
+  String? album,
+  String? artwork,
+  String? songId,
+  int? duration,
+ }) async {
+  if(!signedIn)return;
+  await _request('POST','/orchid/history',{
+    'eventId':eventId,'title':title,'artist':artist,'startedAt':startedAt,
+    if(album!=null)'album':album,
+    if(artwork!=null)'artwork':artwork,
+    if(songId!=null)'songId':songId,
+    if(duration!=null)'duration':duration,
+  });
+ }
  Future<Map<String,dynamic>> lastfmHome() async {
   if(!signedIn||!lastfmConnected)throw StateError('Connect Last.fm first');
   return _request('GET','/orchid/lastfm/home');
