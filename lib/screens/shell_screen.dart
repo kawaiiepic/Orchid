@@ -12,6 +12,7 @@ import 'library_screen.dart';
 import 'daily_mixes_screen.dart';
 import 'replay_screen.dart';
 import 'radio_screen.dart';
+import 'ai_dj_screen.dart';
 import 'all_time_top_songs_screen.dart';
 import '../widgets/mini_player_bar.dart';
 import '../widgets/profile_menu.dart';
@@ -259,6 +260,11 @@ class _ShellScreenState extends State<ShellScreen>{
       openExplore:()=>setState(()=>selected=const ValueKey(1)),
       openProfile:_openProfile,
       openLibrary:()=>setState(()=>selected=const ValueKey(2)),
+      openAiDj:()=>Navigator.of(context).push(
+       ShadcnPageRoute<void>(
+        builder:(_)=>DrawerOverlay(child:AiDjScreen(account:_account)),
+       ),
+      ),
       openRadio:()=>Navigator.of(context).push(
        ShadcnPageRoute<void>(builder:(_)=>DrawerOverlay(
         child:RadioScreen(account:_account,player:_player,addons:_addons),
