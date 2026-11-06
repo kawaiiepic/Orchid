@@ -14,7 +14,7 @@ class OrchidApp extends StatelessWidget {
         colorScheme: ColorSchemes.darkZinc,
         radius: 0.6,
       ),
-      home: ShellScreen(),
+      home: SafeArea(child: ShellScreen()),
     );
   }
 }
