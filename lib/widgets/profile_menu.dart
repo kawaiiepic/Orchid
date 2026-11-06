@@ -78,7 +78,7 @@ class _ProfileMenuState extends State<ProfileMenu> {
                   ),
                 ),
                 const Divider(),
-                _item('Your profile', LucideIcons.userRound, () {
+                _item('Your profile', LucideIcons.user, () {
                   _close();
                   widget.onProfile();
                 }),
@@ -119,7 +119,7 @@ class _ProfileMenuState extends State<ProfileMenu> {
   Widget build(BuildContext context) {
     final name = (widget.account.username ??
         widget.account.email ?? 'O').trim();
-    final initial = name.isEmpty ? 'O' : name.characters.first.toUpperCase();
+    final initial = name.isEmpty ? 'O' : name.substring(0, 1).toUpperCase();
     return GestureDetector(
       onTap: _open,
       behavior: HitTestBehavior.opaque,
