@@ -9,6 +9,7 @@ import '../widgets/song_context_menu.dart';
 import '../widgets/content_drawer.dart';
 import '../widgets/track_duration.dart';
 import '../widgets/orchid_style.dart';
+import '../widgets/apple_cover.dart';
 
 void showSongDetailDrawer(BuildContext context, {
   required PlayerService player,
@@ -133,18 +134,14 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
   );
  }
 
- Widget artwork(){
-  final url=widget.artworkUrl??widget.track?.artworkUrl;
-  if(url==null||!url.startsWith('https://')){
-    return Container(width:210,height:210,
-      decoration:OrchidStyle.panelDecoration(radius:16),
-      child:const Icon(LucideIcons.music2,size:48));
-  }
-  return ClipRRect(borderRadius:BorderRadius.circular(16),
-    child:Image.network(url,width:210,height:210,fit:BoxFit.cover,
-      errorBuilder:(_,__,___)=>const SizedBox(width:210,height:210,
-        child:Center(child:Icon(LucideIcons.music2,size:48)))));
- }
+ Widget artwork() => AppleCover(
+   artist: widget.artist,
+   name: widget.title,
+   fallbackUrl: widget.artworkUrl ?? widget.track?.artworkUrl,
+   size: 210,
+   radius: 16,
+ );
+
  @override
  Widget build(BuildContext context) => Scaffold(
    footers:[MiniPlayerBar(player:widget.player)],
