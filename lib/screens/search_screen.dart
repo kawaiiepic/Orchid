@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import '../models/addon.dart';
 import '../services/addon_service.dart';
 import '../services/music_catalog_service.dart';
+import '../widgets/apple_cover.dart';
 import '../services/music_library.dart';
 import '../services/player_service.dart';
 import '../widgets/artist_artwork.dart';
@@ -33,6 +35,8 @@ class _SearchScreenState extends State<SearchScreen> {
   List<MusicAlbum> _albums = [];
   List<String> _artists = [];
   bool _searching = false;
+  bool _showAllTracks = false;
+  Timer? _searchDebounce;
   int _generation = 0;
   String? _status;
 
@@ -58,13 +62,24 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   void dispose() {
     ++_generation;
+    _searchDebounce?.cancel();
     _controller.dispose();
     super.dispose();
+  }
+
+  void _onQueryChanged(String value) {
+    _searchDebounce?.cancel();
+    if (value.trim().isEmpty) {
+      _search();
+    } else {
+      _searchDebounce = Timer(const Duration(milliseconds: 320), _search);
+    }
   }
 
   Future<void> _search() async {
     final query = _controller.text.trim();
     final generation = ++_generation;
+    _showAllTracks = false;
     if (query.isEmpty) {
       setState(() { _tracks=[]; _albums=[]; _artists=[];
         _searching=false; _status=null; });
@@ -89,9 +104,11 @@ class _SearchScreenState extends State<SearchScreen> {
     ]);
     if (!mounted || generation != _generation) return;
     setState(() {
-      _tracks = response[0] as List<TrackResult>;
+      final tracks = response[0] as List<TrackResult>;
+      final unique = <String>{};
+      _tracks = tracks.where((t) => unique.add('${_norm(t.artist)}|${_norm(t.title)}')).toList();
       _albums = response[1] as List<MusicAlbum>;
-      _artists = response[2] as List<String>;
+      _artists = (response[2] as List<String>).take(1).toList();
       _searching = false;
       final count = _tracks.length + _albums.length + _artists.length +
           (_playlistsOn ? _playlists.length : 0);
@@ -156,7 +173,7 @@ class _SearchScreenState extends State<SearchScreen> {
               crossAxisAlignment:CrossAxisAlignment.start,
               children:[
                 Text(title,maxLines:1,overflow:TextOverflow.ellipsis).semiBold(),
-                Text(subtitle,maxLines:1,overflow:TextOverflow.ellipsis).small().muted(),
+                Text(subtitle,maxLines:2,overflow:TextOverflow.ellipsis).small().muted(),
               ],
             )),
             trailing ?? const Icon(LucideIcons.chevronRight,size:18),
@@ -168,9 +185,14 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget _trackTile(TrackResult t) => SongContextMenu(
     track:t, player:widget.player, library:widget.library,
     child:_tile(
-      artwork:_art(t.artworkUrl),
+      artwork:AppleCover(
+        artist:t.artist,
+        name:t.title,
+        fallbackUrl:t.artworkUrl,
+        size:50,
+      ),
       title:t.title,
-      subtitle:'${t.artist} · ${t.sourceName}',
+      subtitle:[t.artist, if(t.album?.trim().isNotEmpty==true) t.album!].join('\n'),
       onTap:()=>_play(t),
       trailing:Row(mainAxisSize:MainAxisSize.min,children:[
         if(trackDurationLabel(t.duration)!=null)...[
@@ -233,6 +255,7 @@ class _SearchScreenState extends State<SearchScreen> {
           Expanded(child:TextField(
             controller:_controller,
             placeholder:const Text('Search music…'),
+            onChanged:_onQueryChanged,
             onSubmitted:(_)=>_search(),
           )),
           const SizedBox(width:8),
@@ -281,7 +304,15 @@ class _SearchScreenState extends State<SearchScreen> {
             ],
             if(_tracksOn && _tracks.isNotEmpty)...[
               _section('Tracks',_tracks.length),
-              ..._tracks.map(_trackTile),
+              ...(_showAllTracks ? _tracks : _tracks.take(15)).map(_trackTile),
+              if (_tracks.length > 15)
+                Padding(
+                  padding:const EdgeInsets.symmetric(vertical:10),
+                  child:OutlineButton(
+                    onPressed:()=>setState(() => _showAllTracks = !_showAllTracks),
+                    child:Text(_showAllTracks ? 'Show Less' : 'Show More'),
+                  ),
+                ),
             ],
           ],
         ),
