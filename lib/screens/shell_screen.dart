@@ -5,6 +5,8 @@ import '../services/addon_service.dart';
 import '../services/lyrics_appearance.dart';
 import '../services/orchid_account.dart';
 import '../services/player_service.dart';
+import '../services/music_library.dart';
+import 'library_screen.dart';
 import '../widgets/mini_player_bar.dart';
 import 'orchid_home_screen.dart';
 import 'profile_screen.dart';
@@ -18,6 +20,8 @@ class ShellScreen extends StatefulWidget {
 class _ShellScreenState extends State<ShellScreen>{
  final _addonService=AddonService();
  final _account=OrchidAccount();
+ final _library=MusicLibrary();
+ String? _libraryUser;
  late final PlayerService _player;
  StreamSubscription<Duration>? _positionSubscription;
  Key? selected=const ValueKey(0);
@@ -43,7 +47,14 @@ class _ShellScreenState extends State<ShellScreen>{
    setState(()=>_addons=list);_player.setAddons(list);
   }catch(e){debugPrint('Error loading addons: $e');}
  }
- void _accountChanged(){if(mounted)setState((){});}
+ void _accountChanged(){
+  final user=_account.signedIn ? (_account.email ?? _account.username) : null;
+  if(user!=_libraryUser){
+   _libraryUser=user;
+   _library.setAccount(user);
+  }
+  if(mounted)setState((){});
+ }
  void _trackChanged(){
   if(_trackGeneration==_player.lyricsGeneration)return;
   _trackGeneration=_player.lyricsGeneration;
@@ -51,6 +62,8 @@ class _ShellScreenState extends State<ShellScreen>{
   _startedAt=DateTime.now().millisecondsSinceEpoch~/1000;
   final track=_player.current;
   if(track!=null){
+   _library.recordPlay(SavedSong(track.title,track.artist,
+    album:track.album,artwork:track.artworkUrl));
    // Once playback starts, publish the currently playing track.
    void send() async{
     if(!_player.player.playing||!_account.lastfmConnected)return;
@@ -81,7 +94,7 @@ class _ShellScreenState extends State<ShellScreen>{
  }
  @override void dispose(){
   _positionSubscription?.cancel();_player.removeListener(_trackChanged);
-  _player.dispose();_account.removeListener(_accountChanged);_account.dispose();super.dispose();
+  _player.dispose();_library.dispose();_account.removeListener(_accountChanged);_account.dispose();super.dispose();
  }
  NavigationItem _button(String title,IconData icon,int index)=>NavigationItem(
   key:ValueKey(index),style:const ButtonStyle.muted(density:ButtonDensity.icon),
@@ -146,21 +159,17 @@ class _ShellScreenState extends State<ShellScreen>{
       player:_player,addonService:_addonService,addons:_addons,account:_account,
       openExplore:()=>setState(()=>selected=const ValueKey(1)),
       openProfile:()=>setState(()=>selected=const ValueKey(3)),
+      library:_library,
      ),
-     SearchScreen(addonService:_addonService,player:_player,addons:_addons),
-     Center(child:Column(
-      mainAxisSize:MainAxisSize.min,
-      children:[
-       const Text('Your Library').large().semiBold(),
-       const SizedBox(height:8),
-       const Text('Your saved music will appear here.').muted(),
-       const SizedBox(height:12),
-       OutlineButton(
-        onPressed:()=>setState(()=>selected=const ValueKey(1)),
-        child:const Text('Explore music'),
-       ),
-      ],
-     )),
+     SearchScreen(addonService:_addonService,player:_player,addons:_addons,library:_library),
+     LibraryScreen(
+      library:_library,
+      account:_account,
+      player:_player,
+      addonService:_addonService,
+      addons:_addons,
+      openExplore:()=>setState(()=>selected=const ValueKey(1)),
+     ),
      SettingsScreen(
       account:_account,
       addonService:_addonService,
