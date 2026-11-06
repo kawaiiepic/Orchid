@@ -4,17 +4,20 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../models/addon.dart';
 import '../services/addon_service.dart';
 import '../services/player_service.dart';
+import '../services/music_library.dart';
 import 'song_detail_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   final AddonService addonService;
   final PlayerService player;
+  final MusicLibrary library;
   final List<InstalledAddon> addons;
 
   const SearchScreen({
     super.key,
     required this.addonService,
     required this.player,
+    required this.library,
     required this.addons,
   });
 
@@ -65,6 +68,7 @@ class _SearchScreenState extends State<SearchScreen> {
           album:track.album,
           artworkUrl:track.artworkUrl,
           track:track,
+          library:widget.library,
         ),
       ),
     );
