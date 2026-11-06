@@ -187,6 +187,15 @@ class OrchidAccount extends ChangeNotifier {
   if(!signedIn)throw StateError('Sign in first');
   return _request('GET','/orchid/apple/playlists/${Uri.encodeComponent(id)}');
  }
+ Future<List<String?>> appleArtworkBatch(List<Map<String,String>> tracks) async {
+  if(!signedIn || tracks.isEmpty)return List<String?>.filled(tracks.length,null);
+  final data=await _request('POST','/orchid/apple/artwork',{'tracks':tracks});
+  final raw=data['artworks'];
+  if(raw is! List || raw.length!=tracks.length)
+   return List<String?>.filled(tracks.length,null);
+  return raw.map((value)=>value is String&&value.startsWith('https://')
+      ?value:null).toList();
+ }
  Future<Map<String,dynamic>> dailyMixes() async {
   if(!signedIn||!lastfmConnected)throw StateError('Connect Last.fm first');
   return _request('GET','/orchid/daily-mixes');
