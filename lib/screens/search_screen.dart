@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../models/addon.dart';
 import '../services/addon_service.dart';
@@ -18,7 +17,7 @@ import '../widgets/track_duration.dart';
 import 'music_detail_pages.dart';
 import 'song_detail_screen.dart';
 
-enum SearchCategory { all, tracks, albums, artists, playlists }
+enum SearchCategory { all, artists, tracks, albums, playlists }
 
 class SearchScreen extends StatefulWidget {
   final AddonService addonService;
@@ -175,14 +174,6 @@ class _SearchScreenState extends State<SearchScreen> {
       debugPrint('[Orchid] Cannot play playlist: $e');
     });
   }
-
-  Widget _art(String? url) => ClipRRect(
-    borderRadius:BorderRadius.circular(8),
-    child:SizedBox(width:50,height:50,child:url==null||!url.startsWith('https://')
-        ? const Icon(LucideIcons.music2,size:24)
-        : CachedNetworkImage(imageUrl:url,fit:BoxFit.cover,
-          errorWidget:(_,__,___)=>const Icon(LucideIcons.music2,size:24))),
-  );
 
   Widget _tile({required Widget artwork, required String title,
     required String subtitle, required VoidCallback onTap, Widget? trailing}) =>
