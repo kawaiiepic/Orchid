@@ -183,6 +183,10 @@ class OrchidAccount extends ChangeNotifier {
   final uri=Uri(queryParameters: {'q':query.trim()});
   return _request('GET','/orchid/apple/playlists?${uri.query}');
  }
+ Future<Map<String,dynamic>> applePlaylist(String id) async {
+  if(!signedIn)throw StateError('Sign in first');
+  return _request('GET','/orchid/apple/playlists/${Uri.encodeComponent(id)}');
+ }
  Future<Map<String,dynamic>> dailyMixes() async {
   if(!signedIn||!lastfmConnected)throw StateError('Connect Last.fm first');
   return _request('GET','/orchid/daily-mixes');
