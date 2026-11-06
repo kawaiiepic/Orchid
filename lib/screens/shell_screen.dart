@@ -83,7 +83,7 @@ class _ShellScreenState extends State<ShellScreen>{
  }
  void _positionChanged(Duration position){
   final track=_player.current;
-  if(track==null||_scrobbled||!_player.player.playing||!_account.lastfmConnected)return;
+  if(track==null||_scrobbled||!_player.player.playing)return;
   final total=_player.player.duration?.inSeconds??track.duration;
   if(total==null||total<=30)return;
   // Position cannot go backwards on a seek; require reasonable elapsed listening
@@ -94,8 +94,20 @@ class _ShellScreenState extends State<ShellScreen>{
   final elapsed=DateTime.now().millisecondsSinceEpoch~/1000-_startedAt;
   if(_maxPositionSeconds>=threshold&&elapsed>=threshold){
    _scrobbled=true;
-   _account.scrobble(artist:track.artist,title:track.title,album:track.album,
-    duration:total,timestamp:_startedAt);
+   // Record Orchid listening independently of Last.fm. The event ID is
+   // stable across retries, so the backend cannot double-count a listen.
+   final eventId='${_startedAt}_${_trackGeneration}_${track.id.hashCode.abs()}';
+   _account.recordListen(
+    eventId:eventId,title:track.title,artist:track.artist,
+    album:track.album,artwork:track.artworkUrl,songId:track.id,
+    startedAt:_startedAt,duration:total,
+   ).catchError((Object error) {
+    debugPrint('[Orchid History] Could not save listen: $error');
+   });
+   if(_account.lastfmConnected) {
+    _account.scrobble(artist:track.artist,title:track.title,album:track.album,
+     duration:total,timestamp:_startedAt);
+   }
   }
  }
  @override void dispose(){
