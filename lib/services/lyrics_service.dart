@@ -321,7 +321,9 @@ class LyricsService {
         }
         final duration = candidate['duration'];
         if (track.duration != null && duration is num &&
-            (duration - track.duration!).abs() <= 3) score += 2;
+            (duration - track.duration!).abs() <= 3) {
+          score += 2;
+        }
         if ((candidate['syncedLyrics'] as String?)?.trim().isNotEmpty == true) {
           score += 1;
         }
