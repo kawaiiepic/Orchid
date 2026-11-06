@@ -122,7 +122,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
           // Collapse common Last.fm edition labels, but leave live/acoustic
           // performances distinct from the studio recording.
           .replaceAll(RegExp(
-              r'\\s*[\\(\\[]?(?:\\d{4}\\s+)?remaster(?:ed)?(?:\\s+\\d{4})?[\\)\\]]?',
+              r'\s*[\(\[]?(?:\d{4}\s+)?remaster(?:ed)?(?:\s+\d{4})?[\)\]]?',
               caseSensitive: false), '')
           .replaceAll(RegExp(r'[^a-z0-9]+'), ' ')
           .trim();
