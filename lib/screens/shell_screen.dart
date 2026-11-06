@@ -7,6 +7,7 @@ import '../services/orchid_account.dart';
 import '../services/player_service.dart';
 import '../services/music_library.dart';
 import 'library_screen.dart';
+import 'daily_mixes_screen.dart';
 import '../widgets/mini_player_bar.dart';
 import 'orchid_home_screen.dart';
 import 'profile_screen.dart';
@@ -160,6 +161,14 @@ class _ShellScreenState extends State<ShellScreen>{
       openExplore:()=>setState(()=>selected=const ValueKey(1)),
       openProfile:()=>setState(()=>selected=const ValueKey(3)),
       openLibrary:()=>setState(()=>selected=const ValueKey(2)),
+      openDailyMixes:()=>Navigator.of(context).push(
+       ShadcnPageRoute<void>(
+        builder:(_)=>DailyMixesScreen(
+         account:_account,library:_library,player:_player,
+         addonService:_addonService,addons:_addons,
+        ),
+       ),
+      ),
       library:_library,
      ),
      SearchScreen(addonService:_addonService,player:_player,addons:_addons,library:_library),
