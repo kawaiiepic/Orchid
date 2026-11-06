@@ -9,6 +9,7 @@ import '../widgets/mini_player_bar.dart';
 import 'song_detail_screen.dart';
 import '../widgets/orchid_style.dart';
 import '../widgets/artist_artwork.dart';
+import '../widgets/song_context_menu.dart';
 
 void openArtistPage(BuildContext context, {
   required String artist,
@@ -90,7 +91,9 @@ Widget _trackTile(BuildContext context, TrackResult song, {
   required PlayerService player, required AddonService addonService,
   required List<InstalledAddon> addons, required MusicLibrary library,
   int? number,
-}) => Button(
+}) => SongContextMenu(
+  track: song, player: player, library: library,
+  child: Button(
   style: const ButtonStyle.ghost(),
   onPressed: () => _openTrack(context, song,
     player: player, addonService: addonService,
@@ -113,6 +116,7 @@ Widget _trackTile(BuildContext context, TrackResult song, {
       )),
       const Icon(LucideIcons.chevronRight, size: 16),
     ]),
+  ),
   ),
 );
 
