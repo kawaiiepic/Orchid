@@ -3,16 +3,16 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../services/orchid_account.dart';
 import '../widgets/orchid_style.dart';
 
-/// Reply is based on Orchid's own recorded listens, not Last.fm totals.
-class ReplyScreen extends StatefulWidget {
+/// Replay is based on Orchid's own recorded listens, not Last.fm totals.
+class ReplayScreen extends StatefulWidget {
   final OrchidAccount account;
-  const ReplyScreen({super.key,required this.account});
+  const ReplayScreen({super.key,required this.account});
 
   @override
-  State<ReplyScreen> createState()=>_ReplyScreenState();
+  State<ReplayScreen> createState()=>_ReplayScreenState();
 }
 
-class _ReplyScreenState extends State<ReplyScreen> {
+class _ReplayScreenState extends State<ReplayScreen> {
   static const months=['Year','January','February','March','April','May','June',
     'July','August','September','October','November','December'];
   late int year;
@@ -38,7 +38,7 @@ class _ReplyScreenState extends State<ReplyScreen> {
     final id=++request;
     setState(() {loading=true;error=null;});
     try{
-      final result=await widget.account.reply(year:year,month:month);
+      final result=await widget.account.replay(year:year,month:month);
       if(!mounted||id!=request)return;
       setState(() {data=result;loading=false;});
     }catch(e){
@@ -122,7 +122,7 @@ class _ReplyScreenState extends State<ReplyScreen> {
     return ListView(padding:const EdgeInsets.all(24),children:[
       OrchidHero(
         eyebrow:'Made for You',
-        title:'Reply',
+        title:'Replay',
         description:'Your listening story, month by month and year by year.',
         icon:LucideIcons.chartNoAxesCombined,
       ),
