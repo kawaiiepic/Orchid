@@ -1,10 +1,12 @@
-import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:flutter/cupertino.dart' as ios;
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
+import 'package:flutter/material.dart' as material;
+import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-/// Shared side-drawer presentation for music details, settings and the player.
-/// On narrow screens it occupies the full width; on desktop it leaves the
-/// browsing context visible behind the drawer.
+/// Presents detail views as native push pages on iOS and as a right-hand
+/// modal drawer on other platforms. Neither presentation relies on a
+/// Shadcn OverlayAnchor, which may not exist in the caller's widget tree.
 void showContentDrawer(
   BuildContext context, {
   required WidgetBuilder builder,
@@ -18,32 +20,44 @@ void showContentDrawer(
     ));
     return;
   }
+
   final viewport = MediaQuery.sizeOf(context);
   final width = viewport.width < 700
       ? viewport.width
       : (viewport.width * 0.85).clamp(360.0, preferredWidth).toDouble();
-  showOverlay(
-    context,
-    const DrawerConfiguration(
-      anchor: LinkedAnchor(#orchidContentDrawer),
-      expands: true,
-      position: OverlayPosition.end,
-    ),
-    builder: (drawerContext) => OverlayAnchor(
-      anchor: #orchidContentDrawer,
+
+  material.showGeneralDialog<void>(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: 'Close details',
+    barrierColor: const Color(0x99000000),
+    transitionDuration: const Duration(milliseconds: 260),
+    pageBuilder: (dialogContext, _, __) => Align(
+      alignment: Alignment.centerRight,
       child: SizedBox(
         width: width,
         height: viewport.height,
-        child: builder(drawerContext),
+        child: material.Material(
+          color: const Color(0xFF17141D),
+          child: SafeArea(child: builder(dialogContext)),
+        ),
       ),
+    ),
+    transitionBuilder: (dialogContext, animation, _, child) =>
+        SlideTransition(
+      position: Tween<Offset>(
+        begin: const Offset(1, 0),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+      )),
+      child: child,
     ),
   );
 }
 
+/// Closes the topmost detail view, whether presented as an iOS page or dialog.
 void dismissContentDrawer(BuildContext context) {
-  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
-    Navigator.of(context).maybePop();
-  } else {
-    closeOverlay(context);
-  }
+  Navigator.of(context).maybePop();
 }
