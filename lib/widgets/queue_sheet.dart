@@ -5,23 +5,16 @@ import '../models/addon.dart';
 import '../services/player_service.dart';
 import 'track_duration.dart';
 
-const Symbol _queueDrawerAnchor = #orchidQueueDrawer;
-
 /// Opens the queue / history panel as a shadcn drawer overlay.
 void showQueueSheet(BuildContext context, PlayerService player) {
   showOverlay(
     context,
     const DrawerConfiguration(
-      anchor: LinkedAnchor(_queueDrawerAnchor),
       expands: true,
       position: OverlayPosition.end,
+      useSafeArea: true,
     ),
-    builder: (context) {
-      return OverlayAnchor(
-        anchor: _queueDrawerAnchor,
-        child: _QueueDrawerBody(player: player),
-      );
-    },
+    builder: (context) => _QueueDrawerBody(player: player),
   );
 }
 
