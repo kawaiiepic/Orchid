@@ -42,6 +42,8 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _applePlaylistsConfigured = false;
   bool _searching = false;
   bool _showAllTracks = false;
+  bool _showAllAlbums = false;
+  bool _showAllPlaylists = false;
   Timer? _searchDebounce;
   int _generation = 0;
   String? _status;
@@ -88,6 +90,8 @@ class _SearchScreenState extends State<SearchScreen> {
     final query = _controller.text.trim();
     final generation = ++_generation;
     _showAllTracks = false;
+    _showAllAlbums = false;
+    _showAllPlaylists = false;
     if (query.isEmpty) {
       setState(() { _tracks=[]; _albums=[]; _artists=[]; _applePlaylists=[];
         _searching=false; _status=null; });
@@ -284,11 +288,54 @@ class _SearchScreenState extends State<SearchScreen> {
     ),
   );
 
-  Widget _playlistTile(MusicPlaylist p) => _tile(
-    artwork:Container(width:50,height:50,
-      decoration:OrchidStyle.panelDecoration(radius:9),
-      child:const Icon(LucideIcons.listMusic,size:24)),
-    title:p.name, subtitle:'Playlist · ${p.songs.length} songs',
+  Widget _playlistCover(String? url) => LayoutBuilder(
+    builder:(context, constraints) => ClipRRect(
+      borderRadius:BorderRadius.circular(13),
+      child:SizedBox(
+        width:constraints.maxWidth,
+        height:constraints.maxWidth,
+        child:url != null && url.startsWith('https://')
+          ? CachedNetworkImage(
+              imageUrl:url,
+              fit:BoxFit.cover,
+              errorWidget:(_,__,___)=>_emptyPlaylistCover(),
+            )
+          : _emptyPlaylistCover(),
+      ),
+    ),
+  );
+
+  Widget _emptyPlaylistCover() => Container(
+    decoration:OrchidStyle.panelDecoration(radius:13),
+    child:const Center(child:Icon(LucideIcons.listMusic,size:38)),
+  );
+
+  Widget _playlistCard({
+    required String title,
+    required String subtitle,
+    required String? image,
+    required VoidCallback onTap,
+  }) => GestureDetector(
+    behavior:HitTestBehavior.opaque,
+    onTap:onTap,
+    child:Column(
+      crossAxisAlignment:CrossAxisAlignment.start,
+      children:[
+        AspectRatio(
+          aspectRatio:1,
+          child:_playlistCover(image),
+        ),
+        const SizedBox(height:8),
+        Text(title,maxLines:1,overflow:TextOverflow.ellipsis).semiBold(),
+        Text(subtitle,maxLines:1,overflow:TextOverflow.ellipsis).small().muted(),
+      ],
+    ),
+  );
+
+  Widget _playlistTile(MusicPlaylist p) => _playlistCard(
+    title:p.name,
+    subtitle:'Your playlist · ${p.songs.length} songs',
+    image:p.songs.isNotEmpty ? p.songs.first.artwork : null,
     onTap:()=>_playPlaylist(p),
   );
 
@@ -354,20 +401,39 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _applePlaylistTile(Map<String,dynamic> item) => _tile(
-    artwork:_art(item['image']?.toString()),
+  Widget _applePlaylistTile(Map<String,dynamic> item) => _playlistCard(
     title:item['name']?.toString() ?? 'Apple Music Playlist',
     subtitle:'Apple Music · ${item['curator'] ?? 'Apple Music'}',
+    image:item['image']?.toString(),
     onTap:()=>_openApplePlaylist(item),
-    trailing:IconButton.ghost(
-      onPressed:() async {
-        final url = Uri.tryParse(item['url']?.toString() ?? '');
-        if (url != null && url.scheme == 'https' &&
-            (url.host == 'music.apple.com' || url.host.endsWith('.music.apple.com'))) {
-          await launchUrl(url, mode:LaunchMode.externalApplication);
-        }
-      },
-      icon:const Icon(LucideIcons.externalLink,size:18),
+  );
+
+  Widget _coverGrid(List<Widget> items) => LayoutBuilder(
+    builder:(context,constraints) {
+      final columns=(constraints.maxWidth / 165).floor().clamp(2,6).toInt();
+      return GridView.builder(
+        shrinkWrap:true,
+        physics:const NeverScrollableScrollPhysics(),
+        itemCount:items.length,
+        gridDelegate:SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount:columns,
+          crossAxisSpacing:12,
+          mainAxisSpacing:16,
+          childAspectRatio:0.72,
+        ),
+        itemBuilder:(context,index)=>items[index],
+      );
+    },
+  );
+
+  Widget _showMoreButton({
+    required bool expanded,
+    required VoidCallback onPressed,
+  }) => Padding(
+    padding:const EdgeInsets.symmetric(vertical:10),
+    child:OutlineButton(
+      onPressed:onPressed,
+      child:Text(expanded ? 'Show Less' : 'Show More'),
     ),
   );
 
@@ -428,10 +494,42 @@ class _SearchScreenState extends State<SearchScreen> {
         builder:(context,_) => ListView(
           padding:const EdgeInsets.fromLTRB(16,4,16,20),
           children:[
+            if(_artistsOn && _artists.isNotEmpty)...[
+              _section('Artist',_artists.length),
+              ..._artists.map(_artistTile),
+            ],
+            if(_tracksOn && _tracks.isNotEmpty)...[
+              _section('Tracks',_tracks.length),
+              ...(_showAllTracks ? _tracks : _tracks.take(15)).map(_trackTile),
+              if(_tracks.length > 15)
+                _showMoreButton(
+                  expanded:_showAllTracks,
+                  onPressed:()=>setState(() => _showAllTracks = !_showAllTracks),
+                ),
+            ],
+            if(_albumsOn && _albums.isNotEmpty)...[
+              _section('Albums',_albums.length),
+              _coverGrid(
+                (_showAllAlbums ? _albums : _albums.take(15))
+                    .map(_albumTile).toList(),
+              ),
+              if(_albums.length > 15)
+                _showMoreButton(
+                  expanded:_showAllAlbums,
+                  onPressed:()=>setState(() => _showAllAlbums = !_showAllAlbums),
+                ),
+            ],
             if(_playlistsOn && (_playlists.isNotEmpty || _applePlaylists.isNotEmpty))...[
               _section('Playlists',_playlists.length + _applePlaylists.length),
-              ..._playlists.map(_playlistTile),
-              ..._applePlaylists.map(_applePlaylistTile),
+              _coverGrid([
+                ..._playlists.map(_playlistTile),
+                ..._applePlaylists.map(_applePlaylistTile),
+              ].take(_showAllPlaylists ? _playlists.length + _applePlaylists.length : 15).toList()),
+              if(_playlists.length + _applePlaylists.length > 15)
+                _showMoreButton(
+                  expanded:_showAllPlaylists,
+                  onPressed:()=>setState(() => _showAllPlaylists = !_showAllPlaylists),
+                ),
             ],
             if(_playlistsOn && _controller.text.trim().isNotEmpty &&
                 !_applePlaylistsConfigured)
@@ -439,40 +537,6 @@ class _SearchScreenState extends State<SearchScreen> {
                 padding:const EdgeInsets.symmetric(vertical:8),
                 child:const Text('Apple Music playlists require a server-side developer token.').small().muted(),
               ),
-            if(_artistsOn && _artists.isNotEmpty)...[
-              _section('Artists',_artists.length),
-              ..._artists.map(_artistTile),
-            ],
-            if(_albumsOn && _albums.isNotEmpty)...[
-              _section('Albums',_albums.length),
-              LayoutBuilder(builder:(context,constraints) {
-                final columns=(constraints.maxWidth / 165).floor().clamp(2,6).toInt();
-                return GridView.builder(
-                  shrinkWrap:true,
-                  physics:const NeverScrollableScrollPhysics(),
-                  itemCount:_albums.length,
-                  gridDelegate:SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount:columns,
-                    crossAxisSpacing:12,
-                    mainAxisSpacing:16,
-                    childAspectRatio:0.72,
-                  ),
-                  itemBuilder:(context,index)=>_albumTile(_albums[index]),
-                );
-              }),
-            ],
-            if(_tracksOn && _tracks.isNotEmpty)...[
-              _section('Tracks',_tracks.length),
-              ...(_showAllTracks ? _tracks : _tracks.take(15)).map(_trackTile),
-              if (_tracks.length > 15)
-                Padding(
-                  padding:const EdgeInsets.symmetric(vertical:10),
-                  child:OutlineButton(
-                    onPressed:()=>setState(() => _showAllTracks = !_showAllTracks),
-                    child:Text(_showAllTracks ? 'Show Less' : 'Show More'),
-                  ),
-                ),
-            ],
           ],
         ),
       )),
