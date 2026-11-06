@@ -203,6 +203,10 @@ class OrchidAccount extends ChangeNotifier {
   if(!signedIn)throw StateError('Sign in first');
   return _request('GET','/orchid/home');
  }
+ Future<Map<String,dynamic>> reply({required int year,required int month}) async {
+  if(!signedIn)throw StateError('Sign in first');
+  return _request('GET','/orchid/reply?year=$year&month=$month');
+ }
  Future<Map<String,dynamic>> listeningHistory() async {
   if(!signedIn)throw StateError('Sign in first');
   return _request('GET','/orchid/history');
