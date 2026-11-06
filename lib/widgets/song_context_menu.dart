@@ -12,6 +12,7 @@ class SongContextMenu extends StatefulWidget {
   final TrackResult track;
   final PlayerService player;
   final MusicLibrary library;
+  final bool openOnTap;
 
   const SongContextMenu({
     super.key,
@@ -19,6 +20,7 @@ class SongContextMenu extends StatefulWidget {
     required this.track,
     required this.player,
     required this.library,
+    this.openOnTap = false,
   });
 
   @override
@@ -74,6 +76,11 @@ class _SongContextMenuState extends State<SongContextMenu> {
     behavior: HitTestBehavior.opaque,
     onSecondaryTapDown: (details) => _open(details.globalPosition),
     onLongPressStart: (details) => _open(details.globalPosition),
+    onTap: widget.openOnTap ? () {
+      final box = context.findRenderObject() as RenderBox?;
+      if (box == null) return;
+      _open(box.localToGlobal(Offset(box.size.width / 2, box.size.height)));
+    } : null,
     child: widget.child,
   );
 }
