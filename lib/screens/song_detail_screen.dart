@@ -2,6 +2,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../models/addon.dart';
 import '../services/addon_service.dart';
 import '../services/player_service.dart';
+import '../widgets/mini_player_bar.dart';
 
 /// Native song page. Last.fm records are metadata, not direct audio streams.
 class SongDetailScreen extends StatefulWidget {
@@ -67,6 +68,7 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
      child:Center(child:Icon(LucideIcons.music2,size:48)))));
  }
  @override Widget build(BuildContext context)=>Scaffold(
+  footers:[MiniPlayerBar(player:widget.player)],
   child:ListView(padding:const EdgeInsets.all(24),children:[
    Align(alignment:Alignment.centerLeft,child:IconButton.ghost(
     onPressed:()=>Navigator.of(context).pop(),
