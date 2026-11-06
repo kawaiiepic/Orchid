@@ -10,6 +10,7 @@ import 'song_detail_screen.dart';
 import 'music_detail_pages.dart';
 import '../widgets/orchid_style.dart';
 import '../widgets/artist_artwork.dart';
+import '../widgets/song_context_menu.dart';
 
 class OrchidHomeScreen extends StatefulWidget {
   final PlayerService player;
@@ -207,7 +208,19 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     final time = timestamp == null
         ? ''
         : _relativeTime(DateTime.fromMillisecondsSinceEpoch(timestamp * 1000));
-    return _clickable(
+    return SongContextMenu(
+      track: TrackResult(
+        id: '${artist.toLowerCase()}|${(track['title'] ?? '').toString().toLowerCase()}',
+        title: track['title']?.toString() ?? '',
+        artist: artist,
+        album: album,
+        artworkUrl: track['image']?.toString(),
+        sourceId: 'lastfm',
+        sourceName: 'Last.fm',
+      ),
+      player: widget.player,
+      library: widget.library,
+      child: _clickable(
       onTap:()=>_openSong(track),
       child:Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
@@ -233,7 +246,8 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
           const Icon(LucideIcons.chevronRight,size:16),
         ],
       )),
-    ));
+    )),
+    );
   }
 
   String _relativeTime(DateTime when) {
