@@ -5,21 +5,23 @@ import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, Tar
 
 import '../screens/full_player_screen.dart';
 import '../services/player_service.dart';
+import '../services/music_library.dart';
 import 'orchid_style.dart';
 import 'queue_sheet.dart';
 import 'content_drawer.dart';
 
 class MiniPlayerBar extends StatelessWidget {
   final PlayerService player;
+  final MusicLibrary? library;
 
-  const MiniPlayerBar({super.key, required this.player});
+  const MiniPlayerBar({super.key, required this.player, this.library});
 
   void _openFull(BuildContext context) {
     if (player.current == null) return;
     showContentDrawer(
       context,
       preferredWidth: 900,
-      builder: (_) => FullPlayerScreen(player: player),
+      builder: (_) => FullPlayerScreen(player: player, library: library),
     );
   }
 
