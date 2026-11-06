@@ -17,6 +17,7 @@ class _AiDjScreenState extends State<AiDjScreen> {
   final _scroll=ScrollController();
   final List<({String text,bool fromUser})> _messages=[];
   bool _sending=false;
+  bool _thinking=false;
   String? _error;
 
   @override
@@ -47,19 +48,43 @@ class _AiDjScreenState extends State<AiDjScreen> {
     setState((){
       _error=null;
       _sending=true;
+      _thinking=true;
       _messages.add((text:message,fromUser:true));
     });
     _scrollToBottom();
+
+    // The backend still returns a plain "..." response. Simulate a small
+    // thinking delay and stream its characters locally until SSE is available.
+    final thinkingDelay=Future<void>.delayed(const Duration(milliseconds:1100));
     try{
       final answer=await widget.account.sendAiDjMessage(message);
+      await thinkingDelay;
       if(!mounted)return;
-      setState(()=>_messages.add((text:answer,fromUser:false)));
+      setState((){
+        _thinking=false;
+        _messages.add((text:'',fromUser:false));
+      });
+      final replyIndex=_messages.length-1;
       _scrollToBottom();
+      for(var i=0;i<answer.length;i++){
+        await Future<void>.delayed(const Duration(milliseconds:230));
+        if(!mounted)return;
+        setState((){
+          _messages[replyIndex]=(text:answer.substring(0,i+1),fromUser:false);
+        });
+        _scrollToBottom();
+      }
     }catch(e){
       if(!mounted)return;
-      setState(()=>_error=e.toString().replaceFirst('Exception: ',''));
+      setState((){
+        _thinking=false;
+        _error=e.toString().replaceFirst('Exception: ','');
+      });
     }finally{
-      if(mounted)setState(()=>_sending=false);
+      if(mounted)setState((){
+        _sending=false;
+        _thinking=false;
+      });
     }
   }
 
@@ -92,16 +117,16 @@ class _AiDjScreenState extends State<AiDjScreen> {
           :ListView.builder(
             controller:_scroll,
             padding:const EdgeInsets.all(16),
-            itemCount:_messages.length+(_sending?1:0),
+            itemCount:_messages.length+(_thinking?1:0),
             itemBuilder:(context,index){
               final pending=index==_messages.length;
-              final item=pending?(text:'...',fromUser:false):_messages[index];
+              final item=pending?(text:'Thinking…',fromUser:false):_messages[index];
               return Padding(
                 padding:const EdgeInsets.only(bottom:12),
                 child:ChatBubble(
                   alignment:item.fromUser?AxisAlignment.right:AxisAlignment.left,
                   color:item.fromUser?OrchidStyle.violet:OrchidStyle.panel,
-                  child:Text(item.text),
+                  child:pending?Text(item.text).muted():Text(item.text),
                 ),
               );
             },
