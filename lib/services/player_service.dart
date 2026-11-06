@@ -9,7 +9,7 @@ import 'addon_service.dart';
 import 'lyrics_appearance.dart';
 import 'lyrics_service.dart';
 
-enum RepeatMode { off, all, one }
+enum OrchidRepeatMode { off, all, one }
 
 class PlayerService extends ChangeNotifier {
   final AudioPlayer player = AudioPlayer();
@@ -20,7 +20,7 @@ class PlayerService extends ChangeNotifier {
   bool _disposed = false;
   bool keepPlaying = true;
   bool shuffleEnabled = false;
-  RepeatMode repeatMode = RepeatMode.off;
+  OrchidRepeatMode repeatMode = OrchidRepeatMode.off;
   final Random _shuffleRandom = Random();
   static const _keepPlayingKey = 'orchid_keep_playing';
   /// Suggested songs, shown separately from the user's actual queue.
@@ -57,7 +57,7 @@ class PlayerService extends ChangeNotifier {
       notifyListeners();
       if (state.processingState == ProcessingState.completed &&
           !_autoAdvancing && !resolving &&
-          (hasNext || repeatMode == RepeatMode.one)) {
+          (hasNext || repeatMode == OrchidRepeatMode.one)) {
         _autoAdvancing = true;
         unawaited(_advanceAfterCompletion());
       }
@@ -186,12 +186,12 @@ class PlayerService extends ChangeNotifier {
           player.processingState != ProcessingState.completed) {
         return;
       }
-      if (repeatMode == RepeatMode.one && current != null) {
+      if (repeatMode == OrchidRepeatMode.one && current != null) {
         await player.seek(Duration.zero);
         await player.play();
         return;
       }
-      if (!hasQueuedNext && repeatMode == RepeatMode.all && queue.isNotEmpty) {
+      if (!hasQueuedNext && repeatMode == OrchidRepeatMode.all && queue.isNotEmpty) {
         queueIndex = -1;
         if (shuffleEnabled) _shuffleUpcoming();
       }
@@ -241,7 +241,7 @@ class PlayerService extends ChangeNotifier {
   bool get hasQueuedNext =>
       queueIndex >= 0 && queueIndex < queue.length - 1;
   bool get hasNext =>
-      hasQueuedNext || (repeatMode == RepeatMode.all && queue.isNotEmpty) ||
+      hasQueuedNext || (repeatMode == OrchidRepeatMode.all && queue.isNotEmpty) ||
       (keepPlaying && current != null);
   bool get hasPrevious => queueIndex > 0;
 
@@ -253,9 +253,9 @@ class PlayerService extends ChangeNotifier {
 
   void cycleRepeatMode() {
     repeatMode = switch (repeatMode) {
-      RepeatMode.off => RepeatMode.all,
-      RepeatMode.all => RepeatMode.one,
-      RepeatMode.one => RepeatMode.off,
+      OrchidRepeatMode.off => OrchidRepeatMode.all,
+      OrchidRepeatMode.all => OrchidRepeatMode.one,
+      OrchidRepeatMode.one => OrchidRepeatMode.off,
     };
     notifyListeners();
   }
@@ -385,7 +385,7 @@ class PlayerService extends ChangeNotifier {
   }
 
   Future<void> playNext() async {
-    if (!hasQueuedNext && repeatMode == RepeatMode.all && queue.isNotEmpty) {
+    if (!hasQueuedNext && repeatMode == OrchidRepeatMode.all && queue.isNotEmpty) {
       queueIndex = -1;
       if (shuffleEnabled) _shuffleUpcoming();
     }
