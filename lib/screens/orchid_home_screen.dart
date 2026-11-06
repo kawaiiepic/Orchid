@@ -2,6 +2,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../services/orchid_account.dart';
+import '../services/apple_catalog_service.dart';
 import '../services/player_service.dart';
 import '../services/music_library.dart';
 import '../services/addon_service.dart';
@@ -89,6 +90,17 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     try {
       final result = await widget.account.lastfmHome();
       if (!mounted || requestId != _requestId) return;
+      // Listening statistics and timestamps remain untouched. Apple only
+      // normalizes confidently matched catalog metadata.
+      final recent = result['recent'];
+      if (recent is List) {
+        final items = recent.whereType<Map>().map(
+          (item) => Map<String, dynamic>.from(item)).toList();
+        final enriched = await Future.wait(
+          items.map(AppleCatalogService.instance.enrichRecent));
+        if (!mounted || requestId != _requestId) return;
+        result['recent'] = enriched;
+      }
       setState(() => _history = result);
     } catch (e) {
       if (!mounted || requestId != _requestId) return;
