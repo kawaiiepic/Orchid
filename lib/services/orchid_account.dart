@@ -17,6 +17,7 @@ class OrchidAccount extends ChangeNotifier {
  String? _token;
  String? username;
  String? email;
+ String? avatarUrl;
  String? lastfmUsername;
  bool loading=true;
  bool _verified=false;
@@ -99,6 +100,9 @@ class OrchidAccount extends ChangeNotifier {
   restoreError=null;
   username=user['username'] as String?;
   email=user['email'] as String?;
+  final avatar = user['avatar'] as String?;
+  avatarUrl = avatar == null || avatar.isEmpty
+      ? null : Uri.parse(baseUrl).resolve(avatar).toString();
   notifyListeners();
   try{await refreshLastfm();}catch(e){debugPrint('[Orchid] Last.fm unavailable: $e');}
  }
@@ -126,7 +130,7 @@ class OrchidAccount extends ChangeNotifier {
   }
  }
  Future<void> _clear() async {
-  _token=null;_verified=false;username=null;email=null;lastfmUsername=null;connecting=false;restoreError=null;
+  _token=null;_verified=false;username=null;email=null;avatarUrl=null;lastfmUsername=null;connecting=false;restoreError=null;
   await (await SharedPreferences.getInstance()).remove('orchid_petal_token');
   notifyListeners();
  }
@@ -134,6 +138,34 @@ class OrchidAccount extends ChangeNotifier {
  Future<void> logout() async {
   try{await _request('POST','/users/sessions/logout');}finally{await _clear();}
  }
+ Future<void> uploadAccountAvatar(Uint8List image, String contentType) async {
+  if(!signedIn || _token == null)throw StateError('Sign in first');
+  final result = await http.put(
+    Uri.parse('$baseUrl/users/avatar'),
+    headers: {'Cookie':'auth=${_token!}','Content-Type':contentType},
+    body:image,
+  ).timeout(const Duration(seconds:25));
+  if(result.statusCode != 200) {
+    String message = 'Avatar upload failed (HTTP ${result.statusCode})';
+    try {
+      final data = jsonDecode(result.body) as Map;
+      message = data['error']?.toString() ?? message;
+    } catch(_) {}
+    throw Exception(message);
+  }
+  await refresh();
+  if(avatarUrl != null) {
+    avatarUrl = '$avatarUrl?v=${DateTime.now().millisecondsSinceEpoch}';
+    notifyListeners();
+  }
+ }
+
+ Future<void> removeAccountAvatar() async {
+  await _request('DELETE','/users/avatar');
+  avatarUrl=null;
+  notifyListeners();
+ }
+
  Future<void> refreshLastfm() async {
   if(!signedIn)return;
   final data=await _request('GET','/orchid/lastfm');
