@@ -47,7 +47,7 @@ class OrchidAccount extends ChangeNotifier {
   username=user['username'] as String?;
   email=user['email'] as String?;
   notifyListeners();
-  await refreshLastfm();
+  try{await refreshLastfm();}catch(e){debugPrint('[Orchid] Last.fm unavailable: $e');}
  }
  Future<void> login(String email,String password) async {
   final data=await _request('POST','/users/login',{'email':email.trim(),'password':password});
