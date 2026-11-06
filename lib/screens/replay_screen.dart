@@ -185,7 +185,9 @@ class _ReplayScreenState extends State<ReplayScreen> {
         _ranking('Top albums',_items('topAlbums')),
         Text('Top genres').large().semiBold(),
         const SizedBox(height:8),
-        const Text('Genre rankings will appear once Orchid records genre metadata with each listen.').muted(),
+        if(_items('topGenres').isEmpty)
+          const Text('No genre metadata matched the tracks in this period yet.').muted()
+        else _ranking('Most played genres',_items('topGenres'),artists:true),
         const SizedBox(height:25),
       ],
     ]);
