@@ -33,18 +33,12 @@ class LibraryScreen extends StatefulWidget {
 
 class _LibraryScreenState extends State<LibraryScreen> {
   void _openSong(SavedSong song) {
-    Navigator.of(context).push(ShadcnPageRoute<void>(
-      builder: (_) => SongDetailScreen(
-        player: widget.player,
-        addonService: widget.addonService,
-        addons: widget.addons,
-        title: song.title,
-        artist: song.artist,
-        album: song.album,
-        artworkUrl: song.artwork,
-        library: widget.library,
-      ),
-    ));
+    showSongDetailDrawer(context,
+      player:widget.player, addonService:widget.addonService,
+      addons:widget.addons, library:widget.library,
+      title:song.title, artist:song.artist,
+      album:song.album, artworkUrl:song.artwork,
+    );
   }
 
   Future<void> _playCollection(List<SavedSong> songs) async {
