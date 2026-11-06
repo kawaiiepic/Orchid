@@ -15,6 +15,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
  final email=TextEditingController(),password=TextEditingController(),username=TextEditingController();
  bool registering=false,busy=false;
  String? error;
+ String? avatarStatus;
  @override void initState(){super.initState();widget.account.addListener(_changed);}
  void _changed(){if(mounted)setState((){});}
  @override void dispose(){widget.account.removeListener(_changed);email.dispose();password.dispose();username.dispose();super.dispose();}
@@ -55,7 +56,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(()=>error='Please choose an image smaller than 10 MB.');
     return;
    }
-   setState(()=>error=null);
+   setState(() { error=null; avatarStatus=null; });
    // Match Petal's circular crop workflow, but upload the account avatar
    // (not Petal's separate viewing-profile avatar).
    showOverlay(context, const DialogConfiguration(),
@@ -73,7 +74,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
       try {
        await widget.account.uploadAccountAvatar(cropped,mime);
-       if(mounted)setState(()=>error=null);
+       if(mounted)setState(() { error=null; avatarStatus='Profile picture updated.'; });
       }catch(uploadError) {
        debugPrint('[Orchid Avatar] Upload failed: $uploadError');
        rethrow;
@@ -172,6 +173,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ],
      ]))),
    ],
+   if(avatarStatus!=null)...[const SizedBox(height:14),Text(avatarStatus!).small()],
    if(error!=null)...[const SizedBox(height:14),Text(error!).small()],
   ];
   return widget.embedded
