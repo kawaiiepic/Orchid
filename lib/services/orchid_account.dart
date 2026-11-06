@@ -84,6 +84,10 @@ class OrchidAccount extends ChangeNotifier {
   lastfmUsername=data['connected']==true?data['username'] as String?:null;
   notifyListeners();
  }
+ Future<Map<String,dynamic>> lastfmHome() async {
+  if(!signedIn||!lastfmConnected)throw StateError('Connect Last.fm first');
+  return _request('GET','/orchid/lastfm/home');
+ }
  Future<void> startLastfm() async {
   final data=await _request('POST','/orchid/lastfm/start');
   final uri=Uri.parse(data['url'] as String);
