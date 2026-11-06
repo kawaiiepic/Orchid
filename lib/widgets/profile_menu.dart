@@ -1,4 +1,6 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:flutter/cupertino.dart' as ios;
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
 import '../services/orchid_account.dart';
 import 'orchid_style.dart';
@@ -31,6 +33,35 @@ class _ProfileMenuState extends State<ProfileMenu> {
   }
 
   void _open() {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+      ios.showCupertinoModalPopup<void>(
+        context: context,
+        builder: (popupContext) => ios.CupertinoActionSheet(
+          title: Text(widget.account.username ?? 'Your account'),
+          actions: [
+            ios.CupertinoActionSheetAction(
+              onPressed: () {
+                Navigator.of(popupContext).pop();
+                widget.onProfile();
+              },
+              child: const Text('Your profile'),
+            ),
+            ios.CupertinoActionSheetAction(
+              onPressed: () {
+                Navigator.of(popupContext).pop();
+                widget.onSettings();
+              },
+              child: const Text('Settings'),
+            ),
+          ],
+          cancelButton: ios.CupertinoActionSheetAction(
+            onPressed: () => Navigator.of(popupContext).pop(),
+            child: const Text('Cancel'),
+          ),
+        ),
+      );
+      return;
+    }
     if (_menu != null) {
       _close();
       return;
