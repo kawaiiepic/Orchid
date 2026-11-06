@@ -44,8 +44,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
    );
    if(!mounted||result==null||result.files.isEmpty)return;
    final file=result.files.single;
-   final bytes=file.bytes;
-   if(bytes==null||bytes.isEmpty) {
+   // Desktop file_picker may return a path without eagerly loading bytes.
+   // XFile works for Linux/Windows/mobile/web without a dart:io dependency.
+   final bytes=file.bytes ?? await file.xFile.readAsBytes();
+   if(bytes.isEmpty) {
     setState(()=>error='Could not read the selected image.');
     return;
    }
@@ -63,7 +65,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if(cropped.lengthInBytes>5*1024*1024) {
        throw StateError('Cropped avatar must be smaller than 5 MB.');
       }
-      await widget.account.uploadAccountAvatar(cropped,'image/png');
+      // crop_your_image 2.x preserves JPEG/PNG/WebP source encoding.
+      // Sending JPEG bytes labeled PNG can break serving the new avatar.
+      final mime = OrchidAccount.avatarMimeType(cropped);
+      if(mime==null) {
+       throw StateError('Unsupported cropped image format. Choose a PNG or JPEG.');
+      }
+      try {
+       await widget.account.uploadAccountAvatar(cropped,mime);
+       if(mounted)setState(()=>error=null);
+      }catch(uploadError) {
+       debugPrint('[Orchid Avatar] Upload failed: $uploadError');
+       rethrow;
+      }
      },
     ),
    );
