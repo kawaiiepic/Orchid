@@ -8,6 +8,7 @@ import '../services/orchid_account.dart';
 import '../services/player_service.dart';
 import '../widgets/mini_player_bar.dart';
 import 'song_detail_screen.dart';
+import '../widgets/orchid_style.dart';
 
 class LibraryScreen extends StatefulWidget {
   final MusicLibrary library;
@@ -144,20 +145,35 @@ class _LibraryScreenState extends State<LibraryScreen> {
   Widget _collectionTile(String title, String subtitle, VoidCallback open,
       {IconData icon = LucideIcons.listMusic}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Button(
-        style: const ButtonStyle.ghost(),
-        onPressed: open,
-        child: Padding(
-          padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: GestureDetector(
+        onTap: open,
+        child: Container(
+          decoration: OrchidStyle.panelDecoration(radius: 18),
+          padding: const EdgeInsets.all(18),
           child: Row(children: [
-            Icon(icon, size: 24),
+            Container(
+              width: 52, height: 52,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF644184), Color(0xFF342544)],
+                  begin: Alignment.topLeft, end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: OrchidStyle.lilac, size: 23),
+            ),
             const SizedBox(width: 16),
             Expanded(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [Text(title).semiBold(), Text(subtitle).small().muted()],
+              children: [
+                Text(title).semiBold(),
+                const SizedBox(height: 4),
+                Text(subtitle).small().muted(),
+              ],
             )),
-            const Icon(LucideIcons.chevronRight, size: 18),
+            const Icon(LucideIcons.chevronRight,
+              color: OrchidStyle.lilac, size: 18),
           ]),
         ),
       ),
@@ -170,15 +186,23 @@ class _LibraryScreenState extends State<LibraryScreen> {
     builder: (context, _) => ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        const Text('Your Library').x2Large().semiBold(),
-        const SizedBox(height: 14),
+        const OrchidHero(
+          eyebrow: 'Your collection',
+          title: 'Keep what you love.',
+          description: 'All your favorites and handpicked playlists, together in one place.',
+          icon: LucideIcons.library,
+        ),
+        const SizedBox(height: 26),
+        const OrchidSectionHeader(title: 'Liked songs'),
+
         _collectionTile('Favorites', '${widget.library.favorites.length} songs',
           () => _openCollection('Favorites', () => widget.library.favorites),
           icon: LucideIcons.heart),
-        const SizedBox(height: 18),
-        Row(children: [
-          Expanded(child: const Text('Your Playlists').large().semiBold()),
-        ]),
+        const SizedBox(height: 24),
+        const OrchidSectionHeader(
+          title: 'Your playlists',
+          subtitle: 'Little worlds built one song at a time',
+        ),
         const SizedBox(height: 8),
         Row(children: [
           Expanded(child: TextField(
