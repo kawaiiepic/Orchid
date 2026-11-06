@@ -602,26 +602,19 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                   ),
 
                   Expanded(
-                    child: mobileAnimated
-                        ? (_viewMode == 0
-                            ? Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                child: _lyricsBody(),
-                              )
-                            : _animatedArtworkBody(scheme))
-                        : Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            // Keep CanvasVideo mounted while lyrics are visible:
-                            // hiding it must not dispose and reload the stream.
-                            child: IndexedStack(
-                              index: _viewMode == 0 ? 1 : 0,
-                              sizing: StackFit.expand,
-                              children: [
-                                _animatedArtworkBody(scheme),
-                                _lyricsBody(),
-                              ],
-                            ),
-                          ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      // Preserve the video texture across lyrics/artwork
+                      // toggles instead of remounting a black first frame.
+                      child: IndexedStack(
+                        index: _viewMode == 0 ? 1 : 0,
+                        sizing: StackFit.expand,
+                        children: [
+                          _animatedArtworkBody(scheme),
+                          _lyricsBody(),
+                        ],
+                      ),
+                    ),
                   ),
 
                   _trackDetails(),
