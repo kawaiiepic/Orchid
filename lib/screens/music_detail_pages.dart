@@ -1,4 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/addon.dart';
 import '../services/addon_service.dart';
@@ -95,9 +96,12 @@ Widget _trackTile(BuildContext context, TrackResult song, {
   track: song, player: player, library: library,
   child: Button(
   style: const ButtonStyle.ghost(),
-  onPressed: () => _openTrack(context, song,
-    player: player, addonService: addonService,
-    addons: addons, library: library),
+  onPressed: () {
+    player.setAddons(addons);
+    player.playTrack(song).catchError((Object e) {
+      debugPrint('[Orchid Catalog] Playback failed: $e');
+    });
+  },
   child: Padding(
     padding: const EdgeInsets.symmetric(vertical: 8),
     child: Row(children: [
@@ -114,7 +118,12 @@ Widget _trackTile(BuildContext context, TrackResult song, {
             overflow: TextOverflow.ellipsis).small().muted(),
         ],
       )),
-      const Icon(LucideIcons.chevronRight, size: 16),
+      IconButton.ghost(
+        onPressed: () => _openTrack(context, song,
+          player: player, addonService: addonService,
+          addons: addons, library: library),
+        icon: const Icon(LucideIcons.info, size: 18),
+      ),
     ]),
   ),
   ),
