@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
+import 'package:flutter/cupertino.dart' as ios;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../models/addon.dart';
 import '../services/addon_service.dart';
@@ -178,7 +180,20 @@ class _ShellScreenState extends State<ShellScreen>{
    footers:[
     MiniPlayerBar(player:_player),
     const Divider(),
-    NavigationBar(
+    if(!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)
+     ios.CupertinoTabBar(
+      currentIndex:page.clamp(0,2),
+      activeColor:const Color(0xFFC8A2FF),
+      inactiveColor:const Color(0xFF99909F),
+      backgroundColor:const Color(0xFF17141D),
+      onTap:(index)=>setState(()=>selected=ValueKey(index)),
+      items:const [
+       ios.BottomNavigationBarItem(icon:Icon(ios.CupertinoIcons.house),activeIcon:Icon(ios.CupertinoIcons.house_fill),label:'Home'),
+       ios.BottomNavigationBarItem(icon:Icon(ios.CupertinoIcons.search),label:'Explore'),
+       ios.BottomNavigationBarItem(icon:Icon(ios.CupertinoIcons.music_note_list),label:'Library'),
+      ],
+     )
+    else NavigationBar(
      alignment:NavigationBarAlignment.spaceAround,
      labelType:NavigationLabelType.none,
      expanded:true,
