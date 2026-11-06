@@ -5,6 +5,7 @@ import '../screens/full_player_screen.dart';
 import '../services/player_service.dart';
 import 'orchid_style.dart';
 import 'queue_sheet.dart';
+import 'content_drawer.dart';
 
 class MiniPlayerBar extends StatelessWidget {
   final PlayerService player;
@@ -13,10 +14,10 @@ class MiniPlayerBar extends StatelessWidget {
 
   void _openFull(BuildContext context) {
     if (player.current == null) return;
-    Navigator.of(context).push(
-      ShadcnPageRoute<void>(
-        builder: (_) => FullPlayerScreen(player: player),
-      ),
+    showContentDrawer(
+      context,
+      preferredWidth: 900,
+      builder: (_) => FullPlayerScreen(player: player),
     );
   }
 
