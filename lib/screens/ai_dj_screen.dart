@@ -81,10 +81,12 @@ class _AiDjScreenState extends State<AiDjScreen> {
         _error=e.toString().replaceFirst('Exception: ','');
       });
     }finally{
-      if(mounted)setState((){
-        _sending=false;
-        _thinking=false;
-      });
+      if(mounted) {
+        setState((){
+          _sending=false;
+          _thinking=false;
+        });
+      }
     }
   }
 
