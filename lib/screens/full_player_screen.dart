@@ -6,7 +6,6 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import '../services/lyrics_service.dart';
 import '../services/player_service.dart';
-import '../services/canvas_service.dart';
 import '../services/animated_artwork_service.dart';
 import '../widgets/canvas_video.dart';
 
@@ -20,121 +19,88 @@ class FullPlayerScreen extends StatefulWidget {
 }
 
 class _FullPlayerScreen extends State<FullPlayerScreen> {
-  // 0 = lyrics, 1 = album cover, 2 = Canvas video.
+  // 0 = lyrics, 1 = album cover, 2 = animated Apple Music artwork.
   int _viewMode = 0;
-  String? _canvasUrl;
-  bool _canvasLoading = false;
-  bool _appleLoading = false;
   AnimatedArtwork? _appleArtwork;
-  String? _canvasTrackKey;
-  int _canvasRequest = 0;
-  final _canvas = CanvasService.instance;
+  bool _appleLoading = false;
+  String? _artworkTrackKey;
+  int _artworkRequest = 0;
 
   @override
   void initState() {
     super.initState();
     widget.player.addListener(_onTrackChanged);
-    _canvas.addListener(_onCanvasSettingsChanged);
-    _canvas.load().then((_) {
-      if (mounted) _onTrackChanged();
-    });
-    _onTrackChanged();
-  }
-
-  void _onCanvasSettingsChanged() {
-    _canvasTrackKey = null;
     _onTrackChanged();
   }
 
   void _onTrackChanged() {
     final track = widget.player.current;
-    final id = track?.spotifyTrackId ??
-        (track?.sourceId == 'spotify-addon' ? track?.id : null);
-    final key = '${_canvas.endpoint}|${id ?? ''}|${track?.artist ?? ''}|${track?.album ?? ''}';
-    if (key == _canvasTrackKey) return;
-    _canvasTrackKey = key;
-    final request = ++_canvasRequest;
-    final needsApple = track != null &&
-        track.title.trim().isNotEmpty &&
-        track.artist.trim().isNotEmpty;
-
+    final key = '${track?.artist ?? ''}|${track?.album ?? ''}|${track?.title ?? ''}';
+    if (key == _artworkTrackKey) return;
+    _artworkTrackKey = key;
+    final request = ++_artworkRequest;
+    final canSearch = track != null &&
+        track.artist.trim().isNotEmpty &&
+        track.title.trim().isNotEmpty;
     setState(() {
-      _canvasUrl = null;
       _appleArtwork = null;
-      _canvasLoading = id != null && _canvas.endpoint.isNotEmpty;
-      _appleLoading = needsApple;
+      _appleLoading = canSearch;
     });
-
-    if (id != null && _canvas.endpoint.isNotEmpty) {
-      _canvas.fetch(id).then((url) {
-        if (!mounted || request != _canvasRequest) return;
-        setState(() {
-          _canvasUrl = url;
-          _canvasLoading = false;
-        });
+    if (!canSearch || track == null) return;
+    AnimatedArtworkService.instance.fetch(
+      artist: track.artist,
+      album: track.album,
+      title: track.title,
+    ).then((artwork) {
+      if (!mounted || request != _artworkRequest) return;
+      setState(() {
+        _appleArtwork = artwork;
+        _appleLoading = false;
       });
-    }
-    if (needsApple && track != null) {
-      AnimatedArtworkService.instance.fetch(
-        artist: track.artist,
-        album: track.album,
-        title: track.title,
-      ).then((result) {
-        if (!mounted || request != _canvasRequest) return;
-        setState(() {
-          _appleArtwork = result;
-          _appleLoading = false;
-        });
-      });
-    }
+    });
   }
 
   @override
   void dispose() {
-    ++_canvasRequest;
+    ++_artworkRequest;
     widget.player.removeListener(_onTrackChanged);
-    _canvas.removeListener(_onCanvasSettingsChanged);
     super.dispose();
   }
 
-  Widget _canvasBody(ColorScheme scheme) {
-    // Prefer song-specific Spotify Canvas when configured, then the public
-    // Apple Music animated album artwork API (no credentials required).
-    final videoUrl = _canvasUrl ?? _appleArtwork?.url;
-    if (videoUrl == null) {
+  Widget _animatedArtworkBody(ColorScheme scheme) {
+    final artwork = _appleArtwork;
+    if (artwork == null) {
       return Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Flexible(child: _artworkBody(scheme)),
           const SizedBox(height: 12),
-          Text(_canvasLoading || _appleLoading
+          Text(_appleLoading
               ? 'Finding animated artwork…'
               : 'No animated artwork available for this song').small().muted(),
         ],
       );
     }
-    final isApple = _canvasUrl == null;
-    final portrait = !isApple || _appleArtwork!.portrait;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Flexible(
             child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: portrait ? 380 : 450),
+              constraints: BoxConstraints(
+                  maxWidth: artwork.portrait ? 380 : 450),
               child: AspectRatio(
-                aspectRatio: portrait ? 9 / 16 : 1,
+                aspectRatio: artwork.portrait ? 9 / 16 : 1,
                 child: CanvasVideo(
-                  key: ValueKey(videoUrl),
-                  url: videoUrl,
+                  key: ValueKey(artwork.url),
+                  url: artwork.url,
                   fallbackArtworkUrl: widget.player.current?.artworkUrl,
                 ),
               ),
             ),
           ),
           const SizedBox(height: 12),
-          Text(isApple ? 'Apple Music animated artwork' : 'Spotify Canvas')
-              .small().muted(),
+          const Text('Apple Music animated artwork').small().muted(),
         ],
       ),
     );
@@ -143,7 +109,6 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
   void _nextView() {
     setState(() => _viewMode = (_viewMode + 1) % 3);
   }
-
 
   String _fmt(Duration d) {
     final m = d.inMinutes.remainder(60).toString().padLeft(1, '0');
@@ -334,7 +299,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                           ? _lyricsBody()
                           : _viewMode == 1
                               ? _artworkBody(scheme)
-                              : _canvasBody(scheme),
+                              : _animatedArtworkBody(scheme),
                     ),
                   ),
 
