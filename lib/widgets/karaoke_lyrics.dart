@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/scheduler.dart';
@@ -270,7 +269,9 @@ class _KaraokeLyricsState extends State<KaraokeLyrics> with SingleTickerProvider
             onNotification: (n) {
               if (n is ScrollStartNotification && n.dragDetails != null) {
                 _userScrolling = true;
-              } else if (n is ScrollEndNotification) _userScrolling = false;
+              } else if (n is ScrollEndNotification) {
+                _userScrolling = false;
+              }
               return false;
             },
             child: ListView.builder(
@@ -433,9 +434,9 @@ class _InterludeDotsState extends State<_InterludeDots> {
                         padding: const EdgeInsets.symmetric(horizontal: 6),
                         child: Text('•', style: TextStyle(
                           fontSize: 22, fontWeight: FontWeight.w700,
-                          color: scheme.foreground.withOpacity(_safe01(op, 0.5)),
+                          color: scheme.foreground.withValues(alpha: _safe01(op, 0.5)),
                           shadows: (gl.isFinite && widget.glowScale.isFinite && gl * widget.glowScale > 0.05)
-                              ? [Shadow(color: scheme.foreground.withOpacity(_safe01(gl * 0.9 * widget.glowScale, 0)), blurRadius: ((4 + 6 * gl) / 2).clamp(0.0, 24.0))]
+                              ? [Shadow(color: scheme.foreground.withValues(alpha: _safe01(gl * 0.9 * widget.glowScale, 0)), blurRadius: ((4 + 6 * gl) / 2).clamp(0.0, 24.0))]
                               : null,
                         )),
                       ),
@@ -724,15 +725,15 @@ class _FilledText extends StatelessWidget {
           begin: begin,
           end: end,
           colors: [
-            scheme.foreground.withOpacity(litA),
-            scheme.foreground.withOpacity(unlitA),
+            scheme.foreground.withValues(alpha: litA),
+            scheme.foreground.withValues(alpha: unlitA),
           ],
         ).createShader(bounds);
       },
       child: Text(text, textAlign: textAlign, style: TextStyle(
         fontSize: fs, fontWeight: fontWeight, color: scheme.foreground, height: 1.25,
         shadows: gOpacity > 0.004
-            ? [Shadow(color: scheme.foreground.withOpacity(gOpacity), blurRadius: radius.clamp(0.0, 32.0))]
+            ? [Shadow(color: scheme.foreground.withValues(alpha: gOpacity), blurRadius: radius.clamp(0.0, 32.0))]
             : const [],
       )),
     );
