@@ -26,13 +26,22 @@ class AppleCover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final lookup = isAlbum
-        ? AppleArtworkService.instance.album(artist: artist, album: name)
-        : AppleArtworkService.instance.trackOrAlbum(
-            artist: artist,
-            title: name,
-            album: album,
-          );
+    // Catalog-provided cover URLs are authoritative; don't issue an extra
+    // iTunes request for every result card while search is rendering.
+    final direct = preferredUrl != null && preferredUrl!.startsWith('https://')
+        ? preferredUrl
+        : fallbackUrl != null && fallbackUrl!.startsWith('https://')
+            ? fallbackUrl
+            : null;
+    final lookup = direct != null
+        ? Future<String?>.value(direct)
+        : isAlbum
+            ? AppleArtworkService.instance.album(artist: artist, album: name)
+            : AppleArtworkService.instance.trackOrAlbum(
+                artist: artist,
+                title: name,
+                album: album,
+              );
     return FutureBuilder<String?>(
       future: lookup,
       builder: (context, snapshot) {
