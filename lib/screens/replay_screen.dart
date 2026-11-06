@@ -120,14 +120,14 @@ class _ReplayScreenState extends State<ReplayScreen> {
     }
     final sortedYears=years.toList()..sort((a,b)=>b.compareTo(a));
     return ListView(padding:const EdgeInsets.all(24),children:[
-      OrchidHero(
+      const OrchidHero(
         eyebrow:'Made for You',
         title:'Replay',
         description:'Your listening story, month by month and year by year.',
         icon:LucideIcons.audioLines,
       ),
       const SizedBox(height:22),
-      Text('Choose your year').small().muted(),
+      const Text('Choose your year').small().muted(),
       const SizedBox(height:8),
       Wrap(spacing:8,runSpacing:8,children:[
         for(final y in sortedYears)
@@ -135,7 +135,7 @@ class _ReplayScreenState extends State<ReplayScreen> {
           else OutlineButton(onPressed:()=>_select(y,month),child:Text('$y')),
       ]),
       const SizedBox(height:16),
-      Text('Choose a period').small().muted(),
+      const Text('Choose a period').small().muted(),
       const SizedBox(height:8),
       Wrap(spacing:7,runSpacing:8,children:[
         for(var m=0;m<months.length;m++)
@@ -165,7 +165,7 @@ class _ReplayScreenState extends State<ReplayScreen> {
         Text('${_number(stats['timedPlays'])} of ${_number(stats['plays'])} plays include a duration. Listening time is estimated from full track lengths.').xSmall().muted(),
         const SizedBox(height:22),
         if(!isAnnual)...[
-          Text('Compared with the previous month').large().semiBold(),
+          const Text('Compared with the previous month').large().semiBold(),
           const SizedBox(height:10),
           Container(
             padding:const EdgeInsets.all(16),
@@ -184,7 +184,7 @@ class _ReplayScreenState extends State<ReplayScreen> {
         _ranking('Top artists',_items('topArtists'),artists:true),
         _ranking('Top albums',_items('topAlbums')),
         if(_items('topGenres').isEmpty)...[
-          Text('Top genres').large().semiBold(),
+          const Text('Top genres').large().semiBold(),
           const SizedBox(height:8),
           const Text('No genre metadata matched the tracks in this period yet.').muted(),
         ]else _ranking('Top genres',_items('topGenres'),artists:true),
