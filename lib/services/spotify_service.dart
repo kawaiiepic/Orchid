@@ -16,7 +16,6 @@ class SpotifyService {
   SpotifyService({http.Client? client}) : _client = client ?? http.Client();
 
   /// OAuth token cache key
-  static const _tokenKey = 'orchid_spotify_token';
   
   /// Access token (expires in 1 hour)
   String? _accessToken;
