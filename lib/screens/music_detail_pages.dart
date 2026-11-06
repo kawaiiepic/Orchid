@@ -7,6 +7,7 @@ import '../services/music_library.dart';
 import '../services/player_service.dart';
 import '../widgets/mini_player_bar.dart';
 import 'song_detail_screen.dart';
+import '../widgets/orchid_style.dart';
 
 void openArtistPage(BuildContext context, {
   required String artist,
@@ -49,7 +50,7 @@ Widget _cover(BuildContext context, String? artwork, {double size = 128}) {
       width: size, height: size,
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.muted,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: const Icon(LucideIcons.music2, size: 32),
     );
@@ -151,13 +152,20 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
           children: [
             _back(context),
             const SizedBox(height: 12),
-            Center(child: _cover(context,
-              widget.artwork ?? (catalog?.albums.isNotEmpty == true
-                  ? catalog!.albums.first.artwork : null), size: 180)),
+            OrchidHero(
+              eyebrow: 'Artist',
+              title: widget.artist,
+              description: 'The records, deep cuts and songs that make this artist worth exploring.',
+              icon: LucideIcons.mic2,
+            ),
             const SizedBox(height: 20),
-            Center(child: Text(widget.artist,
-              textAlign: TextAlign.center).x2Large().semiBold()),
-            const SizedBox(height: 24),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: _cover(context,
+                widget.artwork ?? (catalog?.albums.isNotEmpty == true
+                    ? catalog!.albums.first.artwork : null), size: 160),
+            ),
+            const SizedBox(height: 28),
             if (snapshot.connectionState != ConnectionState.done)
               const Center(child: Text('Loading artist discography…'))
             else if (snapshot.hasError)
@@ -170,7 +178,7 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
                 }), child: const Text('Retry')),
               ])
             else if (catalog != null) ...[
-              Text('Albums (${catalog.albums.length})').large().semiBold(),
+              OrchidSectionHeader(title: 'Albums', subtitle: '${catalog.albums.length} releases'),
               const SizedBox(height: 12),
               if (catalog.albums.isEmpty)
                 const Text('No albums found in the music catalog.').muted()
@@ -185,21 +193,26 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
                         artwork: album.artwork, collectionId: album.id,
                         player: widget.player, addonService: widget.addonService,
                         addons: widget.addons, library: widget.library),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _cover(context, album.artwork, size: 148),
-                          const SizedBox(height: 8),
-                          Text(album.title, maxLines: 2,
-                            overflow: TextOverflow.ellipsis).semiBold(),
-                          Text('${album.trackCount ?? '?'} tracks').small().muted(),
-                        ],
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: OrchidStyle.panelDecoration(radius: 17),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _cover(context, album.artwork, size: 128),
+                            const SizedBox(height: 10),
+                            Text(album.title, maxLines: 2,
+                              overflow: TextOverflow.ellipsis).semiBold(),
+                            const SizedBox(height: 4),
+                            Text('${album.trackCount ?? '?'} tracks').small().muted(),
+                          ],
+                        ),
                       ),
                     ),
                   )).toList(),
                 ),
               const SizedBox(height: 28),
-              Text('Songs (${catalog.songs.length})').large().semiBold(),
+              OrchidSectionHeader(title: 'Songs', subtitle: '${catalog.songs.length} tracks'),
               const SizedBox(height: 8),
               if (catalog.songs.isEmpty)
                 const Text('No songs found in the music catalog.').muted()
@@ -254,21 +267,26 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
           children: [
             _back(context),
             const SizedBox(height: 12),
-            Center(child: _cover(context,
-              widget.artwork ?? (tracks.isNotEmpty ? tracks.first.artworkUrl : null),
-              size: 200)),
-            const SizedBox(height: 20),
-            Center(child: Text(widget.album,
-              textAlign: TextAlign.center).x2Large().semiBold()),
-            const SizedBox(height: 8),
-            Center(child: Button(
-              style: const ButtonStyle.ghost(),
-              onPressed: () => openArtistPage(context, artist: widget.artist,
-                player: widget.player, addonService: widget.addonService,
-                addons: widget.addons, library: widget.library),
-              child: Text(widget.artist).muted(),
-            )),
+            OrchidHero(
+              eyebrow: 'Album',
+              title: widget.album,
+              description: 'A whole world of music by ${widget.artist}.',
+              icon: LucideIcons.disc3,
+              action: OutlineButton(
+                onPressed: () => openArtistPage(context, artist: widget.artist,
+                  player: widget.player, addonService: widget.addonService,
+                  addons: widget.addons, library: widget.library),
+                child: const Text('View artist'),
+              ),
+            ),
             const SizedBox(height: 24),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: _cover(context,
+                widget.artwork ?? (tracks.isNotEmpty ? tracks.first.artworkUrl : null),
+                size: 200),
+            ),
+            const SizedBox(height: 28),
             if (snapshot.connectionState != ConnectionState.done)
               const Center(child: Text('Loading album tracks…'))
             else if (snapshot.hasError) ...[
@@ -283,7 +301,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
                 child: const Text('Retry'),
               ),
             ] else ...[
-              Text('Tracklist (${tracks.length})').large().semiBold(),
+              OrchidSectionHeader(title: 'Tracklist', subtitle: '${tracks.length} songs'),
               const SizedBox(height: 8),
               if (tracks.isEmpty)
                 const Text('No tracks found for this album.').muted()
