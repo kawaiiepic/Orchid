@@ -3,14 +3,18 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../models/addon.dart';
 import '../services/addon_service.dart';
 import '../services/lyrics_appearance.dart';
+import '../services/orchid_account.dart';
+import 'profile_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
+  final OrchidAccount account;
   final AddonService addonService;
   final List<InstalledAddon> addons;
   final ValueChanged<List<InstalledAddon>> onAddonsChanged;
 
   const SettingsScreen({
     super.key,
+    required this.account,
     required this.addonService,
     required this.addons,
     required this.onAddonsChanged,
@@ -149,6 +153,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        ProfileScreen(account:widget.account,embedded:true),
+        const SizedBox(height:28),
+        const Divider(),
+        const SizedBox(height:22),
         const Text('Lyrics appearance').large().semiBold(),
         const SizedBox(height: 8),
         const Text(
