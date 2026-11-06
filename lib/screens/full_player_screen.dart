@@ -7,13 +7,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/lyrics_service.dart';
 import '../services/player_service.dart';
+import '../services/music_library.dart';
+import '../widgets/song_context_menu.dart';
 import '../services/animated_artwork_service.dart';
 import '../widgets/canvas_video.dart';
 
 class FullPlayerScreen extends StatefulWidget {
   final PlayerService player;
+  final MusicLibrary? library;
 
-  const FullPlayerScreen({super.key, required this.player});
+  const FullPlayerScreen({super.key, required this.player, this.library});
 
   @override
   State<StatefulWidget> createState() => _FullPlayerScreen();
@@ -224,6 +227,66 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _libraryActions() {
+    final library=widget.library;
+    if(library==null)return const SizedBox.shrink();
+    return ListenableBuilder(
+      listenable:library,
+      builder:(context, _) {
+        final track=widget.player.current;
+        if(track==null)return const SizedBox.shrink();
+        final saved=SavedSong(
+          track.title,track.artist,
+          album:track.album,artwork:track.artworkUrl,
+        );
+        final liked=library.isFavorite(saved);
+        return Padding(
+          padding:const EdgeInsets.fromLTRB(20, 8, 20, 6),
+          child:Row(
+            mainAxisAlignment:MainAxisAlignment.center,
+            children:[
+              OutlineButton(
+                onPressed:()=>library.toggleFavorite(saved),
+                child:Row(
+                  mainAxisSize:MainAxisSize.min,
+                  children:[
+                    Icon(LucideIcons.heart,
+                      size:18,
+                      color:liked?const Color(0xFFC8A2FF):null),
+                    const SizedBox(width:8),
+                    Text(liked?'Liked':'Like'),
+                  ],
+                ),
+              ),
+              const SizedBox(width:12),
+              SongContextMenu(
+                track:track,
+                player:widget.player,
+                library:library,
+                openOnTap:true,
+                child:Container(
+                  padding:const EdgeInsets.symmetric(horizontal:14,vertical:10),
+                  decoration:BoxDecoration(
+                    border:Border.all(color:const Color(0xFF685874)),
+                    borderRadius:BorderRadius.circular(9),
+                  ),
+                  child:const Row(
+                    mainAxisSize:MainAxisSize.min,
+                    children:[
+                      Icon(LucideIcons.listPlus,size:18),
+                      SizedBox(width:8),
+                      Text('Add to playlist'),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -590,6 +653,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                       ),
                     ],
                   ),
+                  _libraryActions(),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
                     child: Row(
