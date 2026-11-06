@@ -22,22 +22,15 @@ class AppleCover extends StatelessWidget {
     this.radius = 8,
   });
 
-  /// Prefer the matching Apple track; fall back to the identified Apple
-  /// album for editions Apple lists under a slightly different song title.
-  Future<String?> _resolveTrackArtwork() async {
-    final trackCover = await AppleArtworkService.instance.track(
-      artist: artist, title: name);
-    if (trackCover != null) return trackCover;
-    if (album == null || album!.trim().isEmpty) return null;
-    return AppleArtworkService.instance.album(
-      artist: artist, album: album!);
-  }
-
   @override
   Widget build(BuildContext context) {
     final lookup = isAlbum
         ? AppleArtworkService.instance.album(artist: artist, album: name)
-        : _resolveTrackArtwork();
+        : AppleArtworkService.instance.trackOrAlbum(
+            artist: artist,
+            title: name,
+            album: album,
+          );
     return FutureBuilder<String?>(
       future: lookup,
       builder: (context, snapshot) {
