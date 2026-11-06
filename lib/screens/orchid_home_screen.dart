@@ -22,7 +22,7 @@ class OrchidHomeScreen extends StatefulWidget {
   final OrchidAccount account;
   final VoidCallback openExplore;
   final VoidCallback openLibrary;
-  final VoidCallback openDailyMixes;
+  final ValueChanged<int> openDailyMixes;
   final VoidCallback openProfile;
 
   const OrchidHomeScreen({
@@ -243,7 +243,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
         child: Row(children: [
           for (var i = 0; i < titles.length; i++) ...[
             _clickable(
-              onTap: widget.openDailyMixes,
+              onTap: () => widget.openDailyMixes(i),
               child: Container(
                 width: 168,
                 height: 245,
