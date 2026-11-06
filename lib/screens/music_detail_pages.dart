@@ -76,13 +76,10 @@ void _openTrack(BuildContext context, TrackResult track, {
   required PlayerService player, required AddonService addonService,
   required List<InstalledAddon> addons, required MusicLibrary library,
 }) {
-  Navigator.of(context).push(ShadcnPageRoute<void>(
-    builder: (_) => SongDetailScreen(
-      player: player, addonService: addonService, addons: addons,
-      library: library, title: track.title, artist: track.artist,
-      album: track.album, artworkUrl: track.artworkUrl, track: track,
-    ),
-  ));
+  showSongDetailDrawer(context, player:player,
+    addonService:addonService, addons:addons, library:library,
+    title:track.title, artist:track.artist,
+    album:track.album, artworkUrl:track.artworkUrl, track:track);
 }
 
 Widget _trackTile(BuildContext context, TrackResult song, {
