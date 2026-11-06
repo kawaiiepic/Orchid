@@ -10,6 +10,7 @@ import 'song_detail_screen.dart';
 import 'music_detail_pages.dart';
 import '../widgets/orchid_style.dart';
 import '../widgets/artist_artwork.dart';
+import '../widgets/apple_cover.dart';
 import '../widgets/song_context_menu.dart';
 
 class OrchidHomeScreen extends StatefulWidget {
@@ -174,8 +175,15 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                       crossAxisAlignment:CrossAxisAlignment.start,
                       children:[
                         Stack(children:[
-                          _art(playlist.songs.isNotEmpty
-                            ? playlist.songs.first.artwork:null,size:144),
+                          if (playlist.songs.isNotEmpty)
+                            AppleCover(
+                              artist: playlist.songs.first.artist,
+                              name: playlist.songs.first.title,
+                              fallbackUrl: playlist.songs.first.artwork,
+                              size: 144,
+                              radius: 12,
+                            )
+                          else _art(null, size: 144),
                           Positioned(right:7,bottom:7,
                             child:Container(
                               padding:const EdgeInsets.all(7),
@@ -226,9 +234,15 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Stack(children: [
-                      _art(widget.library.dailyMix(i, source).isNotEmpty
-                          ? widget.library.dailyMix(i, source).first.artwork
-                          : null, size: 144),
+                      if (widget.library.dailyMix(i, source).isNotEmpty)
+                        AppleCover(
+                          artist: widget.library.dailyMix(i, source).first.artist,
+                          name: widget.library.dailyMix(i, source).first.title,
+                          fallbackUrl: widget.library.dailyMix(i, source).first.artwork,
+                          size: 144,
+                          radius: 12,
+                        )
+                      else _art(null, size: 144),
                       Positioned(
                         bottom: 8, right: 8,
                         child: Container(
@@ -384,7 +398,11 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
       padding: const EdgeInsets.symmetric(horizontal:12,vertical:9),
       child: Row(
         children: [
-          _art(track['image'] as String?),
+          AppleCover(
+            artist: artist,
+            name: (track['title'] ?? '').toString(),
+            fallbackUrl: track['image'] as String?,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -453,7 +471,14 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
             crossAxisAlignment:CrossAxisAlignment.start,
             children:[
               isAlbum
-                  ? _art(item['image'] as String?,size:144)
+                  ? AppleCover(
+                      artist: artist,
+                      name: title,
+                      isAlbum: true,
+                      fallbackUrl: item['image'] as String?,
+                      size: 144,
+                      radius: 12,
+                    )
                   : ArtistArtwork(artist: title, size: 144, radius: 12),
               const SizedBox(height:10),
               SizedBox(
