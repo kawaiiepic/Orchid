@@ -8,6 +8,7 @@ import '../services/orchid_account.dart';
 import '../services/player_service.dart';
 import '../widgets/mini_player_bar.dart';
 import 'song_detail_screen.dart';
+import '../widgets/song_context_menu.dart';
 
 class DailyMixesScreen extends StatefulWidget {
   final OrchidAccount account;
@@ -129,7 +130,14 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
             ),
             const SizedBox(height: 12),
           ],
-          ..._mix(index).map((song) => Button(
+          ..._mix(index).map((song) => SongContextMenu(
+            track: TrackResult(
+              id: song.key, title: song.title, artist: song.artist,
+              album: song.album, artworkUrl: song.artwork,
+              sourceId: 'orchid-mix', sourceName: 'Daily Mix',
+            ),
+            player: widget.player, library: widget.library,
+            child: Button(
             style: const ButtonStyle.ghost(),
             onPressed: () => Navigator.of(context).push(ShadcnPageRoute<void>(
               builder: (_) => SongDetailScreen(
@@ -155,6 +163,7 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
                 )),
                 const Icon(LucideIcons.chevronRight, size: 18),
               ]),
+            ),
             ),
           )),
         ]),
