@@ -118,7 +118,14 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     final seen = <String>{};
     return _items('recent').where((track) {
       String norm(Object? value) => (value ?? '').toString()
-          .toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), ' ').trim();
+          .toLowerCase()
+          // Collapse common Last.fm edition labels, but leave live/acoustic
+          // performances distinct from the studio recording.
+          .replaceAll(RegExp(
+              r'\\s*[\\(\\[]?(?:\\d{4}\\s+)?remaster(?:ed)?(?:\\s+\\d{4})?[\\)\\]]?',
+              caseSensitive: false), '')
+          .replaceAll(RegExp(r'[^a-z0-9]+'), ' ')
+          .trim();
       final key = '${norm(track['artist'])}|${norm(track['title'])}';
       return key != '|' && seen.add(key);
     }).toList();
