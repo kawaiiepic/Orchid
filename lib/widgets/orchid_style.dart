@@ -86,6 +86,7 @@ class OrchidHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
+    width: double.infinity,
     clipBehavior: Clip.antiAlias,
     decoration: OrchidStyle.gradientDecoration(),
     child: Stack(
