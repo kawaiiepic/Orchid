@@ -440,11 +440,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            IconButton(
-                              variance: ButtonVariance.ghost,
-                              onPressed: () => dismissContentDrawer(context),
-                              icon: const Icon(LucideIcons.arrowLeft),
-                            ),
+                            const SizedBox(width: 42),
                             Row(mainAxisSize: MainAxisSize.min, children: [
                               IconButton(
                                 variance: ButtonVariance.ghost,
@@ -477,9 +473,16 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                               ))
                         : Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 12),
-                            child: _viewMode == 0
-                                ? _lyricsBody()
-                                : _animatedArtworkBody(scheme),
+                            // Keep CanvasVideo mounted while lyrics are visible:
+                            // hiding it must not dispose and reload the stream.
+                            child: IndexedStack(
+                              index: _viewMode == 0 ? 1 : 0,
+                              sizing: StackFit.expand,
+                              children: [
+                                _animatedArtworkBody(scheme),
+                                _lyricsBody(),
+                              ],
+                            ),
                           ),
                   ),
 
