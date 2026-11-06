@@ -50,9 +50,9 @@ class LiquidArtworkBackground extends StatelessWidget {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                scheme.background.withOpacity(0.45),
-                scheme.background.withOpacity(0.65),
-                scheme.background.withOpacity(0.88),
+                scheme.background.withValues(alpha: 0.45),
+                scheme.background.withValues(alpha: 0.65),
+                scheme.background.withValues(alpha: 0.88),
               ],
             ),
           ),
