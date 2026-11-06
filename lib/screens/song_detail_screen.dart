@@ -80,9 +80,20 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
     player:widget.player,
     library:library,
     openOnTap:true,
-    child:OutlineButton(
-      onPressed:null,
-      child:const Text('More song actions'),
+    child:Container(
+      padding:const EdgeInsets.symmetric(horizontal:18,vertical:12),
+      decoration:BoxDecoration(
+        borderRadius:BorderRadius.circular(12),
+        border:Border.all(color:Theme.of(context).colorScheme.border),
+      ),
+      child:const Row(
+        mainAxisSize:MainAxisSize.min,
+        children:[
+          Icon(LucideIcons.ellipsis,size:18),
+          SizedBox(width:10),
+          Text('Song actions'),
+        ],
+      ),
     ),
   );
  }
