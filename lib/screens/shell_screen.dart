@@ -103,23 +103,12 @@ class _ShellScreenState extends State<ShellScreen>{
   _player.dispose();_library.dispose();_account.removeListener(_accountChanged);_account.dispose();super.dispose();
  }
  void _openProfile() {
-  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
-   Navigator.of(context).push(ios.CupertinoPageRoute<void>(
-    builder: (_) => ios.CupertinoPageScaffold(
-     child: SafeArea(child: Scaffold(
-      footers: [MiniPlayerBar(player:_player)],
-      child: ProfileScreen(account:_account),
-     )),
-    ),
-   ));
-   return;
-  }
-  Navigator.of(context).push(ShadcnPageRoute<void>(
+  showContentDrawer(
+   context,
    builder: (_) => Scaffold(
-    footers: [MiniPlayerBar(player:_player)],
     child: ProfileScreen(account:_account),
    ),
-  ));
+  );
  }
  void _openSettings() {
   showContentDrawer(context, preferredWidth:700,
