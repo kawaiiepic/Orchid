@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../services/orchid_account.dart';
 import '../services/player_service.dart';
+import '../services/music_library.dart';
 import '../services/addon_service.dart';
 import '../models/addon.dart';
 import 'song_detail_screen.dart';
@@ -10,6 +11,7 @@ import '../widgets/mini_player_bar.dart';
 
 class OrchidHomeScreen extends StatefulWidget {
   final PlayerService player;
+  final MusicLibrary library;
   final AddonService addonService;
   final List<InstalledAddon> addons;
   final OrchidAccount account;
@@ -19,6 +21,7 @@ class OrchidHomeScreen extends StatefulWidget {
   const OrchidHomeScreen({
     super.key,
     required this.player,
+    required this.library,
     required this.addonService,
     required this.addons,
     required this.account,
@@ -175,6 +178,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     Navigator.of(context).push(ShadcnPageRoute<void>(
       builder:(_)=>SongDetailScreen(
         player:widget.player,
+        library:widget.library,
         addonService:widget.addonService,
         addons:widget.addons,
         title:track['title']?.toString()??'Unknown',
