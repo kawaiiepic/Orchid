@@ -7,6 +7,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../services/lyrics_service.dart';
 import '../services/player_service.dart';
 import '../services/canvas_service.dart';
+import '../services/animated_artwork_service.dart';
 import '../widgets/canvas_video.dart';
 
 class FullPlayerScreen extends StatefulWidget {
@@ -23,6 +24,8 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
   int _viewMode = 0;
   String? _canvasUrl;
   bool _canvasLoading = false;
+  bool _appleLoading = false;
+  AnimatedArtwork? _appleArtwork;
   String? _canvasTrackKey;
   int _canvasRequest = 0;
   final _canvas = CanvasService.instance;
@@ -47,24 +50,43 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
     final track = widget.player.current;
     final id = track?.spotifyTrackId ??
         (track?.sourceId == 'spotify-addon' ? track?.id : null);
-    final key = '${_canvas.endpoint}|${id ?? ''}';
+    final key = '${_canvas.endpoint}|${id ?? ''}|${track?.artist ?? ''}|${track?.album ?? ''}';
     if (key == _canvasTrackKey) return;
     _canvasTrackKey = key;
     final request = ++_canvasRequest;
-    if (mounted) {
-      setState(() {
-        _canvasUrl = null;
-        _canvasLoading = id != null && _canvas.endpoint.isNotEmpty;
+    final needsApple = track != null &&
+        track.album?.trim().isNotEmpty == true &&
+        track.artist.trim().isNotEmpty;
+
+    setState(() {
+      _canvasUrl = null;
+      _appleArtwork = null;
+      _canvasLoading = id != null && _canvas.endpoint.isNotEmpty;
+      _appleLoading = needsApple;
+    });
+
+    if (id != null && _canvas.endpoint.isNotEmpty) {
+      _canvas.fetch(id).then((url) {
+        if (!mounted || request != _canvasRequest) return;
+        setState(() {
+          _canvasUrl = url;
+          _canvasLoading = false;
+        });
       });
     }
-    if (id == null || _canvas.endpoint.isEmpty) return;
-    _canvas.fetch(id).then((url) {
-      if (!mounted || request != _canvasRequest) return;
-      setState(() {
-        _canvasUrl = url;
-        _canvasLoading = false;
+    if (needsApple) {
+      AnimatedArtworkService.instance.fetch(
+        artist: track.artist,
+        album: track.album!,
+        title: track.title,
+      ).then((result) {
+        if (!mounted || request != _canvasRequest) return;
+        setState(() {
+          _appleArtwork = result;
+          _appleLoading = false;
+        });
       });
-    });
+    }
   }
 
   @override
@@ -76,27 +98,44 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
   }
 
   Widget _canvasBody(ColorScheme scheme) {
-    if (_canvasUrl == null) {
+    // Prefer song-specific Spotify Canvas when configured, then the public
+    // Apple Music animated album artwork API (no credentials required).
+    final videoUrl = _canvasUrl ?? _appleArtwork?.url;
+    if (videoUrl == null) {
       return Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _artworkBody(scheme),
+          Flexible(child: _artworkBody(scheme)),
           const SizedBox(height: 12),
-          Text(_canvasLoading
-              ? 'Finding Canvas…'
-              : _canvas.endpoint.isEmpty
-                  ? 'Configure Canvas API in Settings'
-                  : 'Canvas unavailable for this song').small().muted(),
+          Text(_canvasLoading || _appleLoading
+              ? 'Finding animated artwork…'
+              : 'No animated artwork available for this song').small().muted(),
         ],
       );
     }
+    final isApple = _canvasUrl == null;
+    final portrait = !isApple || _appleArtwork!.portrait;
     return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 380),
-        child: AspectRatio(
-          aspectRatio: 9 / 16,
-          child: CanvasVideo(key: ValueKey(_canvasUrl), url: _canvasUrl!),
-        ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Flexible(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: portrait ? 380 : 450),
+              child: AspectRatio(
+                aspectRatio: portrait ? 9 / 16 : 1,
+                child: CanvasVideo(
+                  key: ValueKey(videoUrl),
+                  url: videoUrl,
+                  fallbackArtworkUrl: widget.player.current?.artworkUrl,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(isApple ? 'Apple Music animated artwork' : 'Spotify Canvas')
+              .small().muted(),
+        ],
       ),
     );
   }
