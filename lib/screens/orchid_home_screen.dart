@@ -8,6 +8,7 @@ import '../services/addon_service.dart';
 import '../models/addon.dart';
 import 'song_detail_screen.dart';
 import 'music_detail_pages.dart';
+import '../widgets/orchid_style.dart';
 
 class OrchidHomeScreen extends StatefulWidget {
   final PlayerService player;
@@ -208,7 +209,10 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     return _clickable(
       onTap:()=>_openSong(track),
       child:Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Container(
+      decoration: OrchidStyle.panelDecoration(radius:14),
+      padding: const EdgeInsets.symmetric(horizontal:12,vertical:9),
       child: Row(
         children: [
           _art(track['image'] as String?),
@@ -227,7 +231,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
           const SizedBox(width:6),
           const Icon(LucideIcons.chevronRight,size:16),
         ],
-      ),
+      )),
     ));
   }
 
@@ -267,14 +271,15 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     return _clickable(
       onTap:()=>_showMusicDetail(item,isAlbum:isAlbum),
       child:SizedBox(
-        width:156,
-        height:252,
-        child:Padding(
-          padding:const EdgeInsets.all(10),
+        width:168,
+        height:258,
+        child:Container(
+          decoration:OrchidStyle.panelDecoration(radius:18),
+          padding:const EdgeInsets.all(12),
           child:Column(
             crossAxisAlignment:CrossAxisAlignment.start,
             children:[
-              _art(item['image'] as String?,size:136),
+              _art(item['image'] as String?,size:144),
               const SizedBox(height:10),
               SizedBox(
                 height:38,
@@ -323,43 +328,34 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
         return ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            Text('Welcome back, ${widget.account.username ?? 'listener'}').x2Large().semiBold(),
-            const SizedBox(height: 5),
-            const Text('Your music, your space.').muted(),
-            const SizedBox(height: 24),
-            Row(children:[
-              Expanded(child: const Text('Made for you').large().semiBold()),
-              OutlineButton(
-                onPressed:widget.openLibrary,
-                child:const Text('Open Library'),
-              ),
-            ]),
-            const SizedBox(height:8),
-            const Text('Your favorites, playlists and daily listening mixes.').small().muted(),
-            const SizedBox(height:12),
-            Row(children:[
-              Expanded(child:Button(
-                style:const ButtonStyle.ghost(),
-                onPressed:widget.openDailyMixes,
-                child:const Text('Daily Mixes'),
-              )),
-              const SizedBox(width:8),
-              Expanded(child:Button(
-                style:const ButtonStyle.ghost(),
-                onPressed:widget.openLibrary,
-                child:const Text('Favorites'),
-              )),
-            ]),
-            const SizedBox(height:24),
-            Row(
-              children: [
-                Expanded(child: const Text('Your Last.fm').large().semiBold()),
-                if (linked)
-                  GhostButton(
-                    onPressed: _loading ? null : _refresh,
-                    child: Text(_loading ? 'Loading…' : 'Refresh'),
+            OrchidHero(
+              eyebrow: 'Your listening space',
+              title: 'Made for your ears.',
+              description: 'Your favorite music, daily discoveries and the artists you keep coming back to.',
+              icon: LucideIcons.audioLines,
+              action: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  PrimaryButton(
+                    onPressed: widget.openDailyMixes,
+                    child: const Text('Explore Daily Mixes'),
                   ),
-              ],
+                  const SizedBox(width: 10),
+                  OutlineButton(
+                    onPressed: widget.openLibrary,
+                    child: const Text('My Library'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 30),
+            OrchidSectionHeader(
+              title: 'Your listening',
+              subtitle: 'A little portrait of your music taste',
+              trailing: linked ? GhostButton(
+                onPressed: _loading ? null : _refresh,
+                child: Text(_loading ? 'Loading…' : 'Refresh'),
+              ) : null,
             ),
             const SizedBox(height: 10),
             if (!linked)
@@ -390,7 +386,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
               if (_loading && _history == null)
                 const Text('Loading your listening history…').muted(),
               if (_history != null) ...[
-                const Text('Listening statistics').large().semiBold(),
+                const OrchidSectionHeader(title: 'By the numbers'),
                 const SizedBox(height: 10),
                 Wrap(
                   spacing: 10,
@@ -403,20 +399,20 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                   ],
                 ),
                 const SizedBox(height: 24),
-                const Text('Recently played').large().semiBold(),
+                const OrchidSectionHeader(title: 'Recently played'),
                 const SizedBox(height: 10),
                 if (_items('recent').isEmpty)
                   const Text('No Last.fm listening history yet.').muted()
                 else
                   ..._items('recent').map(_recentRow),
                 const SizedBox(height: 24),
-                const Text('Top artists').large().semiBold(),
+                const OrchidSectionHeader(title: 'Artists on repeat'),
                 const SizedBox(height: 5),
                 const Text('All time').xSmall().muted(),
                 const SizedBox(height: 10),
                 _horizontalItems(_items('artists'), albums: false),
                 const SizedBox(height: 24),
-                const Text('Top albums').large().semiBold(),
+                const OrchidSectionHeader(title: 'Albums on repeat'),
                 const SizedBox(height: 5),
                 const Text('All time').xSmall().muted(),
                 const SizedBox(height: 10),
