@@ -140,6 +140,20 @@ class OrchidAccount extends ChangeNotifier {
  Future<void> logout() async {
   try{await _request('POST','/users/sessions/logout');}finally{await _clear();}
  }
+ /// Detect actual encoded image data instead of guessing from the filename.
+ static String? avatarMimeType(Uint8List bytes) {
+  if(bytes.length>=8 &&
+      bytes[0]==0x89 && bytes[1]==0x50 &&
+      bytes[2]==0x4E && bytes[3]==0x47)return 'image/png';
+  if(bytes.length>=3 && bytes[0]==0xFF &&
+      bytes[1]==0xD8 && bytes[2]==0xFF)return 'image/jpeg';
+  if(bytes.length>=12 &&
+      String.fromCharCodes(bytes.sublist(0,4))=='RIFF' &&
+      String.fromCharCodes(bytes.sublist(8,12))=='WEBP')return 'image/webp';
+  if(bytes.length>=6 &&
+      String.fromCharCodes(bytes.sublist(0,3))=='GIF')return 'image/gif';
+  return null;
+ }
  Future<void> uploadAccountAvatar(Uint8List image, String contentType) async {
   if(!signedIn || _token == null)throw StateError('Sign in first');
   final result=await http.put(
@@ -153,8 +167,15 @@ class OrchidAccount extends ChangeNotifier {
    if(decoded is Map)data=Map<String,dynamic>.from(decoded);
   }catch(_){}
   if(result.statusCode!=200 || data?['success']!=true) {
-   throw Exception(data?['error']?.toString()
-     ?? 'Avatar upload failed (HTTP ${result.statusCode})');
+   final errors=data?['errors'];
+   final detail=data?['error']?.toString()
+       ?? (errors is List && errors.isNotEmpty
+           ? errors.first.toString() : null)
+       ?? (result.body.trim().isNotEmpty &&
+           result.body.length<300 && !result.body.trim().startsWith('<')
+           ? result.body.trim() : null)
+       ?? 'Avatar upload failed';
+   throw Exception('$detail (HTTP ${result.statusCode})');
   }
   final path=data?['avatar']?.toString();
   if(path==null||path.isEmpty)throw StateError('Avatar upload returned no image URL');
