@@ -85,6 +85,20 @@ class MusicCatalogService {
     );
   }
 
+  /// Canonical Apple catalog search results; playback remains addon-backed.
+  Future<List<TrackResult>> searchTracks(String query) async {
+    final results = await _request(Uri.https('itunes.apple.com', '/search', {
+      'term': query, 'entity': 'song', 'media': 'music', 'limit': '100',
+    }));
+    final seen = <String>{};
+    return results.whereType<Map>().map((item) =>
+        _song(Map<String, dynamic>.from(item)))
+        .whereType<TrackResult>()
+        .where((track) => seen.add(
+          '${_norm(track.artist)}|${_norm(track.title)}|${_norm(track.album ?? '')}'))
+        .toList();
+  }
+
   /// Search catalog entities independently of track searches.
   Future<List<MusicAlbum>> searchAlbums(String query) async {
     final results = await _request(Uri.https('itunes.apple.com', '/search', {
