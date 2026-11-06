@@ -27,16 +27,18 @@ class SavedSong {
 class MusicPlaylist {
   final String id;
   String name;
+  bool pinned;
   final List<SavedSong> songs;
-  MusicPlaylist({required this.id, required this.name, List<SavedSong>? songs})
+  MusicPlaylist({required this.id, required this.name, this.pinned = false, List<SavedSong>? songs})
       : songs = songs ?? [];
   Map<String, dynamic> toJson() => {
-    'id': id, 'name': name,
+    'id': id, 'name': name, 'pinned': pinned,
     'songs': songs.map((s) => s.toJson()).toList(),
   };
   factory MusicPlaylist.fromJson(Map<String, dynamic> data) => MusicPlaylist(
     id: data['id'].toString(),
     name: data['name'].toString(),
+    pinned: data['pinned'] == true,
     songs: (data['songs'] as List? ?? [])
         .whereType<Map>()
         .map((s) => SavedSong.fromJson(Map<String, dynamic>.from(s)))
@@ -125,6 +127,11 @@ class MusicLibrary extends ChangeNotifier {
 
   Future<void> renamePlaylist(MusicPlaylist list, String name) async {
     list.name = name.trim();
+    await _save();
+  }
+
+  Future<void> setPlaylistPinned(MusicPlaylist list, bool pinned) async {
+    list.pinned = pinned;
     await _save();
   }
 
