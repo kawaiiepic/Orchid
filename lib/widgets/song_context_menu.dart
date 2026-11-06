@@ -150,7 +150,7 @@ class _SongActionPanelState extends State<_SongActionPanel> {
             widget.dismiss();
             widget.player.playTrack(widget.track);
           }),
-          _action('Add to Queue', LucideIcons.listPlus, () {
+          _action('Add to Queue', LucideIcons.listMusic, () {
             widget.player.addToQueue(widget.track);
             widget.dismiss();
           }),
