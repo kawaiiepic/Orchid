@@ -67,7 +67,7 @@ class MiniPlayerBar extends StatelessWidget {
                             Text(track.title, maxLines: 1,
                               overflow: TextOverflow.ellipsis).semiBold(),
                             Text(
-                              track.artist,
+                              [track.artist, if (!player.resolving && player.playingVia != null) player.sourceLabel].join(' · '),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ).small().muted(),
