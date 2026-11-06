@@ -101,7 +101,7 @@ class _ShellScreenState extends State<ShellScreen>{
    _account.recordListen(
     eventId:eventId,title:track.title,artist:track.artist,
     album:track.album,artwork:track.artworkUrl,songId:track.id,
-    startedAt:_startedAt,duration:total,
+    startedAt:_startedAt,duration:total,genres:track.genres,
    ).catchError((Object error) {
     debugPrint('[Orchid History] Could not save listen: $error');
    });
