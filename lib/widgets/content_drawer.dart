@@ -1,4 +1,6 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:flutter/cupertino.dart' as ios;
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
 /// Shared side-drawer presentation for music details, settings and the player.
 /// On narrow screens it occupies the full width; on desktop it leaves the
@@ -8,6 +10,14 @@ void showContentDrawer(
   required WidgetBuilder builder,
   double preferredWidth = 600,
 }) {
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+    Navigator.of(context).push(ios.CupertinoPageRoute<void>(
+      builder: (routeContext) => ios.CupertinoPageScaffold(
+        child: SafeArea(child: builder(routeContext)),
+      ),
+    ));
+    return;
+  }
   final viewport = MediaQuery.sizeOf(context);
   final width = viewport.width < 700
       ? viewport.width
@@ -30,4 +40,10 @@ void showContentDrawer(
   );
 }
 
-void dismissContentDrawer(BuildContext context) => closeOverlay(context);
+void dismissContentDrawer(BuildContext context) {
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+    Navigator.of(context).maybePop();
+  } else {
+    closeOverlay(context);
+  }
+}
