@@ -100,7 +100,7 @@ class _SearchScreenState extends State<SearchScreen> {
     }
     final catalog = MusicCatalogService.instance;
     final response = await Future.wait<dynamic>([
-      _tracksOn ? safe<TrackResult>(() => widget.addonService.search(widget.addons, query))
+      _tracksOn ? safe<TrackResult>(() => catalog.searchTracks(query))
                 : Future.value(<TrackResult>[]),
       _albumsOn ? safe<MusicAlbum>(() => catalog.searchAlbums(query))
                 : Future.value(<MusicAlbum>[]),
@@ -117,7 +117,7 @@ class _SearchScreenState extends State<SearchScreen> {
     setState(() {
       final tracks = response[0] as List<TrackResult>;
       final unique = <String>{};
-      _tracks = tracks.where((t) => unique.add('${_norm(t.artist)}|${_norm(t.title)}')).toList();
+      _tracks = tracks.where((t) => unique.add('${_norm(t.artist)}|${_norm(t.title)}|${_norm(t.album ?? '')}')).toList();
       _albums = response[1] as List<MusicAlbum>;
       _artists = (response[2] as List<String>).take(1).toList();
       final apple = Map<String, dynamic>.from(response[3] as Map);
