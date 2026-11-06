@@ -152,6 +152,31 @@ class _SearchScreenState extends State<SearchScreen> {
       });
     }catch(error) {
       debugPrint('[Orchid Search] Apple Music catalog error: $error');
+      // Older Petal deployments don't have /orchid/apple/search yet.
+      // Keep browsing usable until the backend update is deployed.
+      if(error is OrchidAuthException && error.status==404) {
+        try {
+          final catalog=MusicCatalogService.instance;
+          final fallback=await Future.wait<dynamic>([
+            _tracksOn?catalog.searchTracks(query):Future.value(<TrackResult>[]),
+            _albumsOn?catalog.searchAlbums(query):Future.value(<MusicAlbum>[]),
+            _artistsOn?catalog.searchArtists(query):Future.value(<String>[]),
+          ]);
+          if(!mounted||generation!=_generation)return;
+          setState(() {
+            _tracks=fallback[0] as List<TrackResult>;
+            _albums=fallback[1] as List<MusicAlbum>;
+            _artists=(fallback[2] as List<String>).take(1).toList();
+            _applePlaylists=[];
+            _applePlaylistsConfigured=false;
+            _searching=false;
+            _status='Showing public catalog results. Update Petal for Apple Music search.';
+          });
+          return;
+        }catch(fallbackError) {
+          debugPrint('[Orchid Search] Public catalog fallback failed: $fallbackError');
+        }
+      }
       if(!mounted||generation!=_generation)return;
       setState(() {
         _tracks=[];
