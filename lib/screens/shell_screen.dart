@@ -11,6 +11,7 @@ import 'daily_mixes_screen.dart';
 import '../widgets/mini_player_bar.dart';
 import '../widgets/profile_menu.dart';
 import '../widgets/orchid_style.dart';
+import '../widgets/content_drawer.dart';
 import 'orchid_home_screen.dart';
 import 'profile_screen.dart';
 import 'search_screen.dart';
@@ -108,20 +109,32 @@ class _ShellScreenState extends State<ShellScreen>{
   ));
  }
  void _openSettings() {
-  Navigator.of(context).push(ShadcnPageRoute<void>(
-   builder: (_) => Scaffold(
-    footers: [MiniPlayerBar(player:_player)],
-    child: SettingsScreen(
-     account:_account,
-     addonService:_addonService,
-     addons:_addons,
-     onAddonsChanged:(list) {
-      if(!mounted)return;
-      setState(()=>_addons=list);
-      _player.setAddons(list);
-     },
+  showContentDrawer(context, preferredWidth:700,
+    builder:(_) => Scaffold(
+      child:Column(children:[
+        Padding(
+          padding:const EdgeInsets.fromLTRB(12,8,12,0),
+          child:Row(children:[
+            IconButton.ghost(
+              onPressed:()=>dismissContentDrawer(context),
+              icon:const Icon(LucideIcons.x),
+            ),
+            const SizedBox(width:10),
+            const Text('Settings').large().semiBold(),
+          ]),
+        ),
+        Expanded(child:SettingsScreen(
+          account:_account,
+          addonService:_addonService,
+          addons:_addons,
+          onAddonsChanged:(list) {
+            if(!mounted)return;
+            setState(()=>_addons=list);
+            _player.setAddons(list);
+          },
+        )),
+      ]),
     ),
-   ),
   ));
  }
  NavigationItem _button(String title,IconData icon,int index)=>NavigationItem(
