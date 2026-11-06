@@ -35,6 +35,13 @@ class _ShellScreenState extends State<ShellScreen>{
  late final PlayerService _player;
  StreamSubscription<Duration>? _positionSubscription;
  Key? selected=const ValueKey(0);
+ final Set<int> _initializedTabs={0};
+ void _selectTab(int index) {
+  setState(() {
+   selected=ValueKey(index);
+   _initializedTabs.add(index);
+  });
+ }
  List<InstalledAddon> _addons=[];
  int _trackGeneration=0;
  bool _scrobbled=false;
@@ -237,7 +244,7 @@ class _ShellScreenState extends State<ShellScreen>{
       activeColor:const Color(0xFFC8A2FF),
       inactiveColor:const Color(0xFF99909F),
       backgroundColor:const Color(0xFF17141D),
-      onTap:(index)=>setState(()=>selected=ValueKey(index)),
+      onTap:_selectTab,
       items:const [
        ios.BottomNavigationBarItem(icon:Icon(ios.CupertinoIcons.house),activeIcon:Icon(ios.CupertinoIcons.house_fill),label:'Home'),
        ios.BottomNavigationBarItem(icon:Icon(ios.CupertinoIcons.search),label:'Explore'),
@@ -248,7 +255,7 @@ class _ShellScreenState extends State<ShellScreen>{
      alignment:NavigationBarAlignment.spaceAround,
      labelType:NavigationLabelType.none,
      expanded:true,
-     onSelected:(key)=>setState(()=>selected=key),
+     onSelected:(key)=>_selectTab((key as ValueKey<int>).value),
      selectedKey:selected,
      children:[
       _button('Home',BootstrapIcons.house,0),
@@ -279,9 +286,9 @@ class _ShellScreenState extends State<ShellScreen>{
     children:[
      OrchidHomeScreen(
       player:_player,addonService:_addonService,addons:_addons,account:_account,
-      openExplore:()=>setState(()=>selected=const ValueKey(1)),
+      openExplore:()=>_selectTab(1),
       openProfile:_openProfile,
-      openLibrary:()=>setState(()=>selected=const ValueKey(2)),
+      openLibrary:()=>_selectTab(2),
       openAiDj:()=>showContentDrawer(
        context,
        builder:(sheetContext)=>Scaffold(
@@ -325,8 +332,10 @@ class _ShellScreenState extends State<ShellScreen>{
       ),
       library:_library,
      ),
-     SearchScreen(addonService:_addonService,player:_player,addons:_addons,library:_library,account:_account),
-     LibraryScreen(
+     if(_initializedTabs.contains(1))
+      SearchScreen(addonService:_addonService,player:_player,addons:_addons,library:_library,account:_account)
+     else const SizedBox.shrink(),
+     if(_initializedTabs.contains(2)) LibraryScreen(
       library:_library,
       account:_account,
       player:_player,
