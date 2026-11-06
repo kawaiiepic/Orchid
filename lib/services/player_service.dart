@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,6 +9,8 @@ import 'addon_service.dart';
 import 'lyrics_appearance.dart';
 import 'lyrics_service.dart';
 
+enum RepeatMode { off, all, one }
+
 class PlayerService extends ChangeNotifier {
   final AudioPlayer player = AudioPlayer();
   final AddonService addonService;
@@ -16,6 +19,9 @@ class PlayerService extends ChangeNotifier {
   bool _autoAdvancing = false;
   bool _disposed = false;
   bool keepPlaying = true;
+  bool shuffleEnabled = false;
+  RepeatMode repeatMode = RepeatMode.off;
+  final Random _shuffleRandom = Random();
   static const _keepPlayingKey = 'orchid_keep_playing';
   /// Suggested songs, shown separately from the user's actual queue.
   List<TrackResult> recommendations = [];
@@ -50,7 +56,8 @@ class PlayerService extends ChangeNotifier {
       if (_disposed) return;
       notifyListeners();
       if (state.processingState == ProcessingState.completed &&
-          !_autoAdvancing && !resolving && (hasNext || keepPlaying)) {
+          !_autoAdvancing && !resolving &&
+          (hasNext || repeatMode == RepeatMode.one)) {
         _autoAdvancing = true;
         unawaited(_advanceAfterCompletion());
       }
@@ -166,6 +173,7 @@ class PlayerService extends ChangeNotifier {
     recommendations = [];
     if (added.isEmpty) return false;
     queue.addAll(added);
+    if (shuffleEnabled) _shuffleUpcoming();
     notifyListeners();
     return true;
   }
@@ -177,6 +185,15 @@ class PlayerService extends ChangeNotifier {
       if (_disposed || resolving ||
           player.processingState != ProcessingState.completed) {
         return;
+      }
+      if (repeatMode == RepeatMode.one && current != null) {
+        await player.seek(Duration.zero);
+        await player.play();
+        return;
+      }
+      if (!hasQueuedNext && repeatMode == RepeatMode.all && queue.isNotEmpty) {
+        queueIndex = -1;
+        if (shuffleEnabled) _shuffleUpcoming();
       }
       if (!hasQueuedNext && keepPlaying) {
         await _appendRecommendations();
@@ -224,8 +241,31 @@ class PlayerService extends ChangeNotifier {
   bool get hasQueuedNext =>
       queueIndex >= 0 && queueIndex < queue.length - 1;
   bool get hasNext =>
-      hasQueuedNext || (keepPlaying && current != null);
+      hasQueuedNext || (repeatMode == RepeatMode.all && queue.isNotEmpty) ||
+      (keepPlaying && current != null);
   bool get hasPrevious => queueIndex > 0;
+
+  void toggleShuffle() {
+    shuffleEnabled = !shuffleEnabled;
+    if (shuffleEnabled) _shuffleUpcoming();
+    notifyListeners();
+  }
+
+  void cycleRepeatMode() {
+    repeatMode = switch (repeatMode) {
+      RepeatMode.off => RepeatMode.all,
+      RepeatMode.all => RepeatMode.one,
+      RepeatMode.one => RepeatMode.off,
+    };
+    notifyListeners();
+  }
+
+  void _shuffleUpcoming() {
+    final first = queueIndex + 1;
+    if (first < 0 || first >= queue.length - 1) return;
+    final remaining = queue.sublist(first)..shuffle(_shuffleRandom);
+    queue.setRange(first, queue.length, remaining);
+  }
 
   void setAddons(List<InstalledAddon> addons) {
     _addons = addons;
@@ -273,6 +313,7 @@ class PlayerService extends ChangeNotifier {
       }
     }
 
+    if (shuffleEnabled) _shuffleUpcoming();
     await _loadAndPlay(track);
   }
 
@@ -344,6 +385,10 @@ class PlayerService extends ChangeNotifier {
   }
 
   Future<void> playNext() async {
+    if (!hasQueuedNext && repeatMode == RepeatMode.all && queue.isNotEmpty) {
+      queueIndex = -1;
+      if (shuffleEnabled) _shuffleUpcoming();
+    }
     if (!hasQueuedNext && keepPlaying) {
       await _appendRecommendations();
     }
