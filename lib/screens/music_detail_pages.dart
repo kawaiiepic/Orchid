@@ -165,7 +165,8 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
                 Text('Could not load artist: ${snapshot.error}').muted(),
                 const SizedBox(height: 12),
                 OutlineButton(onPressed: () => setState(() {
-                  _catalog = MusicCatalogService.instance.artist(widget.artist);
+                  _catalog = MusicCatalogService.instance.artist(widget.artist,
+                    refresh: true);
                 }), child: const Text('Retry')),
               ])
             else if (catalog != null) ...[
@@ -270,9 +271,18 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
             const SizedBox(height: 24),
             if (snapshot.connectionState != ConnectionState.done)
               const Center(child: Text('Loading album tracks…'))
-            else if (snapshot.hasError)
-              Text('Could not load album: ${snapshot.error}').muted()
-            else ...[
+            else if (snapshot.hasError) ...[
+              Text('Could not load album: ${snapshot.error}').muted(),
+              const SizedBox(height: 12),
+              OutlineButton(
+                onPressed: () => setState(() {
+                  _tracks = MusicCatalogService.instance.album(
+                    widget.artist, widget.album,
+                    collectionId: widget.collectionId, refresh: true);
+                }),
+                child: const Text('Retry'),
+              ),
+            ] else ...[
               Text('Tracklist (${tracks.length})').large().semiBold(),
               const SizedBox(height: 8),
               if (tracks.isEmpty)
