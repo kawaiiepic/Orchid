@@ -109,7 +109,10 @@ class OrchidAccount extends ChangeNotifier {
   _verified=false;
   if(_token==null)throw StateError('Login response did not contain a session');
   await (await SharedPreferences.getInstance()).setString('orchid_petal_token',_token!);
-  try{await refresh();}catch(e){await _clear();rethrow;}
+  try{await refresh();}on OrchidAuthException catch(e){
+   if(e.status==401||e.status==403)await _clear();
+   rethrow;
+  }
  }
  Future<void> register(String username,String email,String password) async {
   final data=await _request('POST','/users/register',{'username':username.trim(),'email':email.trim(),'password':password});
@@ -117,7 +120,10 @@ class OrchidAccount extends ChangeNotifier {
   _verified=false;
   if(_token==null)throw StateError('Registration did not return a session');
   await (await SharedPreferences.getInstance()).setString('orchid_petal_token',_token!);
-  try{await refresh();}catch(e){await _clear();rethrow;}
+  try{await refresh();}on OrchidAuthException catch(e){
+   if(e.status==401||e.status==403)await _clear();
+   rethrow;
+  }
  }
  Future<void> _clear() async {
   _token=null;_verified=false;username=null;email=null;lastfmUsername=null;connecting=false;restoreError=null;
