@@ -5,6 +5,7 @@ import '../services/player_service.dart';
 import '../services/music_library.dart';
 import '../widgets/mini_player_bar.dart';
 import 'music_detail_pages.dart';
+import '../widgets/song_context_menu.dart';
 
 /// Native song page. Last.fm records are metadata, not direct audio streams.
 class SongDetailScreen extends StatefulWidget {
@@ -65,39 +66,25 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
  Widget _libraryActions() {
   final library=widget.library;
   if(library==null)return const SizedBox.shrink();
-  final song=savedSong;
-  return ListenableBuilder(listenable:library,builder:(context,_)=>Column(
-   children:[
-    Row(mainAxisAlignment:MainAxisAlignment.center,children:[
-     OutlineButton(
-      onPressed:()=>library.toggleFavorite(song),
-      child:Row(mainAxisSize:MainAxisSize.min,children:[
-       Icon(library.isFavorite(song)?LucideIcons.heartHandshake:LucideIcons.heart,size:16),
-       const SizedBox(width:8),
-       Text(library.isFavorite(song)?'Favorited':'Add to Favorites'),
-      ]),
-     ),
-    ]),
-    const SizedBox(height:12),
-    if(library.playlists.isNotEmpty)...[
-     Align(alignment:Alignment.centerLeft,
-       child:const Text('Add to playlist').semiBold()),
-     const SizedBox(height:8),
-     ...library.playlists.map((playlist)=>Padding(
-      padding:const EdgeInsets.symmetric(vertical:3),
-      child:OutlineButton(
-       onPressed:()=>library.contains(playlist,song)
-         ?library.removeFromPlaylist(playlist,song)
-         :library.addToPlaylist(playlist,song),
-       child:Row(children:[
-        Expanded(child:Text(playlist.name)),
-        Icon(library.contains(playlist,song)?LucideIcons.check:LucideIcons.plus,size:16),
-       ]),
-      ),
-     )),
-    ]else const Text('Create playlists in Library to save this song.').small().muted(),
-   ],
-  ));
+  final t=widget.track ?? TrackResult(
+    id:savedSong.key,
+    title:widget.title,
+    artist:widget.artist,
+    album:widget.album,
+    artworkUrl:widget.artworkUrl,
+    sourceId:'orchid-library',
+    sourceName:'Library',
+  );
+  return SongContextMenu(
+    track:t,
+    player:widget.player,
+    library:library,
+    openOnTap:true,
+    child:OutlineButton(
+      onPressed:null,
+      child:const Text('More song actions'),
+    ),
+  );
  }
 
  Widget artwork(){
