@@ -203,6 +203,11 @@ class OrchidAccount extends ChangeNotifier {
   if(!signedIn)throw StateError('Sign in first');
   return _request('GET','/orchid/home');
  }
+ Future<Map<String,dynamic>> allTimeTopSongs() =>
+    _request('GET','/orchid/top-songs');
+ Future<Map<String,dynamic>> radioSongs({
+  required String type,required String choice,required int offset,
+ }) => _request('GET','/orchid/radio?type=${Uri.encodeQueryComponent(type)}&choice=${Uri.encodeQueryComponent(choice)}&offset=$offset');
  Future<Map<String,dynamic>> replay({required int year,required int month}) async {
   if(!signedIn)throw StateError('Sign in first');
   return _request('GET','/orchid/replay?year=$year&month=$month');
