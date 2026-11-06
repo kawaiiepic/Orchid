@@ -333,14 +333,14 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
               title: 'Made for your ears.',
               description: 'Your favorite music, daily discoveries and the artists you keep coming back to.',
               icon: LucideIcons.audioLines,
-              action: Row(
-                mainAxisSize: MainAxisSize.min,
+              action: Wrap(
+                spacing: 10,
+                runSpacing: 10,
                 children: [
                   PrimaryButton(
                     onPressed: widget.openDailyMixes,
                     child: const Text('Explore Daily Mixes'),
                   ),
-                  const SizedBox(width: 10),
                   OutlineButton(
                     onPressed: widget.openLibrary,
                     child: const Text('My Library'),
