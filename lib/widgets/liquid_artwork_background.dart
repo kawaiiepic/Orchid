@@ -1,10 +1,11 @@
+import 'dart:ui' as ui;
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-/// Full-resolution album art backdrop behind the player.
-///
-/// No [ImageFiltered] / runtime blur — those were laggy and could trip
-/// painting asserts when layout sizes were not finite yet.
+/// Full-bleed album colors behind the player, blurred until artwork details
+/// disappear. The image is clipped to the finite viewport to keep painting
+/// bounded on desktop as well as mobile.
 class LiquidArtworkBackground extends StatelessWidget {
   final String? imageUrl;
   final Widget child;
@@ -14,46 +15,62 @@ class LiquidArtworkBackground extends StatelessWidget {
     super.key,
     required this.imageUrl,
     required this.child,
-    this.intensity = 0.55,
+    this.intensity = 0.8,
   });
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final url = imageUrl;
-    final op = intensity.clamp(0.12, 0.75);
-
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        ColoredBox(color: scheme.background),
-        if (url != null)
+    return ClipRect(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          ColoredBox(color: scheme.background),
+          if (url != null && url.startsWith('https://'))
+            Positioned.fill(
+              child: RepaintBoundary(
+                child: ImageFiltered(
+                  imageFilter: ui.ImageFilter.blur(
+                    sigmaX: 80,
+                    sigmaY: 80,
+                    tileMode: ui.TileMode.decal,
+                  ),
+                  child: Transform.scale(
+                    scale: 1.35,
+                    child: Opacity(
+                      opacity: intensity.clamp(0.0, 1.0),
+                      child: CachedNetworkImage(
+                        imageUrl: url,
+                        fit: BoxFit.cover,
+                        fadeInDuration: const Duration(milliseconds: 350),
+                        errorWidget: (_, __, ___) =>
+                            const SizedBox.expand(),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           Positioned.fill(
-            child: Opacity(
-              opacity: op,
-              child: CachedNetworkImage(
-                  imageUrl: url,
-                  fit: BoxFit.cover,
-                  fadeInDuration: Duration.zero,
-                  errorWidget: (_, __, ___) => const SizedBox.shrink(),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    const Color(0xFF0C0915).withValues(alpha: 0.28),
+                    const Color(0xFF100C19).withValues(alpha: 0.38),
+                    const Color(0xFF080610).withValues(alpha: 0.73),
+                  ],
+                  stops: const [0.0, 0.48, 1.0],
+                ),
               ),
             ),
           ),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                scheme.background.withValues(alpha: 0.18),
-                scheme.background.withValues(alpha: 0.38),
-                scheme.background.withValues(alpha: 0.72),
-              ],
-            ),
-          ),
-        ),
-        child,
-      ],
+          child,
+        ],
+      ),
     );
   }
 }
