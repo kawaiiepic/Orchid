@@ -16,7 +16,7 @@ void showContentDrawer(
       draggable: true,
     ),
     builder: (sheetContext) => SizedBox(
-      width: MediaQuery.sizeOf(sheetContext).width,
+      width: (MediaQuery.sizeOf(sheetContext).width * 0.94).clamp(0.0, 1100.0),
       height: MediaQuery.sizeOf(sheetContext).height,
       child: builder(sheetContext),
     ),
