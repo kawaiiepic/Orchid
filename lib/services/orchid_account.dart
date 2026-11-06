@@ -220,6 +220,7 @@ class OrchidAccount extends ChangeNotifier {
   String? artwork,
   String? songId,
   int? duration,
+  List<String>? genres,
  }) async {
   if(!signedIn)return;
   await _request('POST','/orchid/history',{
