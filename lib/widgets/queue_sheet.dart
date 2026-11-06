@@ -60,6 +60,27 @@ class _QueueDrawerBody extends StatelessWidget {
                   ],
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                child: Row(
+                  children: [
+                    const Icon(LucideIcons.radio, size: 18),
+                    const SizedBox(width: 10),
+                    Expanded(child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Keep Playing').semiBold(),
+                        const Text('Find more music when the queue ends')
+                            .xSmall().muted(),
+                      ],
+                    )),
+                    OutlineButton(
+                      onPressed: () => player.setKeepPlaying(!player.keepPlaying),
+                      child: Text(player.keepPlaying ? 'On' : 'Off'),
+                    ),
+                  ],
+                ),
+              ),
               const Divider(),
               Expanded(
                 child: ListView(
