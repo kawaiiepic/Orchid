@@ -660,12 +660,21 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                   LucideIcons.radio,
                   const [Color(0xFF0E9E91),Color(0xFF265D83),Color(0xFF202244)],
                   widget.openRadio),
-                const SizedBox(width:10),
-                _personalCard('AI DJ','Your music companion',
-                  LucideIcons.bot,
-                  const [Color(0xFF9B4DCC),Color(0xFF543E85),Color(0xFF201A3B)],
-                  widget.openAiDj),
+
               ])),
+            const SizedBox(height:28),
+            const OrchidSectionHeader(
+              title: 'AI DJ',
+              subtitle: 'Talk music with your personal DJ',
+            ),
+            const SizedBox(height:12),
+            Align(
+              alignment:Alignment.centerLeft,
+              child:_personalCard('AI DJ','Your music companion',
+                LucideIcons.bot,
+                const [Color(0xFF9B4DCC),Color(0xFF543E85),Color(0xFF201A3B)],
+                widget.openAiDj),
+            ),
             const SizedBox(height:28),
             const OrchidSectionHeader(
               title: 'Daily Mixes',
