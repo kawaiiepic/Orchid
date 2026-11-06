@@ -5,16 +5,20 @@ import '../models/addon.dart';
 import '../services/player_service.dart';
 import 'track_duration.dart';
 
-/// Opens the queue / history panel as a shadcn drawer overlay.
+/// Opens the queue / history panel as a full-screen Shadcn bottom sheet.
 void showQueueSheet(BuildContext context, PlayerService player) {
   showOverlay(
     context,
-    const DrawerConfiguration(
-      expands: true,
-      position: OverlayPosition.end,
+    const SheetConfiguration(
+      position: OverlayPosition.bottom,
       useSafeArea: true,
+      barrierDismissible: true,
     ),
-    builder: (context) => _QueueDrawerBody(player: player),
+    builder: (sheetContext) => SizedBox(
+      width: MediaQuery.sizeOf(sheetContext).width,
+      height: MediaQuery.sizeOf(sheetContext).height,
+      child: _QueueDrawerBody(player: player),
+    ),
   );
 }
 
@@ -35,7 +39,7 @@ class _QueueDrawerBody extends StatelessWidget {
         final idx = player.queueIndex;
 
         return Container(
-          width: 340,
+          width: double.infinity,
           color: scheme.card,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
