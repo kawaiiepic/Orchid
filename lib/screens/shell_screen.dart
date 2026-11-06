@@ -242,9 +242,10 @@ class _ShellScreenState extends State<ShellScreen>{
       openExplore:()=>setState(()=>selected=const ValueKey(1)),
       openProfile:_openProfile,
       openLibrary:()=>setState(()=>selected=const ValueKey(2)),
-      openDailyMixes:()=>Navigator.of(context).push(
+      openDailyMixes:(index)=>Navigator.of(context).push(
        ShadcnPageRoute<void>(
         builder:(_)=>DailyMixesScreen(
+         initialMixIndex:index,
          account:_account,library:_library,player:_player,
          addonService:_addonService,addons:_addons,
         ),
