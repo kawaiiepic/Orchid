@@ -4,6 +4,7 @@ import '../models/addon.dart';
 import '../services/addon_service.dart';
 import '../services/lyrics_appearance.dart';
 import '../services/orchid_account.dart';
+import '../services/canvas_service.dart';
 import 'profile_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -26,6 +27,9 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final _urlController = TextEditingController();
+  final _canvasController = TextEditingController();
+  final _canvas = CanvasService.instance;
+  String? _canvasStatus;
   bool _adding = false;
   String? _status;
   final _appearance = LyricsAppearance.instance;
@@ -37,6 +41,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) setState(() {});
     });
     _appearance.addListener(_onAppearance);
+    _canvas.load().then((_) {
+      if (mounted) setState(() => _canvasController.text = _canvas.endpoint);
+    });
   }
 
   void _onAppearance() {
@@ -47,6 +54,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void dispose() {
     _appearance.removeListener(_onAppearance);
     _urlController.dispose();
+    _canvasController.dispose();
     super.dispose();
   }
 
@@ -277,6 +285,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
         ),
+        const SizedBox(height: 24),
+        const Text('Spotify Canvas').large().semiBold(),
+        const SizedBox(height: 8),
+        const Text(
+          'Optional looping artwork in the fullscreen player. Requires your '
+          'own Spotify Canvas API server. Configure its HTTPS base URL below. '
+          'Never paste your Spotify session cookie into Orchid.',
+        ).small().muted(),
+        const SizedBox(height: 12),
+        Row(children: [
+          Expanded(child: TextField(
+            controller: _canvasController,
+            placeholder: const Text('https://your-canvas-api.example'),
+          )),
+          const SizedBox(width: 8),
+          PrimaryButton(
+            onPressed: () async {
+              try {
+                await _canvas.setEndpoint(_canvasController.text);
+                if (mounted) setState(() => _canvasStatus =
+                    _canvas.endpoint.isEmpty ? 'Canvas disabled' : 'Canvas API saved');
+              } catch (e) {
+                if (mounted) setState(() => _canvasStatus = '$e');
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ]),
+        if (_canvasStatus != null) ...[
+          const SizedBox(height: 8),
+          Text(_canvasStatus!).small().muted(),
+        ],
         const SizedBox(height: 24),
         const Text('Sources').large().semiBold(),
         const SizedBox(height: 8),
