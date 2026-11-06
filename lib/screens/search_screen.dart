@@ -8,6 +8,7 @@ import '../services/addon_service.dart';
 import '../services/music_catalog_service.dart';
 import '../services/orchid_account.dart';
 import '../widgets/apple_cover.dart';
+import '../widgets/content_drawer.dart';
 import '../services/music_library.dart';
 import '../services/player_service.dart';
 import '../widgets/artist_artwork.dart';
@@ -289,18 +290,83 @@ class _SearchScreenState extends State<SearchScreen> {
     onTap:()=>_playPlaylist(p),
   );
 
+  TrackResult _applePlaylistTrack(Map<String,dynamic> item) => TrackResult(
+    id:(item['id'] ?? '').toString(),
+    title:(item['title'] ?? '').toString(),
+    artist:(item['artist'] ?? '').toString(),
+    album:item['album']?.toString(),
+    artworkUrl:item['image']?.toString(),
+    duration:item['duration'] is num ? (item['duration'] as num).toInt() : null,
+    previewUrl:item['previewUrl']?.toString(),
+    sourceId:'apple-music', sourceName:'Apple Music',
+  );
+
+  void _openApplePlaylist(Map<String,dynamic> item) {
+    final id = item['id']?.toString() ?? '';
+    if(id.isEmpty) return;
+    final future = widget.account.applePlaylist(id);
+    showContentDrawer(context,builder:(sheetContext) =>
+      FutureBuilder<Map<String,dynamic>>(
+        future:future,
+        builder:(context,snapshot) {
+          final raw = snapshot.data;
+          final songs = (raw?['tracks'] is List
+              ? (raw!['tracks'] as List).whereType<Map>()
+                  .map((entry)=>_applePlaylistTrack(Map<String,dynamic>.from(entry)))
+                  .toList()
+              : <TrackResult>[]);
+          final name = (raw?['name'] ?? item['name'] ?? 'Apple Music playlist').toString();
+          return Scaffold(
+            child:ListView(
+              padding:const EdgeInsets.all(20),
+              children:[
+                const SizedBox(height:12),
+                Text(name).x2Large().semiBold(),
+                const SizedBox(height:5),
+                Text((raw?['curator'] ?? item['curator'] ?? 'Apple Music').toString()).muted(),
+                const SizedBox(height:14),
+                if(snapshot.connectionState != ConnectionState.done)
+                  const Text('Loading Apple Music tracks…').muted()
+                else if(snapshot.hasError)
+                  Text('Could not load playlist: ${snapshot.error}').muted()
+                else if(songs.isEmpty)
+                  const Text('No playable song metadata found.').muted()
+                else ...[
+                  PrimaryButton(
+                    onPressed:(){
+                      widget.player.setAddons(widget.addons);
+                      widget.player.playTrack(songs.first,fromQueue:songs).catchError(
+                        (Object e)=>debugPrint('[Orchid Apple Playlist] Playback failed: $e'));
+                    },
+                    child:const Text('Play all'),
+                  ),
+                  const SizedBox(height:12),
+                  for(final song in songs)
+                    _trackTile(song),
+                ],
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _applePlaylistTile(Map<String,dynamic> item) => _tile(
     artwork:_art(item['image']?.toString()),
     title:item['name']?.toString() ?? 'Apple Music Playlist',
     subtitle:'Apple Music · ${item['curator'] ?? 'Apple Music'}',
-    onTap:() async {
-      final url = Uri.tryParse(item['url']?.toString() ?? '');
-      if (url != null && url.scheme == 'https' &&
-          (url.host == 'music.apple.com' || url.host.endsWith('.music.apple.com'))) {
-        await launchUrl(url, mode:LaunchMode.externalApplication);
-      }
-    },
-    trailing:const Icon(LucideIcons.externalLink,size:18),
+    onTap:()=>_openApplePlaylist(item),
+    trailing:IconButton.ghost(
+      onPressed:() async {
+        final url = Uri.tryParse(item['url']?.toString() ?? '');
+        if (url != null && url.scheme == 'https' &&
+            (url.host == 'music.apple.com' || url.host.endsWith('.music.apple.com'))) {
+          await launchUrl(url, mode:LaunchMode.externalApplication);
+        }
+      },
+      icon:const Icon(LucideIcons.externalLink,size:18),
+    ),
   );
 
   Widget _section(String title,int length) => Padding(
