@@ -37,6 +37,9 @@ jobs:
       - name: Analyze Dart source
         run: flutter analyze --no-fatal-infos
 
+      - name: Generate Orchid iOS app icons
+        run: bash scripts/generate_ios_icons.sh
+
       - name: Build unsigned iOS app (pull requests)
         if: ${{ github.event_name == 'pull_request' }}
         run: flutter build ios --release --no-codesign
