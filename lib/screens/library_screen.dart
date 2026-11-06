@@ -116,6 +116,27 @@ class _LibraryScreenState extends State<LibraryScreen> {
     ));
   }
 
+  Future<void> _playCollection(List<SavedSong> songs) async {
+    if (songs.isEmpty) return;
+    widget.player.setAddons(widget.addons);
+    // Source-independent tracks: PlayerService looks for a matching stream
+    // through whichever addons are currently installed.
+    final queue = songs.map((song) => TrackResult(
+      id: song.key,
+      title: song.title,
+      artist: song.artist,
+      album: song.album,
+      artworkUrl: song.artwork,
+      sourceId: 'orchid-library',
+      sourceName: 'Library',
+    )).toList();
+    try {
+      await widget.player.playTrack(queue.first, fromQueue: queue);
+    } catch (e) {
+      debugPrint('[Orchid Library] Playlist playback failed: $e');
+    }
+  }
+
   void _openCollection(String title, List<SavedSong> Function() items,
       {MusicPlaylist? playlist}) {
     Navigator.of(context).push(ShadcnPageRoute<void>(
@@ -135,6 +156,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
               const SizedBox(height: 8),
               Text('${songs.length} tracks').muted(),
               const SizedBox(height: 14),
+              if (songs.isNotEmpty)
+                PrimaryButton(
+                  onPressed: () => _playCollection(songs),
+                  child: const Text('Play all'),
+                ),
+              const SizedBox(height: 10),
               if (playlist != null)
                 OutlineButton(
                   onPressed: () async {
