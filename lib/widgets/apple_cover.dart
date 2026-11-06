@@ -57,7 +57,16 @@ class AppleCover extends StatelessWidget {
                     width: size,
                     height: size,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => placeholder(),
+                    errorBuilder: (_, __, ___) =>
+                        apple != null && fallback != null &&
+                                fallback.startsWith('https://') &&
+                                fallback != apple
+                            ? Image.network(
+                                fallback,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => placeholder(),
+                              )
+                            : placeholder(),
                   ),
           ),
         );
