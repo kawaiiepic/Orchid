@@ -224,28 +224,42 @@ class AddonService {
     }
   }
 
+  /// Collapse duplicate recordings even when providers attach different ISRCs,
+  /// IDs or albums to the same title/artist. Explicit version titles remain
+  /// separate (for example: live, acoustic or remastered).
   List<TrackResult> _dedupe(List<TrackResult> input) {
+    int priority(TrackResult t) {
+      if (t.fromStreamAddon) return 0;
+      if (t.spotifyTrackId?.isNotEmpty ?? false) return 1;
+      if (t.previewUrl?.isNotEmpty ?? false) return 2;
+      return 3;
+    }
+
+    String normalize(String value) => value
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), ' ')
+        .trim()
+        .replaceAll(RegExp(r'\\s+'), ' ');
+
     final ranked = List<TrackResult>.from(input)
-      ..sort((a, b) {
-        // Priority: Stream addon > Spotify with ID > iTunes
-        final as = a.fromStreamAddon ? 0 : 
-                   (a.spotifyTrackId?.isNotEmpty ?? false) ? 1 : 
-                   (a.sourceId == 'itunes' || a.sourceId == 'spotify-addon' ? 2 : 3);
-        final bs = b.fromStreamAddon ? 0 :
-                   (b.spotifyTrackId?.isNotEmpty ?? false) ? 1 :
-                   (b.sourceId == 'itunes' || b.sourceId == 'spotify-addon' ? 2 : 3);
-        return as.compareTo(bs);
-      });
+      ..sort((a, b) => priority(a).compareTo(priority(b)));
 
     final seen = <String>{};
-    final out = <TrackResult>[];
-    for (final t in ranked) {
-      final key = t.dedupeKey;
-      if (seen.contains(key)) continue;
-      seen.add(key);
-      out.add(t);
+    final result = <TrackResult>[];
+    for (final track in ranked) {
+      // Do not use ISRC as the primary key: the same song can have several
+      // ISRCs, while many other hits have no ISRC at all.
+      final title = normalize(track.title);
+      final artist = normalize(track.artist);
+      final identity = title.isNotEmpty && artist.isNotEmpty
+          ? 'song:$artist|$title'
+          : 'id:${track.sourceId}|${track.id}';
+      if (seen.add(identity)) {
+        result.add(track);
+      }
     }
-    return out;
+    _log('collapsed ${input.length - result.length} duplicate songs');
+    return result;
   }
 
   Future<StreamInfo> resolvePlayback(
