@@ -325,7 +325,8 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
               Positioned.fill(
                 child: GestureDetector(
               onHorizontalDragEnd: _onHorizontalDragEnd,
-              child: Column(
+              child: SafeArea(
+                child: Column(
                 children: [
                   Padding(
                     padding: const EdgeInsets.symmetric(
@@ -349,7 +350,9 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 14,
-                                color: scheme.primary,
+                                color: mobileAnimated
+                                    ? const Color(0xFFF2E8FF)
+                                    : scheme.primary,
                               ),
                             ),
                           ),
@@ -530,6 +533,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                   ),
                   const SizedBox(height: 12),
                 ],
+              ),
               ),
               ),
             ],
