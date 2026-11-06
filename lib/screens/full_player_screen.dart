@@ -446,14 +446,11 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                               icon: const Icon(LucideIcons.arrowLeft),
                             ),
                             Row(mainAxisSize: MainAxisSize.min, children: [
-                              OverlayAnchor(
-                                anchor: #orchidQueueDrawer,
-                                child: IconButton(
-                                  variance: ButtonVariance.ghost,
-                                  onPressed: () =>
-                                      showQueueSheet(context, widget.player),
-                                  icon: const Icon(LucideIcons.listMusic),
-                                ),
+                              IconButton(
+                                variance: ButtonVariance.ghost,
+                                onPressed: () =>
+                                    showQueueSheet(context, widget.player),
+                                icon: const Icon(LucideIcons.listMusic),
                               ),
                               IconButton(
                                 variance: ButtonVariance.ghost,
