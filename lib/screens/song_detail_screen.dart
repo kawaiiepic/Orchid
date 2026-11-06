@@ -19,13 +19,15 @@ class SongDetailScreen extends StatefulWidget {
  @override State<SongDetailScreen> createState()=>_SongDetailScreenState();
 }
 class _SongDetailScreenState extends State<SongDetailScreen>{
- bool busy=false;
+ bool searching=false;
+ bool playing=false;
+ bool get busy=>searching||playing;
  String? error;
  List<TrackResult> matches=[];
  String norm(String s)=>s.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'),' ').trim();
  Future<void> find() async{
   if(busy)return;
-  setState((){busy=true;error=null;});
+  setState((){searching=true;error=null;});
   try{
    final results=await widget.addonService.search(widget.addons,
     '${widget.artist} ${widget.title}').timeout(const Duration(seconds:25));
@@ -37,16 +39,16 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
     if(matches.isEmpty)error='No matching playback sources found.';
    });
   }catch(e){if(mounted)setState(()=>error='Search failed: $e');}
-  finally{if(mounted)setState(()=>busy=false);}
+  finally{if(mounted)setState(()=>searching=false);}
  }
  Future<void> play(TrackResult t) async{
   if(busy)return;
-  setState((){busy=true;error=null;});
+  setState((){playing=true;error=null;});
   try{
    widget.player.setAddons(widget.addons);
    await widget.player.playTrack(t);
   }catch(e){if(mounted)setState(()=>error='Playback failed: $e');}
-  finally{if(mounted)setState(()=>busy=false);}
+  finally{if(mounted)setState(()=>playing=false);}
  }
  Future<void> playFirst() async{
   if(widget.track!=null){await play(widget.track!);return;}
@@ -65,8 +67,12 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
      child:Center(child:Icon(LucideIcons.music2,size:48)))));
  }
  @override Widget build(BuildContext context)=>Scaffold(
-  headers:[const AppBar(title:Text('Song'))],
   child:ListView(padding:const EdgeInsets.all(24),children:[
+   Align(alignment:Alignment.centerLeft,child:IconButton.ghost(
+    onPressed:()=>Navigator.of(context).pop(),
+    icon:const Icon(LucideIcons.arrowLeft),
+   )),
+   const SizedBox(height:12),
    Center(child:artwork()),
    const SizedBox(height:20),
    Center(child:Text(widget.title,textAlign:TextAlign.center).x2Large().semiBold()),
@@ -82,9 +88,10 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
    ],
    const SizedBox(height:24),
    PrimaryButton(onPressed:busy?null:playFirst,
-    child:Text(busy?'Working…':'Play')),
+    child:Text(searching?'Finding sources…':playing?'Starting playback…':'Play')),
    const SizedBox(height:8),
-   OutlineButton(onPressed:busy?null:find,child:const Text('Find playback sources')),
+   OutlineButton(onPressed:busy?null:find,
+    child:Text(searching?'Searching music sources…':'Find playback sources')),
    if(error!=null)...[const SizedBox(height:12),Text(error!).small()],
    if(matches.isNotEmpty)...[
     const SizedBox(height:24),
