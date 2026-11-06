@@ -117,8 +117,21 @@ class _ShellScreenState extends State<ShellScreen>{
  void _openProfile() {
   showContentDrawer(
    context,
-   builder: (_) => Scaffold(
-    child: ProfileScreen(account:_account),
+   builder: (sheetContext) => Scaffold(
+    child: Column(children:[
+     Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 2),
+      child:Row(children:[
+       const Text('Your Profile').large().semiBold(),
+       const Spacer(),
+       IconButton.ghost(
+        onPressed:()=>dismissContentDrawer(sheetContext),
+        icon:const Icon(LucideIcons.x),
+       ),
+      ]),
+     ),
+     Expanded(child:ProfileScreen(account:_account)),
+    ]),
    ),
   );
  }
