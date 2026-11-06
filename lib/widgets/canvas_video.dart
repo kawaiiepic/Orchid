@@ -6,6 +6,8 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:media_kit/media_kit.dart' as mk;
 import 'package:media_kit_video/media_kit_video.dart';
 
+import '../services/hls_variant_service.dart';
+
 /// Silently plays Apple Music's animated album artwork when its HLS segments
 /// are actually decodable. Falls back to the static cover on MPV errors.
 class CanvasVideo extends StatefulWidget {
@@ -61,7 +63,9 @@ class _CanvasVideoState extends State<CanvasVideo> {
       if (generation != _generation) return;
       await _video.setPlaylistMode(mk.PlaylistMode.loop);
       if (generation != _generation) return;
-      await _video.open(mk.Media(widget.url, httpHeaders: const {
+      final playableUrl = await HlsVariantService.instance.preferredUrl(widget.url);
+      if (generation != _generation) return;
+      await _video.open(mk.Media(playableUrl, httpHeaders: const {
         'User-Agent': 'Mozilla/5.0',
         'Accept': '*/*',
       }));
