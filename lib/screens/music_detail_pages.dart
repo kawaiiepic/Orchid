@@ -1,5 +1,4 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import 'package:flutter/foundation.dart';
 
 import '../models/addon.dart';
 import '../services/addon_service.dart';
@@ -113,7 +112,9 @@ Widget _catalogActions({
     ),
     OutlineButton(
       onPressed:(){
-        for(final track in tracks)player.addToQueue(track);
+        for (final track in tracks) {
+          player.addToQueue(track);
+        }
       },
       child:const Row(mainAxisSize:MainAxisSize.min,children:[
         Icon(LucideIcons.listMusic,size:17),
