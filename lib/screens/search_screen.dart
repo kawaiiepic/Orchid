@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/addon.dart';
 import '../services/addon_service.dart';
 import '../services/music_catalog_service.dart';
+import '../services/orchid_account.dart';
 import '../widgets/apple_cover.dart';
 import '../services/music_library.dart';
 import '../services/player_service.dart';
@@ -19,10 +21,11 @@ enum SearchCategory { all, tracks, albums, artists, playlists }
 
 class SearchScreen extends StatefulWidget {
   final AddonService addonService;
+  final OrchidAccount account;
   final PlayerService player;
   final MusicLibrary library;
   final List<InstalledAddon> addons;
-  const SearchScreen({super.key, required this.addonService,
+  const SearchScreen({super.key, required this.account, required this.addonService,
     required this.player, required this.library, required this.addons});
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -34,6 +37,8 @@ class _SearchScreenState extends State<SearchScreen> {
   List<TrackResult> _tracks = [];
   List<MusicAlbum> _albums = [];
   List<String> _artists = [];
+  List<Map<String, dynamic>> _applePlaylists = [];
+  bool _applePlaylistsConfigured = false;
   bool _searching = false;
   bool _showAllTracks = false;
   Timer? _searchDebounce;
@@ -81,7 +86,7 @@ class _SearchScreenState extends State<SearchScreen> {
     final generation = ++_generation;
     _showAllTracks = false;
     if (query.isEmpty) {
-      setState(() { _tracks=[]; _albums=[]; _artists=[];
+      setState(() { _tracks=[]; _albums=[]; _artists=[]; _applePlaylists=[];
         _searching=false; _status=null; });
       return;
     }
@@ -101,6 +106,12 @@ class _SearchScreenState extends State<SearchScreen> {
                 : Future.value(<MusicAlbum>[]),
       _artistsOn ? safe<String>(() => catalog.searchArtists(query))
                  : Future.value(<String>[]),
+      _playlistsOn && query.length >= 2
+          ? widget.account.searchApplePlaylists(query).catchError((Object e) {
+              debugPrint('[Orchid Search] Apple playlists unavailable: $e');
+              return <String, dynamic>{'playlists': <dynamic>[]};
+            })
+          : Future.value(<String, dynamic>{'playlists': <dynamic>[]}),
     ]);
     if (!mounted || generation != _generation) return;
     setState(() {
@@ -109,9 +120,16 @@ class _SearchScreenState extends State<SearchScreen> {
       _tracks = tracks.where((t) => unique.add('${_norm(t.artist)}|${_norm(t.title)}')).toList();
       _albums = response[1] as List<MusicAlbum>;
       _artists = (response[2] as List<String>).take(1).toList();
+      final apple = Map<String, dynamic>.from(response[3] as Map);
+      _applePlaylistsConfigured = apple['configured'] == true;
+      _applePlaylists = (apple['playlists'] is List
+          ? (apple['playlists'] as List)
+              .whereType<Map>()
+              .map((p) => Map<String, dynamic>.from(p)).toList()
+          : <Map<String, dynamic>>[]);
       _searching = false;
       final count = _tracks.length + _albums.length + _artists.length +
-          (_playlistsOn ? _playlists.length : 0);
+          (_playlistsOn ? _playlists.length + _applePlaylists.length : 0);
       _status = count == 0 ? 'No results found' : '$count results';
     });
   }
@@ -271,6 +289,20 @@ class _SearchScreenState extends State<SearchScreen> {
     onTap:()=>_playPlaylist(p),
   );
 
+  Widget _applePlaylistTile(Map<String,dynamic> item) => _tile(
+    artwork:_art(item['image']?.toString()),
+    title:item['name']?.toString() ?? 'Apple Music Playlist',
+    subtitle:'Apple Music · ${item['curator'] ?? 'Apple Music'}',
+    onTap:() async {
+      final url = Uri.tryParse(item['url']?.toString() ?? '');
+      if (url != null && url.scheme == 'https' &&
+          (url.host == 'music.apple.com' || url.host.endsWith('.music.apple.com'))) {
+        await launchUrl(url, mode:LaunchMode.externalApplication);
+      }
+    },
+    trailing:const Icon(LucideIcons.externalLink,size:18),
+  );
+
   Widget _section(String title,int length) => Padding(
     padding:const EdgeInsets.fromLTRB(0,20,0,8),
     child:OrchidSectionHeader(title:title,subtitle:'$length results'),
@@ -328,10 +360,17 @@ class _SearchScreenState extends State<SearchScreen> {
         builder:(context,_) => ListView(
           padding:const EdgeInsets.fromLTRB(16,4,16,20),
           children:[
-            if(_playlistsOn && _playlists.isNotEmpty)...[
-              _section('Playlists',_playlists.length),
+            if(_playlistsOn && (_playlists.isNotEmpty || _applePlaylists.isNotEmpty))...[
+              _section('Playlists',_playlists.length + _applePlaylists.length),
               ..._playlists.map(_playlistTile),
+              ..._applePlaylists.map(_applePlaylistTile),
             ],
+            if(_playlistsOn && _controller.text.trim().isNotEmpty &&
+                !_applePlaylistsConfigured)
+              const Padding(
+                padding:EdgeInsets.symmetric(vertical:8),
+                child:Text('Apple Music playlists require a server-side developer token.').small().muted(),
+              ),
             if(_artistsOn && _artists.isNotEmpty)...[
               _section('Artists',_artists.length),
               ..._artists.map(_artistTile),
