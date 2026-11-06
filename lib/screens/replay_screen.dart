@@ -54,7 +54,7 @@ class _ReplayScreenState extends State<ReplayScreen> {
 
   int _number(Object? value) => value is num?value.toInt():int.tryParse('$value')??0;
   String _format(int n)=>n.toString().replaceAllMapped(
-    RegExp(r'\\B(?=(\\d{3})+(?!\\d))'),(m)=>',');
+    RegExp(r'\B(?=(\d{3})+(?!\d))'),(m)=>',');
   Map<String,dynamic> _map(Object? item)=>item is Map
       ?Map<String,dynamic>.from(item):<String,dynamic>{};
   List<Map<String,dynamic>> _items(String key){
@@ -124,7 +124,7 @@ class _ReplayScreenState extends State<ReplayScreen> {
         eyebrow:'Made for You',
         title:'Replay',
         description:'Your listening story, month by month and year by year.',
-        icon:LucideIcons.barChart3,
+        icon:LucideIcons.audioLines,
       ),
       const SizedBox(height:22),
       Text('Choose your year').small().muted(),
