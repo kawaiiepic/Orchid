@@ -84,8 +84,11 @@ class MusicCatalogService {
     );
   }
 
-  Future<ArtistCatalog> artist(String artist) =>
-      _artists.putIfAbsent(_norm(artist), () => _loadArtist(artist));
+  Future<ArtistCatalog> artist(String artist, {bool refresh = false}) {
+    final key = _norm(artist);
+    if (refresh) _artists.remove(key);
+    return _artists.putIfAbsent(key, () => _loadArtist(artist));
+  }
 
   Future<ArtistCatalog> _loadArtist(String artist) async {
     final found = await _request(Uri.https('itunes.apple.com', '/search', {
@@ -135,8 +138,10 @@ class MusicCatalogService {
     );
   }
 
-  Future<List<TrackResult>> album(String artist, String album, {int? collectionId}) {
+  Future<List<TrackResult>> album(String artist, String album,
+      {int? collectionId, bool refresh = false}) {
     final key = '${_norm(artist)}|${_norm(album)}';
+    if (refresh) _albums.remove(key);
     return _albums.putIfAbsent(key, () =>
         _loadAlbum(artist, album, collectionId: collectionId));
   }
