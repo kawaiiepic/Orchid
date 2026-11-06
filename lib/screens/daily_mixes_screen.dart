@@ -6,6 +6,7 @@ import '../services/music_library.dart';
 import '../services/orchid_account.dart';
 import '../services/player_service.dart';
 import '../widgets/mini_player_bar.dart';
+import '../widgets/apple_cover.dart';
 import 'song_detail_screen.dart';
 import '../widgets/song_context_menu.dart';
 
@@ -151,7 +152,12 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Row(children: [
-                const Icon(LucideIcons.music2, size: 20),
+                AppleCover(
+                  artist: song.artist,
+                  name: song.title,
+                  fallbackUrl: song.artwork,
+                  size: 44,
+                ),
                 const SizedBox(width: 12),
                 Expanded(child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
