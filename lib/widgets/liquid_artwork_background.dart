@@ -1,7 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-/// Soft album-art wash behind the player.
+/// Full-resolution album art backdrop behind the player.
 ///
 /// No [ImageFiltered] / runtime blur — those were laggy and could trip
 /// painting asserts when layout sizes were not finite yet.
@@ -14,14 +14,14 @@ class LiquidArtworkBackground extends StatelessWidget {
     super.key,
     required this.imageUrl,
     required this.child,
-    this.intensity = 0.35,
+    this.intensity = 0.55,
   });
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final url = imageUrl;
-    final op = intensity.clamp(0.12, 0.55);
+    final op = intensity.clamp(0.12, 0.75);
 
     return Stack(
       fit: StackFit.expand,
@@ -31,16 +31,11 @@ class LiquidArtworkBackground extends StatelessWidget {
           Positioned.fill(
             child: Opacity(
               opacity: op,
-              child: Transform.scale(
-                scale: 1.15,
-                child: CachedNetworkImage(
+              child: CachedNetworkImage(
                   imageUrl: url,
                   fit: BoxFit.cover,
-                  memCacheWidth: 128,
-                  memCacheHeight: 128,
                   fadeInDuration: Duration.zero,
                   errorWidget: (_, __, ___) => const SizedBox.shrink(),
-                ),
               ),
             ),
           ),
@@ -50,9 +45,9 @@ class LiquidArtworkBackground extends StatelessWidget {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                scheme.background.withValues(alpha: 0.45),
-                scheme.background.withValues(alpha: 0.65),
-                scheme.background.withValues(alpha: 0.88),
+                scheme.background.withValues(alpha: 0.18),
+                scheme.background.withValues(alpha: 0.38),
+                scheme.background.withValues(alpha: 0.72),
               ],
             ),
           ),
