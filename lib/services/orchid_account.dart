@@ -241,7 +241,7 @@ class OrchidAccount extends ChangeNotifier {
       ?value:null).toList();
  }
  Future<Map<String,dynamic>> dailyMixes() async {
-  if(!signedIn||!lastfmConnected)throw StateError('Connect Last.fm first');
+  if(!signedIn)throw StateError('Sign in first');
   return _request('GET','/orchid/daily-mixes');
  }
  Future<void> startLastfm() async {
