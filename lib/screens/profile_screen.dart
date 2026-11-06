@@ -3,7 +3,8 @@ import '../services/orchid_account.dart';
 
 class ProfileScreen extends StatefulWidget {
  final OrchidAccount account;
- const ProfileScreen({super.key,required this.account});
+ final bool embedded;
+ const ProfileScreen({super.key,required this.account,this.embedded=false});
  @override State<ProfileScreen> createState()=>_ProfileScreenState();
 }
 class _ProfileScreenState extends State<ProfileScreen> {
@@ -20,7 +21,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
  }
  @override Widget build(BuildContext context){
   final a=widget.account;
-  return ListView(padding:const EdgeInsets.all(20),children:[
+  final children=<Widget>[
    const Text('Your account').x2Large().semiBold(),
    const SizedBox(height:8),
    const Text('One Petal account for Petal and Orchid.').muted(),
@@ -75,6 +76,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
      ]))),
    ],
    if(error!=null)...[const SizedBox(height:14),Text(error!).small()],
-  ]);
+  ];
+  return widget.embedded
+    ? Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:children)
+    : ListView(padding:const EdgeInsets.all(20),children:children);
  }
 }
