@@ -229,7 +229,7 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    footers: [MiniPlayerBar(player: widget.player)],
+    footers: [MiniPlayerBar(player: widget.player, library: widget.library)],
     child: FutureBuilder<ArtistCatalog>(
       future: _catalog,
       builder: (context, snapshot) {
