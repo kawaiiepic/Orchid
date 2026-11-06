@@ -126,9 +126,9 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
     player:widget.player,
     library:library,
     openOnTap:true,
-    child:IconButton.ghost(
-      onPressed: null,
-      icon:const Icon(LucideIcons.ellipsis,size:22),
+    child:const Padding(
+      padding:EdgeInsets.all(12),
+      child:Icon(LucideIcons.ellipsis,size:22),
     ),
   );
  }
