@@ -92,7 +92,7 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
     _appleArtwork.clear();
     setState(() { _loading = true; _error = null; _mixError = null; });
     try {
-      // Orchid history lives in Petal D1. Last.fm is not needed for mixes.
+      // Orchid history lives in Petal D1. This is independent of scrobbling.
       final response = await widget.account.dailyMixes();
       final rawMixes = response['mixes'];
       if (rawMixes is! List) {
