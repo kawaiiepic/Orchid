@@ -136,17 +136,17 @@ class _QueueDrawerBody extends StatelessWidget {
                         child: Row(children: [
                           const Icon(LucideIcons.sparkles, size: 16),
                           const SizedBox(width: 8),
-                          const Expanded(
-                            child: Text('Playing Next · Keep Playing').semiBold(),
+                          Expanded(
+                            child: const Text('Playing Next · Keep Playing').semiBold(),
                           ),
                           if (player.recommendationsLoading)
                             const Text('Finding…').xSmall().muted(),
                         ]),
                       ),
                       if (suggestions.isEmpty && !player.recommendationsLoading)
-                        const Padding(
-                          padding: EdgeInsets.all(12),
-                          child: Text('No suggestions yet.').small().muted(),
+                        Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: const Text('No suggestions yet.').small().muted(),
                         ),
                       ...suggestions.map((t) => _TrackTile(
                         track: t,
