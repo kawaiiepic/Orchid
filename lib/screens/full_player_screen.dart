@@ -9,6 +9,7 @@ import '../services/lyrics_service.dart';
 import '../services/player_service.dart';
 import '../services/animated_artwork_service.dart';
 import '../widgets/canvas_video.dart';
+import '../widgets/content_drawer.dart';
 
 class FullPlayerScreen extends StatefulWidget {
   final PlayerService player;
@@ -442,7 +443,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                           children: [
                             IconButton(
                               variance: ButtonVariance.ghost,
-                              onPressed: () => Navigator.of(context).pop(),
+                              onPressed: () => dismissContentDrawer(context),
                               icon: const Icon(LucideIcons.arrowLeft),
                             ),
                             Row(mainAxisSize: MainAxisSize.min, children: [
