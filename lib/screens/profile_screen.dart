@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart' as ios;
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:file_picker/file_picker.dart';
 import '../services/orchid_account.dart';
+import '../widgets/avatar_crop_dialog.dart';
 
 class ProfileScreen extends StatefulWidget {
  final OrchidAccount account;
@@ -35,32 +36,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
   return TextField(controller:controller,obscureText:password,placeholder:Text(hint));
  }
  Future<void> _chooseAvatar() async {
-  final result=await FilePicker.platform.pickFiles(
+  try {
+   final result=await FilePicker.platform.pickFiles(
     type:FileType.custom,
-    allowedExtensions:['png','jpg','jpeg','gif','webp'],
+    allowedExtensions:['png','jpg','jpeg','webp'],
     withData:true,
-  );
-  if(result==null||result.files.isEmpty)return;
-  final file=result.files.single;
-  final bytes=file.bytes;
-  if(bytes==null) {
-    if(mounted)setState(()=>error='Could not read the selected image.');
+   );
+   if(!mounted||result==null||result.files.isEmpty)return;
+   final file=result.files.single;
+   final bytes=file.bytes;
+   if(bytes==null||bytes.isEmpty) {
+    setState(()=>error='Could not read the selected image.');
     return;
-  }
-  if(bytes.lengthInBytes>5*1024*1024) {
-    if(mounted)setState(()=>error='Avatar must be smaller than 5 MB.');
+   }
+   if(bytes.lengthInBytes>10*1024*1024) {
+    setState(()=>error='Please choose an image smaller than 10 MB.');
     return;
+   }
+   setState(()=>error=null);
+   // Match Petal's circular crop workflow, but upload the account avatar
+   // (not Petal's separate viewing-profile avatar).
+   showOverlay(context, const DialogConfiguration(),
+    builder:(_) => AvatarCropDialog(
+     image:bytes,
+     onSave:(cropped) async {
+      if(cropped.lengthInBytes>5*1024*1024) {
+       throw StateError('Cropped avatar must be smaller than 5 MB.');
+      }
+      await widget.account.uploadAccountAvatar(cropped,'image/png');
+     },
+    ),
+   );
+  }catch(e){
+   if(mounted)setState(()=>error='Could not select an avatar: $e');
   }
-  final ext=(file.extension??'').toLowerCase();
-  final type=switch(ext){
-    'png'=>'image/png',
-    'jpg'||'jpeg'=>'image/jpeg',
-    'gif'=>'image/gif',
-    'webp'=>'image/webp',
-    _=>'',
-  };
-  if(type.isEmpty)return;
-  await _run(()=>widget.account.uploadAccountAvatar(bytes,type));
  }
  Future<void> _run(Future<void> Function() action) async{
   setState((){busy=true;error=null;});
