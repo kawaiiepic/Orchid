@@ -1,5 +1,4 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../services/orchid_account.dart';
@@ -532,7 +531,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
             ),
             _dailyMixCards(),
             const SizedBox(height: 28),
-            OrchidSectionHeader(
+            const OrchidSectionHeader(
               title: 'Your listening',
               subtitle: 'A little portrait of your music taste',
 
