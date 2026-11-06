@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/addon.dart';
 import 'addon_service.dart';
@@ -14,6 +15,8 @@ class PlayerService extends ChangeNotifier {
   StreamSubscription<PlayerState>? _stateSubscription;
   bool _autoAdvancing = false;
   bool _disposed = false;
+  bool keepPlaying = true;
+  static const _keepPlayingKey = 'orchid_keep_playing';
 
   TrackResult? current;
   String? playingVia;
@@ -37,21 +40,89 @@ class PlayerService extends ChangeNotifier {
     required this.addonService,
     LyricsService? lyricsService,
   }) : lyricsService = lyricsService ?? LyricsService() {
+    unawaited(_restoreKeepPlaying());
     _stateSubscription = player.playerStateStream.listen((state) {
       if (_disposed) return;
       notifyListeners();
       if (state.processingState == ProcessingState.completed &&
-          !_autoAdvancing && !resolving && hasNext) {
+          !_autoAdvancing && !resolving && (hasNext || keepPlaying)) {
         _autoAdvancing = true;
         unawaited(_advanceAfterCompletion());
       }
     });
   }
 
+  Future<void> _restoreKeepPlaying() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (_disposed) return;
+      keepPlaying = prefs.getBool(_keepPlayingKey) ?? true;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('[Orchid] Keep Playing preference unavailable: $e');
+    }
+  }
+
+  Future<void> setKeepPlaying(bool enabled) async {
+    keepPlaying = enabled;
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_keepPlayingKey, enabled);
+    } catch (e) {
+      debugPrint('[Orchid] Could not save Keep Playing preference: $e');
+    }
+  }
+
+  /// Add a track after all currently queued music, without interrupting audio.
+  void addToQueue(TrackResult track) {
+    if (queue.isEmpty && current != null) {
+      queue = [current!];
+      queueIndex = 0;
+    }
+    queue.add(track);
+    notifyListeners();
+  }
+
+  /// Similar music is discovered from currently available catalog/addon
+  /// searches, not guessed from arbitrary song titles.
+  Future<bool> _appendRecommendations() async {
+    final seed = current;
+    if (seed == null || !keepPlaying || _disposed) return false;
+    try {
+      final found = await addonService.search(_addons, seed.artist)
+          .timeout(const Duration(seconds: 22));
+      if (_disposed || !keepPlaying) return false;
+      String identity(TrackResult t) =>
+          '${t.artist.trim().toLowerCase()}|${t.title.trim().toLowerCase()}';
+      final excluded = <String>{
+        ...queue.map(identity),
+        ...history.map(identity),
+        identity(seed),
+      };
+      final candidates = found.where((t) =>
+          t.title.isNotEmpty && t.artist.isNotEmpty &&
+          !excluded.contains(identity(t))).toList();
+      if (candidates.isEmpty) return false;
+      // Preserve existing queued songs and append a batch of fresh results.
+      queue.addAll(candidates.take(8));
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint('[Orchid] Keep Playing recommendations unavailable: $e');
+      return false;
+    }
+  }
+
   Future<void> _advanceAfterCompletion() async {
     try {
       // Let the audio stream finish delivering its last completion event.
       // The guard prevents duplicate advances while the next source resolves.
+      if (_disposed || resolving ||
+          player.processingState != ProcessingState.completed) return;
+      if (!hasNext && keepPlaying) {
+        await _appendRecommendations();
+      }
       if (_disposed || !hasNext || resolving ||
           player.processingState != ProcessingState.completed) return;
       await playNext();
