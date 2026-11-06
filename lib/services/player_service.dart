@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 
@@ -104,7 +105,7 @@ class PlayerService extends ChangeNotifier {
       playingVia = stream.via ?? stream.quality;
       await player.setUrl(stream.url);
       await player.setVolume(volume);
-      await player.play();
+      unawaited(player.play());
       resolving = false;
       notifyListeners();
 
