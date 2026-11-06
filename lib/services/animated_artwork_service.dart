@@ -22,19 +22,52 @@ class AnimatedArtworkService {
       .replaceAll(RegExp(r'[^a-z0-9]+'), ' ')
       .trim();
 
+  Future<String> _findAlbum(String artist, String title) async {
+    try {
+      final uri = Uri.https('itunes.apple.com', '/search', {
+        'term': '$artist $title',
+        'entity': 'song',
+        'media': 'music',
+        'limit': '10',
+      });
+      final response = await http.get(uri)
+          .timeout(const Duration(seconds: 5));
+      if (response.statusCode != 200) return '';
+      final data = jsonDecode(response.body);
+      if (data is! Map || data['results'] is! List) return '';
+      for (final item in data['results'] as List) {
+        if (item is! Map) continue;
+        if (_key((item['trackName'] ?? '').toString()) != _key(title) ||
+            _key((item['artistName'] ?? '').toString()) != _key(artist)) {
+          continue;
+        }
+        final value = item['collectionName'];
+        if (value is String && value.trim().isNotEmpty) return value.trim();
+      }
+    } catch (e) {
+      debugPrint('[Orchid Artwork] Album lookup failed: $e');
+    }
+    return '';
+  }
+
   Future<AnimatedArtwork?> fetch({
     required String artist,
-    required String album,
+    String? album,
     String? title,
   }) async {
-    if (artist.trim().isEmpty || album.trim().isEmpty) return null;
-    final key = '${_key(artist)}|${_key(album)}';
+    if (artist.trim().isEmpty) return null;
+    var resolvedAlbum = album?.trim() ?? '';
+    if (resolvedAlbum.isEmpty && title?.trim().isNotEmpty == true) {
+      resolvedAlbum = await _findAlbum(artist, title!);
+    }
+    if (resolvedAlbum.isEmpty) return null;
+    final key = '${_key(artist)}|${_key(resolvedAlbum)}';
     if (_cache.containsKey(key)) return _cache[key];
 
     try {
       final uri = Uri.https('artwork.m8tec.top', '/api/v1/artwork/search', {
         'artist': artist,
-        'album': album,
+        'album': resolvedAlbum,
         if (title != null && title.trim().isNotEmpty) 'title': title,
       });
       final response = await http.get(
