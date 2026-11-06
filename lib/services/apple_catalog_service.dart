@@ -66,7 +66,9 @@ class AppleCatalogService {
         // No fuzzy matching: different versions and recordings must not be
         // mistaken for one another.
         if (normalize(candidateArtist) != a ||
-            normalize(candidateTitle) != t) continue;
+            normalize(candidateTitle) != t) {
+          continue;
+        }
         final image = raw['artworkUrl100'];
         matches.add(AppleCatalogTrack(
           title: candidateTitle,
