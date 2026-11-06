@@ -204,39 +204,77 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     return '${when.month}/${when.day}/${when.year}';
   }
 
+  void _showMusicDetail(Map<String, dynamic> item, {required bool isAlbum}) {
+    final name=item['name']?.toString()??'Unknown';
+    final artist=item['artist']?.toString()??'';
+    final recent=_items('recent').where((track) {
+      final trackArtist=track['artist']?.toString()??'';
+      final trackAlbum=track['album']?.toString()??'';
+      return isAlbum
+          ? trackAlbum.toLowerCase()==name.toLowerCase() &&
+              trackArtist.toLowerCase()==artist.toLowerCase()
+          : trackArtist.toLowerCase()==name.toLowerCase();
+    }).toList();
+    Navigator.of(context).push(
+      ShadcnPageRoute<void>(
+        builder: (_) => Scaffold(
+          headers: [
+            AppBar(
+              title: Text(isAlbum ? 'Album' : 'Artist'),
+            ),
+          ],
+          child: ListView(
+            padding: const EdgeInsets.all(24),
+            children: [
+              Center(child:_art(item['image'] as String?,size:200)),
+              const SizedBox(height:20),
+              Center(child:Text(name,textAlign:TextAlign.center).x2Large().semiBold()),
+              if(isAlbum)...[
+                const SizedBox(height:6),
+                Center(child:Text(artist).muted()),
+              ],
+              const SizedBox(height:12),
+              Center(child:Text('${_count(item['plays'])} Last.fm plays').muted()),
+              const SizedBox(height:28),
+              Text('Recent listening').large().semiBold(),
+              const SizedBox(height:10),
+              if(recent.isEmpty)
+                const Text('No matching tracks in your latest Last.fm history.').muted()
+              else
+                ...recent.map(_recentRow),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _topCard(Map<String, dynamic> item, {required bool isAlbum}) {
-    final title = item['name']?.toString() ?? 'Unknown';
-    final artist = item['artist']?.toString() ?? '';
+    final title=item['name']?.toString()??'Unknown';
+    final artist=item['artist']?.toString()??'';
     return _clickable(
-      onTap:()=>_openLastfm(item['url']),
+      onTap:()=>_showMusicDetail(item,isAlbum:isAlbum),
       child:SizedBox(
         width:156,
-        height:246,
-        child:Card(
-          child:Padding(
-            padding:const EdgeInsets.all(10),
-            child:Column(
-              crossAxisAlignment:CrossAxisAlignment.start,
-              children:[
-                _art(item['image'] as String?,size:132),
-                const SizedBox(height:10),
-                SizedBox(
-                  height:38,
-                  child:Text(title,maxLines:2,overflow:TextOverflow.ellipsis).semiBold(),
-                ),
-                if(isAlbum)
-                  Text(artist,maxLines:1,overflow:TextOverflow.ellipsis).small().muted()
-                else
-                  const SizedBox(height:17),
-                const Spacer(),
-                Row(
-                  children:[
-                    Expanded(child:Text('${_count(item['plays'])} plays').xSmall().muted()),
-                    const Icon(LucideIcons.externalLink,size:13),
-                  ],
-                ),
-              ],
-            ),
+        height:232,
+        child:Padding(
+          padding:const EdgeInsets.all(10),
+          child:Column(
+            crossAxisAlignment:CrossAxisAlignment.start,
+            children:[
+              _art(item['image'] as String?,size:136),
+              const SizedBox(height:10),
+              SizedBox(
+                height:38,
+                child:Text(title,maxLines:2,overflow:TextOverflow.ellipsis).semiBold(),
+              ),
+              if(isAlbum)
+                Text(artist,maxLines:1,overflow:TextOverflow.ellipsis).small().muted()
+              else
+                const SizedBox(height:17),
+              const Spacer(),
+              Text('${_count(item['plays'])} plays').xSmall().muted(),
+            ],
           ),
         ),
       ),
