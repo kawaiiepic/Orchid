@@ -10,7 +10,7 @@ import '../services/player_service.dart';
 import '../services/music_library.dart';
 import 'library_screen.dart';
 import 'daily_mixes_screen.dart';
-import 'reply_screen.dart';
+import 'replay_screen.dart';
 import '../widgets/mini_player_bar.dart';
 import '../widgets/profile_menu.dart';
 import '../widgets/orchid_style.dart';
@@ -257,9 +257,9 @@ class _ShellScreenState extends State<ShellScreen>{
       openExplore:()=>setState(()=>selected=const ValueKey(1)),
       openProfile:_openProfile,
       openLibrary:()=>setState(()=>selected=const ValueKey(2)),
-      openReply:()=>Navigator.of(context).push(
+      openReplay:()=>Navigator.of(context).push(
        ShadcnPageRoute<void>(
-        builder:(_)=>DrawerOverlay(child:ReplyScreen(account:_account)),
+        builder:(_)=>DrawerOverlay(child:ReplayScreen(account:_account)),
        ),
       ),
       openDailyMixes:(index)=>Navigator.of(context).push(
