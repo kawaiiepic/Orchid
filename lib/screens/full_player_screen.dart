@@ -374,10 +374,10 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
           size:31,
         ),
         _transportControl(
-          icon:widget.player.repeatMode==RepeatMode.one
+          icon:widget.player.repeatMode==OrchidRepeatMode.one
               ?LucideIcons.repeat1:LucideIcons.repeat,
           onTap:widget.player.cycleRepeatMode,
-          active:widget.player.repeatMode!=RepeatMode.off,
+          active:widget.player.repeatMode!=OrchidRepeatMode.off,
         ),
       ],
     ),
