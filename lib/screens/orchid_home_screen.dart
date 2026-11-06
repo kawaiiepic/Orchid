@@ -3,9 +3,14 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../services/orchid_account.dart';
 import '../services/player_service.dart';
+import '../services/addon_service.dart';
+import '../models/addon.dart';
+import 'song_detail_screen.dart';
 
 class OrchidHomeScreen extends StatefulWidget {
   final PlayerService player;
+  final AddonService addonService;
+  final List<InstalledAddon> addons;
   final OrchidAccount account;
   final VoidCallback openExplore;
   final VoidCallback openProfile;
@@ -13,6 +18,8 @@ class OrchidHomeScreen extends StatefulWidget {
   const OrchidHomeScreen({
     super.key,
     required this.player,
+    required this.addonService,
+    required this.addons,
     required this.account,
     required this.openExplore,
     required this.openProfile,
@@ -159,6 +166,26 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     ));
   }
 
+  void _openSong(Map<String,dynamic> track) {
+    final timestamp=track['timestamp'];
+    final listenedAt=timestamp is num
+      ? DateTime.fromMillisecondsSinceEpoch(timestamp.toInt()*1000)
+      : null;
+    Navigator.of(context).push(ShadcnPageRoute<void>(
+      builder:(_)=>SongDetailScreen(
+        player:widget.player,
+        addonService:widget.addonService,
+        addons:widget.addons,
+        title:track['title']?.toString()??'Unknown',
+        artist:track['artist']?.toString()??'Unknown',
+        album:track['album']?.toString(),
+        artworkUrl:track['image']?.toString(),
+        listenedAt:listenedAt,
+        nowPlaying:track['nowPlaying']==true,
+      ),
+    ));
+  }
+
   Widget _recentRow(Map<String, dynamic> track) {
     final artist = track['artist']?.toString() ?? '';
     final album = track['album']?.toString() ?? '';
@@ -170,7 +197,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
         ? ''
         : _relativeTime(DateTime.fromMillisecondsSinceEpoch(timestamp * 1000));
     return _clickable(
-      onTap:()=>_openLastfm(track['url']),
+      onTap:()=>_openSong(track),
       child:Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -189,7 +216,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
           const SizedBox(width: 8),
           Text(nowPlaying ? 'Now playing' : time).xSmall().muted(),
           const SizedBox(width:6),
-          const Icon(LucideIcons.externalLink,size:13),
+          const Icon(LucideIcons.chevronRight,size:16),
         ],
       ),
     ));
