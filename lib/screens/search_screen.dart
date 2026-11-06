@@ -286,6 +286,7 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget _artistTile(String artist) => GestureDetector(
     behavior:HitTestBehavior.opaque,
     onTap:()=>openArtistPage(context,artist:artist,
+      account:widget.account,
       player:widget.player,addonService:widget.addonService,
       addons:widget.addons,library:widget.library),
     child:Container(
