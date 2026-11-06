@@ -12,6 +12,7 @@ import '../widgets/orchid_style.dart';
 import '../widgets/artist_artwork.dart';
 import '../widgets/song_context_menu.dart';
 import '../widgets/content_drawer.dart';
+import '../widgets/track_duration.dart';
 
 void openArtistPage(BuildContext context, {
   required String artist,
@@ -112,6 +113,10 @@ Widget _trackTile(BuildContext context, TrackResult song, {
             overflow: TextOverflow.ellipsis).small().muted(),
         ],
       )),
+      if (trackDurationLabel(song.duration) != null) ...[
+        Text(trackDurationLabel(song.duration)!).xSmall().muted(),
+        const SizedBox(width: 6),
+      ],
       IconButton.ghost(
         onPressed: () => _openTrack(context, song,
           player: player, addonService: addonService,
