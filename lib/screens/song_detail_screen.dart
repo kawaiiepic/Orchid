@@ -126,20 +126,9 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
     player:widget.player,
     library:library,
     openOnTap:true,
-    child:Container(
-      padding:const EdgeInsets.symmetric(horizontal:18,vertical:12),
-      decoration:BoxDecoration(
-        borderRadius:BorderRadius.circular(12),
-        border:Border.all(color:Theme.of(context).colorScheme.border),
-      ),
-      child:const Row(
-        mainAxisSize:MainAxisSize.min,
-        children:[
-          Icon(LucideIcons.ellipsis,size:18),
-          SizedBox(width:10),
-          Text('Song actions'),
-        ],
-      ),
+    child:IconButton.ghost(
+      onPressed: null,
+      icon:const Icon(LucideIcons.ellipsis,size:22),
     ),
   );
  }
@@ -162,10 +151,8 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
    child:ListView(
      padding:const EdgeInsets.fromLTRB(20,12,20,28),
      children:[
-       Align(alignment:Alignment.centerLeft,child:IconButton.ghost(
-         onPressed:()=>dismissContentDrawer(context),
-         icon:const Icon(LucideIcons.arrowLeft),
-       )),
+       if(widget.library!=null)
+         Align(alignment:Alignment.centerRight,child:_libraryActions()),
        const SizedBox(height:12),
        Container(
          width:double.infinity,
@@ -212,7 +199,6 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
                    Text('Add to queue'),
                  ]),
                ),
-               if(widget.library!=null)_libraryActions(),
              ]),
            ],
          ),
