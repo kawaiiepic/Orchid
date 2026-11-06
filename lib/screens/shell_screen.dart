@@ -92,6 +92,31 @@ class _ShellScreenState extends State<ShellScreen>{
    return const Scaffold(child:Center(child:Text('Checking your Petal session…')));
   }
   if(!_account.signedIn){
+   if(_account.hasStoredSession){
+    return Scaffold(
+     child:Center(
+      child:ConstrainedBox(
+       constraints:const BoxConstraints(maxWidth:420),
+       child:Padding(
+        padding:const EdgeInsets.all(24),
+        child:Column(
+         mainAxisSize:MainAxisSize.min,
+         crossAxisAlignment:CrossAxisAlignment.stretch,
+         children:[
+          const Text('Session temporarily unavailable').large().semiBold(),
+          const SizedBox(height:10),
+          Text(_account.restoreError??'We could not verify your saved Petal login. Your session is still saved.').muted(),
+          const SizedBox(height:16),
+          PrimaryButton(onPressed:_account.retryRestore,child:const Text('Retry connection')),
+          const SizedBox(height:8),
+          OutlineButton(onPressed:_account.clearSavedSession,child:const Text('Sign in with another account')),
+         ],
+        ),
+       ),
+      ),
+     ),
+    );
+   }
    return Scaffold(child:ProfileScreen(account:_account));
   }
   final page=(selected as ValueKey<int>?)?.value??0;
