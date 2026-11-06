@@ -6,6 +6,28 @@ import '../services/music_library.dart';
 import '../widgets/mini_player_bar.dart';
 import 'music_detail_pages.dart';
 import '../widgets/song_context_menu.dart';
+import '../widgets/content_drawer.dart';
+
+void showSongDetailDrawer(BuildContext context, {
+  required PlayerService player,
+  required AddonService addonService,
+  required List<InstalledAddon> addons,
+  MusicLibrary? library,
+  required String title,
+  required String artist,
+  String? album,
+  String? artworkUrl,
+  DateTime? listenedAt,
+  bool nowPlaying = false,
+  TrackResult? track,
+}) {
+  showContentDrawer(context, builder: (_) => SongDetailScreen(
+    player:player, addonService:addonService, addons:addons,
+    library:library, title:title, artist:artist, album:album,
+    artworkUrl:artworkUrl, listenedAt:listenedAt,
+    nowPlaying:nowPlaying, track:track,
+  ));
+}
 
 /// Native song page. Last.fm records are metadata, not direct audio streams.
 class SongDetailScreen extends StatefulWidget {
@@ -113,7 +135,7 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
   footers:[MiniPlayerBar(player:widget.player)],
   child:ListView(padding:const EdgeInsets.all(24),children:[
    Align(alignment:Alignment.centerLeft,child:IconButton.ghost(
-    onPressed:()=>Navigator.of(context).pop(),
+    onPressed:()=>dismissContentDrawer(context),
     icon:const Icon(LucideIcons.arrowLeft),
    )),
    const SizedBox(height:12),
