@@ -2,7 +2,6 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../services/orchid_account.dart';
-import '../services/apple_catalog_service.dart';
 import '../services/player_service.dart';
 import '../services/music_library.dart';
 import '../services/addon_service.dart';
@@ -46,7 +45,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
   Map<String, dynamic>? _history;
   bool _loading = false;
   String? _error;
-  String? _lastfmUser;
+  String? _homeAccount;
   int _requestId = 0;
 
   @override
@@ -67,9 +66,11 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
   }
 
   void _accountChanged() {
-    final user = widget.account.lastfmUsername;
-    if (_lastfmUser == user) return;
-    _lastfmUser = user;
+    final user = widget.account.signedIn
+        ? (widget.account.email ?? widget.account.username)
+        : null;
+    if (_homeAccount == user) return;
+    _homeAccount = user;
     _requestId++;
     _history = null;
     _error = null;
@@ -81,30 +82,21 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
   }
 
   Future<void> _refresh() async {
-    if (!widget.account.lastfmConnected) return;
+    if (!widget.account.signedIn) return;
     final requestId = ++_requestId;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
-      final result = await widget.account.lastfmHome();
+      // All home metadata comes from Orchid history and Apple Music charts.
+      // Last.fm is only used to scrobble, never as a UI catalog.
+      final result = await widget.account.orchidHome();
       if (!mounted || requestId != _requestId) return;
-      // Listening statistics and timestamps remain untouched. Apple only
-      // normalizes confidently matched catalog metadata.
-      final recent = result['recent'];
-      if (recent is List) {
-        final items = recent.whereType<Map>().map(
-          (item) => Map<String, dynamic>.from(item)).toList();
-        final enriched = await Future.wait(
-          items.map(AppleCatalogService.instance.enrichRecent));
-        if (!mounted || requestId != _requestId) return;
-        result['recent'] = enriched;
-      }
       setState(() => _history = result);
-    } catch (e) {
+    } catch (error) {
       if (!mounted || requestId != _requestId) return;
-      setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+      setState(() => _error = error.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted && requestId == _requestId) {
         setState(() => _loading = false);
@@ -340,7 +332,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
 
   Widget _stat(String title, dynamic count) {
     return _clickable(
-      onTap:()=>_openLastfm('https://www.last.fm/user/${Uri.encodeComponent(widget.account.lastfmUsername ?? '')}'),
+      onTap:_refresh,
       child:SizedBox(
       width: 138,
       child: Card(
@@ -392,8 +384,8 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
         artist: artist,
         album: album,
         artworkUrl: track['image']?.toString(),
-        sourceId: 'lastfm',
-        sourceName: 'Last.fm',
+        sourceId: 'orchid-history',
+        sourceName: 'Orchid History',
       ),
       player: widget.player,
       library: widget.library,
@@ -405,7 +397,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
           title:track['title']?.toString() ?? '',
           artist:artist, album:album,
           artworkUrl:track['image']?.toString(),
-          sourceId:'lastfm', sourceName:'Last.fm',
+          sourceId:'orchid-history', sourceName:'Orchid History',
         )).catchError((Object e) {
           debugPrint('[Orchid] Recent track playback failed: $e');
         });
@@ -466,6 +458,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
         library: widget.library);
     } else {
       openArtistPage(context,
+        account: widget.account,
         artist: item['name']?.toString() ?? '',
         artwork: item['image']?.toString(),
         player: widget.player,
@@ -540,7 +533,6 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     return AnimatedBuilder(
       animation: widget.player,
       builder: (context, _) {
-        final linked = widget.account.lastfmConnected;
         final stats = _history?['stats'] is Map
             ? Map<String, dynamic>.from(_history!['stats'] as Map)
             : <String, dynamic>{};
@@ -581,65 +573,55 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
 
             ),
             const SizedBox(height: 10),
-            if (!linked)
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Connect Last.fm to unlock your listening history.').semiBold(),
-                      const SizedBox(height: 8),
-                      const Text('See music played on all your Last.fm-connected apps, plus your favorite artists, albums, and listening stats.').small().muted(),
-                      const SizedBox(height: 12),
-                      PrimaryButton(
-                        onPressed: widget.openProfile,
-                        child: const Text('Connect Last.fm'),
-                      ),
-                    ],
-                  ),
-                ),
-              )
-            else ...[
-              if (_error != null) ...[
-                Text(_error!).small(),
-                const SizedBox(height: 8),
-                OutlineButton(onPressed: _refresh, child: const Text('Try again')),
+            if (_error != null) ...[
+              Text(_error!).small(),
+              const SizedBox(height: 8),
+              OutlineButton(onPressed: _refresh, child: const Text('Try again')),
+            ],
+            if (_loading && _history == null)
+              const Text('Loading your music home…').muted(),
+            if (_history != null) ...[
+              const OrchidSectionHeader(title: 'By the numbers'),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 10, runSpacing: 10,
+                children: [
+                  _stat('Listens', stats['scrobbles']),
+                  _stat('Artists', stats['artists']),
+                  _stat('Albums', stats['albums']),
+                  _stat('Tracks', stats['tracks']),
+                ],
+              ),
+              const SizedBox(height: 24),
+              const OrchidSectionHeader(title:'Recently played'),
+              const SizedBox(height:10),
+              if (_uniqueRecent().isEmpty)
+                const Text('Play some music to start your Orchid history.').muted()
+              else ..._uniqueRecent().map(_recentRow),
+              const SizedBox(height:24),
+              const OrchidSectionHeader(
+                title:'Popular on Apple Music',
+                subtitle:'Explore something new',
+              ),
+              const SizedBox(height:10),
+              if(_items('charts').isEmpty)
+                const Text('Apple Music charts are unavailable.').muted()
+              else ..._items('charts').take(12).map(_recentRow),
+              const SizedBox(height:24),
+              const OrchidSectionHeader(title:'Featured albums'),
+              const SizedBox(height:10),
+              _horizontalItems(_items('featuredAlbums'),albums:true),
+              if(_items('artists').isNotEmpty)...[
+                const SizedBox(height:24),
+                const OrchidSectionHeader(title:'Your top artists'),
+                const SizedBox(height:10),
+                _horizontalItems(_items('artists'),albums:false),
               ],
-              if (_loading && _history == null)
-                const Text('Loading your listening history…').muted(),
-              if (_history != null) ...[
-                const OrchidSectionHeader(title: 'By the numbers'),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    _stat('Scrobbles', stats['scrobbles']),
-                    _stat('Artists', stats['artists']),
-                    _stat('Albums', stats['albums']),
-                    _stat('Tracks', stats['tracks']),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                const OrchidSectionHeader(title: 'Recently played'),
-                const SizedBox(height: 10),
-                if (_uniqueRecent().isEmpty)
-                  const Text('No Last.fm listening history yet.').muted()
-                else
-                  ..._uniqueRecent().map(_recentRow),
-                const SizedBox(height: 24),
-                const OrchidSectionHeader(title: 'Artists on repeat'),
-                const SizedBox(height: 5),
-                const Text('All time').xSmall().muted(),
-                const SizedBox(height: 10),
-                _horizontalItems(_items('artists'), albums: false),
-                const SizedBox(height: 24),
-                const OrchidSectionHeader(title: 'Albums on repeat'),
-                const SizedBox(height: 5),
-                const Text('All time').xSmall().muted(),
-                const SizedBox(height: 10),
-                _horizontalItems(_items('albums'), albums: true),
+              if(_items('albums').isNotEmpty)...[
+                const SizedBox(height:24),
+                const OrchidSectionHeader(title:'Your top albums'),
+                const SizedBox(height:10),
+                _horizontalItems(_items('albums'),albums:true),
               ],
             ],
             const SizedBox(height: 24),
