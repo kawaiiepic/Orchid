@@ -82,7 +82,7 @@ class _AiDjScreenState extends State<AiDjScreen> {
           ?Center(child:Padding(
             padding:const EdgeInsets.all(24),
             child:Column(mainAxisSize:MainAxisSize.min,children:[
-              const Icon(LucideIcons.messagesSquare,size:34,color:OrchidStyle.lilac),
+              const Icon(LucideIcons.messageCircle,size:34,color:OrchidStyle.lilac),
               const SizedBox(height:12),
               const Text('Start a conversation').large().semiBold(),
               const SizedBox(height:6),
