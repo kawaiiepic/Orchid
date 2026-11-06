@@ -11,6 +11,7 @@ import 'song_detail_screen.dart';
 import '../widgets/orchid_style.dart';
 import '../widgets/artist_artwork.dart';
 import '../widgets/song_context_menu.dart';
+import '../widgets/content_drawer.dart';
 
 void openArtistPage(BuildContext context, {
   required String artist,
@@ -70,7 +71,7 @@ Widget _cover(BuildContext context, String? artwork, {double size = 128}) {
 Widget _back(BuildContext context) => Align(
   alignment: Alignment.centerLeft,
   child: IconButton.ghost(
-    onPressed: () => Navigator.of(context).pop(),
+    onPressed: () => dismissContentDrawer(context),
     icon: const Icon(LucideIcons.arrowLeft),
   ),
 );
