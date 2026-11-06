@@ -93,6 +93,22 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
     }
   }
 
+  Future<void> _playMix(int index) async {
+    final songs = _mix(index);
+    if (songs.isEmpty) return;
+    widget.player.setAddons(widget.addons);
+    final queue = songs.map((song) => TrackResult(
+      id: song.key, title: song.title, artist: song.artist,
+      album: song.album, artworkUrl: song.artwork,
+      sourceId: 'orchid-mix', sourceName: 'Daily Mix',
+    )).toList();
+    try {
+      await widget.player.playTrack(queue.first, fromQueue: queue);
+    } catch (e) {
+      debugPrint('[Orchid] Daily Mix playback failed: $e');
+    }
+  }
+
   void _openMix(int index) {
     final titles = ['Favorites Mix', 'Similar Sounds', 'Discover'];
     Navigator.of(context).push(ShadcnPageRoute<void>(
@@ -106,6 +122,13 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
           const SizedBox(height: 16),
           Text(titles[index]).x2Large().semiBold(),
           const SizedBox(height: 12),
+          if (_mix(index).isNotEmpty) ...[
+            PrimaryButton(
+              onPressed: () => _playMix(index),
+              child: const Text('Play all'),
+            ),
+            const SizedBox(height: 12),
+          ],
           ..._mix(index).map((song) => Button(
             style: const ButtonStyle.ghost(),
             onPressed: () => Navigator.of(context).push(ShadcnPageRoute<void>(
