@@ -11,6 +11,8 @@ import '../services/music_library.dart';
 import 'library_screen.dart';
 import 'daily_mixes_screen.dart';
 import 'replay_screen.dart';
+import 'radio_screen.dart';
+import 'all_time_top_songs_screen.dart';
 import '../widgets/mini_player_bar.dart';
 import '../widgets/profile_menu.dart';
 import '../widgets/orchid_style.dart';
@@ -257,6 +259,16 @@ class _ShellScreenState extends State<ShellScreen>{
       openExplore:()=>setState(()=>selected=const ValueKey(1)),
       openProfile:_openProfile,
       openLibrary:()=>setState(()=>selected=const ValueKey(2)),
+      openRadio:()=>Navigator.of(context).push(
+       ShadcnPageRoute<void>(builder:(_)=>DrawerOverlay(
+        child:RadioScreen(account:_account,player:_player,addons:_addons),
+       )),
+      ),
+      openTopSongs:()=>Navigator.of(context).push(
+       ShadcnPageRoute<void>(builder:(_)=>DrawerOverlay(
+        child:AllTimeTopSongsScreen(account:_account,player:_player,addons:_addons),
+       )),
+      ),
       openReplay:()=>Navigator.of(context).push(
        ShadcnPageRoute<void>(
         builder:(_)=>DrawerOverlay(child:ReplayScreen(account:_account)),
