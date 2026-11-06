@@ -4,6 +4,7 @@ import '../models/addon.dart';
 import '../services/addon_service.dart';
 import '../services/music_library.dart';
 import '../services/orchid_account.dart';
+import '../services/apple_catalog_service.dart';
 import '../services/player_service.dart';
 import '../widgets/mini_player_bar.dart';
 import '../widgets/apple_cover.dart';
@@ -61,9 +62,17 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
           final title = (raw['title'] ?? '').toString();
           final artist = (raw['artist'] ?? '').toString();
           if (title.isEmpty || artist.isEmpty) continue;
-          tracks.add(SavedSong(title, artist,
+          final canonical = await AppleCatalogService.instance.matchTrack(
+            artist: artist,
+            title: title,
             album: raw['album']?.toString(),
-            artwork: raw['image']?.toString()));
+          );
+          tracks.add(SavedSong(
+            canonical?.title ?? title,
+            canonical?.artist ?? artist,
+            album: canonical?.album ?? raw['album']?.toString(),
+            artwork: canonical?.artwork ?? raw['image']?.toString(),
+          ));
         }
       }
       if (!mounted) return;
