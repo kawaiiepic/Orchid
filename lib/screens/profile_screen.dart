@@ -1,4 +1,6 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:flutter/cupertino.dart' as ios;
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:file_picker/file_picker.dart';
 import '../services/orchid_account.dart';
 
@@ -15,6 +17,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
  @override void initState(){super.initState();widget.account.addListener(_changed);}
  void _changed(){if(mounted)setState((){});}
  @override void dispose(){widget.account.removeListener(_changed);email.dispose();password.dispose();username.dispose();super.dispose();}
+ Widget _accountInput(TextEditingController controller, String hint, {bool password = false}) {
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+   return ios.CupertinoTextField(
+    controller: controller,
+    placeholder: hint,
+    obscureText: password,
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+    decoration: BoxDecoration(
+     color: const Color(0xFF24202D),
+     borderRadius: BorderRadius.circular(10),
+    ),
+    style: const TextStyle(color: Color(0xFFF3EAF7)),
+    placeholderStyle: const TextStyle(color: Color(0xFF978A9E)),
+   );
+  }
+  return TextField(controller:controller,obscureText:password,placeholder:Text(hint));
+ }
  Future<void> _chooseAvatar() async {
   final result=await FilePicker.platform.pickFiles(
     type:FileType.custom,
@@ -59,14 +78,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
    else if(!a.signedIn)...[
     if(registering)...[
      const Text('Username'),const SizedBox(height:6),
-     TextField(controller:username,placeholder:const Text('Username')),
+     _accountInput(username, 'Username'),
      const SizedBox(height:12),
     ],
     const Text('Email'),const SizedBox(height:6),
-    TextField(controller:email,placeholder:const Text('you@example.com')),
+    _accountInput(email, 'you@example.com'),
     const SizedBox(height:12),
     const Text('Password'),const SizedBox(height:6),
-    TextField(controller:password,obscureText:true,placeholder:const Text('Password')),
+    _accountInput(password, 'Password', password:true),
     const SizedBox(height:14),
     PrimaryButton(onPressed:busy?null:()=>_run(()=>registering?
       a.register(username.text,email.text,password.text):a.login(email.text,password.text)),
