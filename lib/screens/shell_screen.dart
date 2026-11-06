@@ -120,33 +120,58 @@ class _ShellScreenState extends State<ShellScreen>{
    return Scaffold(child:ProfileScreen(account:_account));
   }
   final page=(selected as ValueKey<int>?)?.value??0;
-  final explore=SearchScreen(addonService:_addonService,player:_player,addons:_addons);
-  final pages=<Widget>[
-   OrchidHomeScreen(player:_player,account:_account,
-    openExplore:()=>setState(()=>selected=const ValueKey(1)),
-    openProfile:()=>setState(()=>selected=const ValueKey(3))),
-   explore,
-   OrchidHomeScreen(player:_player,account:_account,
-    openExplore:()=>setState(()=>selected=const ValueKey(1)),
-    openProfile:()=>setState(()=>selected=const ValueKey(3))),
-   ProfileScreen(account:_account),
-   SettingsScreen(addonService:_addonService,addons:_addons,onAddonsChanged:(list){
-    setState(()=>_addons=list);_player.setAddons(list);
-   }),
-  ];
   return Scaffold(
-   footers:[MiniPlayerBar(player:_player),const Divider(),
-    NavigationBar(alignment:NavigationBarAlignment.spaceAround,
-     labelType:NavigationLabelType.none,expanded:true,
-     onSelected:(key)=>setState(()=>selected=key),selectedKey:selected,
+   footers:[
+    MiniPlayerBar(player:_player),
+    const Divider(),
+    NavigationBar(
+     alignment:NavigationBarAlignment.spaceAround,
+     labelType:NavigationLabelType.none,
+     expanded:true,
+     onSelected:(key)=>setState(()=>selected=key),
+     selectedKey:selected,
      children:[
       _button('Home',BootstrapIcons.house,0),
       _button('Explore',BootstrapIcons.compass,1),
       _button('Library',BootstrapIcons.musicNoteList,2),
-      _button('Profile',BootstrapIcons.person,3),
-      _button('App',BootstrapIcons.gear,4),
-     ])],
-   child:pages[page.clamp(0,pages.length-1)],
+      _button('Settings',BootstrapIcons.gear,3),
+     ],
+    ),
+   ],
+   // Preserve tab state, including Last.fm data, search results, and settings.
+   child:IndexedStack(
+    index:page.clamp(0,3),
+    children:[
+     OrchidHomeScreen(
+      player:_player,account:_account,
+      openExplore:()=>setState(()=>selected=const ValueKey(1)),
+      openProfile:()=>setState(()=>selected=const ValueKey(3)),
+     ),
+     SearchScreen(addonService:_addonService,player:_player,addons:_addons),
+     Center(child:Column(
+      mainAxisSize:MainAxisSize.min,
+      children:[
+       const Text('Your Library').large().semiBold(),
+       const SizedBox(height:8),
+       const Text('Your saved music will appear here.').muted(),
+       const SizedBox(height:12),
+       OutlineButton(
+        onPressed:()=>setState(()=>selected=const ValueKey(1)),
+        child:const Text('Explore music'),
+       ),
+      ],
+     )),
+     SettingsScreen(
+      account:_account,
+      addonService:_addonService,
+      addons:_addons,
+      onAddonsChanged:(list){
+       setState(()=>_addons=list);
+       _player.setAddons(list);
+      },
+     ),
+    ],
+   ),
   );
  }
 }
