@@ -179,7 +179,6 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          const Text('Apple Music animated artwork').small().muted(),
         ],
       ),
     );
@@ -389,7 +388,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
       listenable: widget.player,
       builder: (context, _) {
         final track = widget.player.current;
-        final mobileAnimated = isMobile && _viewMode == 1 &&
+        final mobileAnimated = isMobile &&
             _animatedEnabled && _appleArtwork != null && !_animationFailed;
         return Scaffold(
           child: Stack(
@@ -470,10 +469,15 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
 
                   Expanded(
                     child: mobileAnimated
-                        ? Align(
-                            alignment: Alignment.bottomCenter,
-                            child: _mobileTrackDetails(),
-                          )
+                        ? (_viewMode == 0
+                            ? Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: _lyricsBody(),
+                              )
+                            : Align(
+                                alignment: Alignment.bottomCenter,
+                                child: _mobileTrackDetails(),
+                              ))
                         : Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                             child: _viewMode == 0
