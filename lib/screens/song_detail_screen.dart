@@ -225,7 +225,7 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
          child:Column(
            crossAxisAlignment:CrossAxisAlignment.start,
            children:[
-             Text('Artist').small().muted(),
+             const Text('Artist').small().muted(),
              const SizedBox(height:5),
              GhostButton(
                onPressed:widget.library==null?null:()=>openArtistPage(context,
@@ -236,7 +236,7 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
              ),
              if(widget.album?.isNotEmpty==true)...[
                const Divider(),
-               Text('Album').small().muted(),
+               const Text('Album').small().muted(),
                const SizedBox(height:5),
                GhostButton(
                  onPressed:widget.library==null?null:()=>openAlbumPage(context,
@@ -249,13 +249,13 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
              ],
              if(displayedDuration!=null)...[
                const Divider(),
-               Text('Duration').small().muted(),
+               const Text('Duration').small().muted(),
                const SizedBox(height:5),
                Text(displayedDuration!).semiBold(),
              ],
              if(widget.listenedAt!=null)...[
                const Divider(),
-               Text('Last listened').small().muted(),
+               const Text('Last listened').small().muted(),
                const SizedBox(height:5),
                Text(widget.listenedAt!.toLocal().toString()).semiBold(),
              ],
