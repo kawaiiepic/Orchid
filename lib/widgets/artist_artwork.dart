@@ -48,7 +48,7 @@ class ArtistArtwork extends StatelessWidget {
       ),
     ),
     child: Center(
-      child: Icon(LucideIcons.userRound,
+      child: Icon(LucideIcons.music2,
           color: const Color(0xFFE0CBFF), size: size * 0.38),
     ),
   );
