@@ -29,7 +29,6 @@ class DailyMixesScreen extends StatefulWidget {
 
 class _DailyMixesScreenState extends State<DailyMixesScreen> {
   List<List<SavedSong>> _serverMixes = [];
-  List<SavedSong> _recentHistory = [];
   int? _selectedMix;
   bool _loading = false;
   String? _error;
@@ -44,10 +43,9 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
     _refresh();
   }
 
+  // Don't fabricate local mixes when the D1 endpoint is unavailable.
   List<SavedSong> _mix(int i) =>
-      i < _serverMixes.length
-          ? _serverMixes[i]
-          : i == 2 ? <SavedSong>[] : widget.library.dailyMix(i, _recentHistory);
+      i < _serverMixes.length ? _serverMixes[i] : <SavedSong>[];
 
   Future<void> _loadAppleArtwork(List<List<SavedSong>> mixes) async {
     final generation = ++_artworkGeneration;
