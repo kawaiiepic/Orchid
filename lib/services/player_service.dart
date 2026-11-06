@@ -175,12 +175,16 @@ class PlayerService extends ChangeNotifier {
       // Let the audio stream finish delivering its last completion event.
       // The guard prevents duplicate advances while the next source resolves.
       if (_disposed || resolving ||
-          player.processingState != ProcessingState.completed) return;
+          player.processingState != ProcessingState.completed) {
+        return;
+      }
       if (!hasQueuedNext && keepPlaying) {
         await _appendRecommendations();
       }
       if (_disposed || !hasQueuedNext || resolving ||
-          player.processingState != ProcessingState.completed) return;
+          player.processingState != ProcessingState.completed) {
+        return;
+      }
       await playNext();
     } catch (e) {
       debugPrint('[Orchid] Unable to auto-play next queue track: $e');
@@ -207,7 +211,9 @@ class PlayerService extends ChangeNotifier {
       final uri = Uri.tryParse(raw.startsWith('www.') ? 'https://$raw' : raw);
       final host = (uri?.host ?? '').toLowerCase();
       if (host.contains('youtube') || host == 'youtu.be' ||
-          host.contains('googlevideo')) return 'YouTube';
+          host.contains('googlevideo')) {
+        return 'YouTube';
+      }
       if (host.contains('spotify')) return 'Spotify';
       if (host.contains('apple.com') || host.contains('itunes')) return 'iTunes';
       return track.sourceName.isNotEmpty ? track.sourceName : 'Stream';
