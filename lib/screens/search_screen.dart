@@ -75,6 +75,8 @@ class _SearchScreenState extends State<SearchScreen> {
 
   void _onQueryChanged(String value) {
     _searchDebounce?.cancel();
+    // Invalidate in-flight results immediately, not after debounce expires.
+    ++_generation;
     if (value.trim().isEmpty) {
       _search();
     } else {
