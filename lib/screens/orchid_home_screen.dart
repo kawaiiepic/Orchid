@@ -43,6 +43,7 @@ class OrchidHomeScreen extends StatefulWidget {
 
 class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
   Map<String, dynamic>? _history;
+  List<List<SavedSong>> _homeMixes = [];
   bool _loading = false;
   String? _error;
   String? _homeAccount;
@@ -73,6 +74,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     _homeAccount = user;
     _requestId++;
     _history = null;
+    _homeMixes = [];
     _error = null;
     if (user != null) {
       _refresh();
@@ -94,6 +96,8 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
       final result = await widget.account.orchidHome();
       if (!mounted || requestId != _requestId) return;
       setState(() => _history = result);
+      // The home cards show the same D1-generated mixes as the detail page.
+      _loadHomeMixes(requestId);
     } catch (error) {
       if (!mounted || requestId != _requestId) return;
       setState(() => _error = error.toString().replaceFirst('Exception: ', ''));
@@ -101,6 +105,28 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
       if (mounted && requestId == _requestId) {
         setState(() => _loading = false);
       }
+    }
+  }
+
+  Future<void> _loadHomeMixes(int requestId) async {
+    try {
+      final response=await widget.account.dailyMixes();
+      if(!mounted||requestId!=_requestId)return;
+      final raw=response['mixes'];
+      if(raw is! List)return;
+      setState(() => _homeMixes=raw.map((mix) {
+        if(mix is! Map||mix['tracks'] is! List)return <SavedSong>[];
+        return (mix['tracks'] as List).whereType<Map>().map((song) =>
+          SavedSong(
+            (song['title']??'').toString(),
+            (song['artist']??'').toString(),
+            album:song['album']?.toString(),
+            artwork:song['image']?.toString(),
+          ),
+        ).where((song)=>song.title.isNotEmpty&&song.artist.isNotEmpty).toList();
+      }).toList());
+    }catch(error){
+      debugPrint('[Orchid Home] Daily Mix preview unavailable: $error');
     }
   }
 
@@ -135,17 +161,6 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     }).toList();
   }
 
-  List<SavedSong> _lastfmMixPool() => [
-    for (final item in _uniqueRecent())
-      if ((item['artist'] ?? '').toString().isNotEmpty &&
-          (item['title'] ?? '').toString().isNotEmpty)
-        SavedSong(
-          item['title'].toString(),
-          item['artist'].toString(),
-          album: item['album']?.toString(),
-          artwork: item['image']?.toString(),
-        ),
-  ];
 
   Widget _pinnedPlaylists() => ListenableBuilder(
     listenable:widget.library,
@@ -227,7 +242,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
   Widget _dailyMixCards() => ListenableBuilder(
     listenable: widget.library,
     builder: (context, _) {
-      final source = _lastfmMixPool();
+      final source = _homeMixes;
       const titles = ['Favorites Mix', 'Similar Sounds', 'Discover'];
       const subtitles = ['Your comfort songs', 'Songs in your orbit', 'Something different'];
       return SingleChildScrollView(
@@ -245,11 +260,11 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Stack(children: [
-                      if (widget.library.dailyMix(i, source).isNotEmpty)
+                      if (i < source.length && source[i].isNotEmpty)
                         AppleCover(
-                          artist: widget.library.dailyMix(i, source).first.artist,
-                          name: widget.library.dailyMix(i, source).first.title,
-                          fallbackUrl: widget.library.dailyMix(i, source).first.artwork,
+                          artist: source[i].first.artist,
+                          name: source[i].first.title,
+                          fallbackUrl: source[i].first.artwork,
                           size: 144,
                           radius: 12,
                         )
