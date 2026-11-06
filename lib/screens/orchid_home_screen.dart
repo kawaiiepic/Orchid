@@ -23,6 +23,8 @@ class OrchidHomeScreen extends StatefulWidget {
   final VoidCallback openLibrary;
   final ValueChanged<int?> openDailyMixes;
   final VoidCallback openReplay;
+  final VoidCallback openRadio;
+  final VoidCallback openTopSongs;
   final VoidCallback openProfile;
 
   const OrchidHomeScreen({
@@ -36,6 +38,8 @@ class OrchidHomeScreen extends StatefulWidget {
     required this.openLibrary,
     required this.openDailyMixes,
     required this.openReplay,
+    required this.openRadio,
+    required this.openTopSongs,
     required this.openProfile,
   });
 
@@ -339,6 +343,27 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     ),
   );
 
+  Widget _personalCard(String title,String subtitle,IconData icon,
+      List<Color> colors,VoidCallback onTap) => _clickable(
+    onTap:onTap,
+    child:Container(
+      width:168,height:245,padding:const EdgeInsets.all(12),
+      decoration:OrchidStyle.panelDecoration(radius:18),
+      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Container(width:144,height:144,
+          decoration:BoxDecoration(borderRadius:BorderRadius.circular(12),
+            gradient:LinearGradient(begin:Alignment.topLeft,
+              end:Alignment.bottomRight,colors:colors)),
+          child:Center(child:Icon(icon,size:64,color:const Color(0xFFFFFFFF))),
+        ),
+        const SizedBox(height:10),
+        Text(title,maxLines:1,overflow:TextOverflow.ellipsis).semiBold(),
+        const SizedBox(height:4),
+        Text(subtitle,maxLines:2,overflow:TextOverflow.ellipsis).small().muted(),
+      ]),
+    ),
+  );
+
   String _count(dynamic value) {
     final number = value is num ? value : num.tryParse('$value') ?? 0;
     if (number >= 1000000) return '${(number / 1000000).toStringAsFixed(1)}m';
@@ -620,7 +645,20 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
               subtitle: 'A little more personal',
             ),
             const SizedBox(height:12),
-            Align(alignment:Alignment.centerLeft,child:_madeForYouCard()),
+            SingleChildScrollView(scrollDirection:Axis.horizontal,
+              child:Row(children:[
+                _madeForYouCard(),
+                const SizedBox(width:10),
+                _personalCard('All-Time Top Songs','Your most-played tracks',
+                  LucideIcons.trophy,
+                  const [Color(0xFFC48C31),Color(0xFF774227),Color(0xFF241722)],
+                  widget.openTopSongs),
+                const SizedBox(width:10),
+                _personalCard('Radio','Pick a vibe, play forever',
+                  LucideIcons.radio,
+                  const [Color(0xFF0E9E91),Color(0xFF265D83),Color(0xFF202244)],
+                  widget.openRadio),
+              ])),
             const SizedBox(height:28),
             const OrchidSectionHeader(
               title: 'Daily Mixes',
