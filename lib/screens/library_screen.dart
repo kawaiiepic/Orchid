@@ -1,4 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/addon.dart';
 import '../services/addon_service.dart';
