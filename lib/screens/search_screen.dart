@@ -113,14 +113,12 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void _songDetails(TrackResult track) {
-    Navigator.of(context).push(ShadcnPageRoute<void>(
-      builder: (_) => SongDetailScreen(
-        player:widget.player, addonService:widget.addonService,
-        addons:widget.addons, library:widget.library,
-        title:track.title, artist:track.artist,
-        album:track.album, artworkUrl:track.artworkUrl, track:track,
-      ),
-    ));
+    showSongDetailDrawer(context,
+      player:widget.player, addonService:widget.addonService,
+      addons:widget.addons, library:widget.library,
+      title:track.title, artist:track.artist,
+      album:track.album, artworkUrl:track.artworkUrl, track:track,
+    );
   }
 
   void _playPlaylist(MusicPlaylist playlist) {
