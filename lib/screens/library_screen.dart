@@ -185,7 +185,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
           icon: LucideIcons.heart),
         const SizedBox(height: 18),
         Row(children: [
-          const Expanded(child: Text('Your Playlists').large().semiBold()),
+          Expanded(child: const Text('Your Playlists').large().semiBold()),
         ]),
         const SizedBox(height: 8),
         Row(children: [
@@ -210,7 +210,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
           )),
         const SizedBox(height: 24),
         Row(children: [
-          const Expanded(child: Text('Daily Mixes').large().semiBold()),
+          Expanded(child: const Text('Daily Mixes').large().semiBold()),
           IconButton.ghost(
             onPressed: _loadingMixes ? null : _loadMixes,
             icon: const Icon(LucideIcons.refreshCw),
