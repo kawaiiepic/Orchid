@@ -31,9 +31,11 @@ class _SearchScreenState extends State<SearchScreen> {
   List<TrackResult> _results = [];
   bool _searching = false;
   String? _status;
+  int _searchGeneration = 0;
 
   @override
   void dispose() {
+    _searchGeneration++;
     _searchController.dispose();
     super.dispose();
   }
@@ -41,6 +43,7 @@ class _SearchScreenState extends State<SearchScreen> {
   Future<void> _search() async {
     final q = _searchController.text.trim();
     if (q.isEmpty) return;
+    final generation = ++_searchGeneration;
 
     setState(() {
       _searching = true;
@@ -48,13 +51,23 @@ class _SearchScreenState extends State<SearchScreen> {
       _results = [];
     });
 
-    final tracks = await widget.addonService.search(widget.addons, q);
-    if (!mounted) return;
-    setState(() {
-      _results = tracks;
-      _searching = false;
-      _status = tracks.isEmpty ? 'No results' : '${tracks.length} track(s)';
-    });
+    try {
+      final tracks = await widget.addonService.search(widget.addons, q);
+      if (!mounted || generation != _searchGeneration) return;
+      setState(() {
+        _results = tracks;
+        _searching = false;
+        _status = tracks.isEmpty
+            ? 'No matches. Try a different artist or song title.'
+            : '${tracks.length} results · best matches first';
+      });
+    } catch (e) {
+      if (!mounted || generation != _searchGeneration) return;
+      setState(() {
+        _searching = false;
+        _status = 'Search failed. Please try again.';
+      });
+    }
   }
 
   void _openSong(TrackResult track) {
