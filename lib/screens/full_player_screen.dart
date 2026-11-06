@@ -55,7 +55,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
     _canvasTrackKey = key;
     final request = ++_canvasRequest;
     final needsApple = track != null &&
-        track.album?.trim().isNotEmpty == true &&
+        track.title.trim().isNotEmpty &&
         track.artist.trim().isNotEmpty;
 
     setState(() {
@@ -77,7 +77,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
     if (needsApple && track != null) {
       AnimatedArtworkService.instance.fetch(
         artist: track.artist,
-        album: track.album!,
+        album: track.album,
         title: track.title,
       ).then((result) {
         if (!mounted || request != _canvasRequest) return;
