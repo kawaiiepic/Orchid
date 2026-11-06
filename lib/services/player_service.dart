@@ -96,40 +96,56 @@ class PlayerService extends ChangeNotifier {
     error = null;
     lyrics = null;
     lyricsLoading = true;
-    lyricsGeneration++;
+    final generation = ++lyricsGeneration;
     current = track;
     notifyListeners();
 
     try {
-      final stream = await addonService.resolvePlayback(track, _addons);
+      final stream = await addonService
+          .resolvePlayback(track, _addons)
+          .timeout(const Duration(seconds: 30));
+      if (generation != lyricsGeneration) return;
       playingVia = stream.via ?? stream.quality;
-      await player.setUrl(stream.url);
+      await player.setUrl(stream.url).timeout(const Duration(seconds: 20));
+      if (generation != lyricsGeneration) return;
       await player.setVolume(volume);
-      unawaited(player.play());
+      unawaited(player.play().catchError((Object e) {
+        debugPrint('[Orchid] Audio playback failed: $e');
+      }));
       resolving = false;
       notifyListeners();
 
-      try {
-        lyrics = await lyricsService.fetchFor(track);
-        if (LyricsAppearance.instance.skipUnsynced &&
-            (lyrics == null || !lyrics!.hasSync) &&
-            hasNext) {
-          debugPrint('[Orchid] skipUnsynced: advancing');
-          lyricsLoading = false;
-          notifyListeners();
-          await playNext();
-          return;
-        }
-      } finally {
+      // Lyrics are optional metadata. Never block playback or the Play button
+      // on a third-party lyrics provider.
+      unawaited(_loadLyricsFor(track, generation));
+    } catch (e) {
+      if (generation == lyricsGeneration) {
+        resolving = false;
         lyricsLoading = false;
+        error = 'Playback failed: $e';
         notifyListeners();
       }
-    } catch (e) {
-      resolving = false;
-      lyricsLoading = false;
-      error = '$e';
-      notifyListeners();
       rethrow;
+    }
+  }
+
+  Future<void> _loadLyricsFor(TrackResult track, int generation) async {
+    try {
+      final result = await lyricsService.fetchFor(track)
+          .timeout(const Duration(seconds: 12));
+      if (generation != lyricsGeneration) return;
+      lyrics = result;
+      lyricsLoading = false;
+      notifyListeners();
+      if (LyricsAppearance.instance.skipUnsynced &&
+          (result == null || !result.hasSync) && hasNext) {
+        await playNext();
+      }
+    } catch (e) {
+      if (generation != lyricsGeneration) return;
+      debugPrint('[Orchid] Lyrics unavailable: $e');
+      lyricsLoading = false;
+      notifyListeners();
     }
   }
 
