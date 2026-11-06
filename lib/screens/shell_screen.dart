@@ -135,7 +135,7 @@ class _ShellScreenState extends State<ShellScreen>{
         )),
       ]),
     ),
-  ));
+  );
  }
  NavigationItem _button(String title,IconData icon,int index)=>NavigationItem(
   key:ValueKey(index),style:const ButtonStyle.muted(density:ButtonDensity.icon),
