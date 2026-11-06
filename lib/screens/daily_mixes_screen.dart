@@ -34,6 +34,7 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
   int? _selectedMix;
   bool _loading = false;
   String? _error;
+  String? _mixError;
 
   @override
   void initState() {
@@ -54,7 +55,7 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
       });
       return;
     }
-    setState(() { _loading = true; _error = null; });
+    setState(() { _loading = true; _error = null; _mixError = null; });
     try {
       final home = await widget.account.lastfmHome();
       final recent = home['recent'];
@@ -99,6 +100,9 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
         }
       } catch (e) {
         debugPrint('[Orchid] Backend Daily Mixes unavailable: $e');
+        if (mounted) {
+          setState(() => _mixError = 'Could not generate Daily Mixes: $e');
+        }
       }
     } catch (e) {
       if (mounted) setState(() => _error = 'Could not refresh Last.fm history: $e');
@@ -150,10 +154,16 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
           ],
           if (_loading && _mix(index).isEmpty)
             const Text('Preparing your mix…').muted(),
-          if (!_loading && _mix(index).isEmpty)
-            Text(index == 2
-                ? 'No unheard recommendations found yet. Try again after more listening history is available.'
-                : 'No songs available in this mix yet.').muted(),
+          if (!_loading && _mix(index).isEmpty) ...[
+            Text(_mixError ?? (index == 2
+                ? 'No unheard recommendations matched this time. Try refreshing to discover different songs.'
+                : 'No songs available in this mix yet.')).muted(),
+            const SizedBox(height:12),
+            OutlineButton(
+              onPressed: _refresh,
+              child:const Text('Retry'),
+            ),
+          ],
           ..._mix(index).map((song) => SongContextMenu(
             track: TrackResult(
               id: song.key, title: song.title, artist: song.artist,
@@ -180,6 +190,7 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
                   artist: song.artist,
                   name: song.title,
                   fallbackUrl: song.artwork,
+                  album: song.album,
                   size: 44,
                 ),
                 const SizedBox(width: 12),
@@ -231,9 +242,11 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
             const SizedBox(height: 16),
             if (_loading)
               const Text('Preparing your mixes…').small().muted(),
-            if (_error != null) ...[
+            if (_error != null || _mixError != null) ...[
               const SizedBox(height: 10),
-              Text(_error!).small().muted(),
+              Text((_error ?? _mixError)!).small().muted(),
+              const SizedBox(height:10),
+              OutlineButton(onPressed:_refresh, child:const Text('Retry')),
             ],
             const SizedBox(height: 18),
             for (var i = 0; i < titles.length; i++)
@@ -250,6 +263,7 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
                           artist: _mix(i).first.artist,
                           name: _mix(i).first.title,
                           fallbackUrl: _mix(i).first.artwork,
+                          album: _mix(i).first.album,
                           size: 48,
                         )
                       else const Icon(LucideIcons.sparkles, size: 24),
