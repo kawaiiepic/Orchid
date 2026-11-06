@@ -6,6 +6,7 @@ void showContentDrawer(
   BuildContext context, {
   required WidgetBuilder builder,
   double preferredWidth = 600,
+  bool fullWidth = false,
 }) {
   showOverlay(
     context,
@@ -16,7 +17,8 @@ void showContentDrawer(
       draggable: true,
     ),
     builder: (sheetContext) => SizedBox(
-      width: (MediaQuery.sizeOf(sheetContext).width * 0.94).clamp(0.0, 1100.0),
+      width: fullWidth ? MediaQuery.sizeOf(sheetContext).width
+          : (MediaQuery.sizeOf(sheetContext).width * 0.94).clamp(0.0, 1100.0),
       height: MediaQuery.sizeOf(sheetContext).height,
       child: builder(sheetContext),
     ),
