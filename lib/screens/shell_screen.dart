@@ -190,7 +190,7 @@ class _ShellScreenState extends State<ShellScreen>{
   final page=(selected as ValueKey<int>?)?.value??0;
   return Scaffold(
    footers:[
-    MiniPlayerBar(player:_player),
+    MiniPlayerBar(player:_player,library:_library),
     const Divider(),
     if(!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)
      ios.CupertinoTabBar(
