@@ -25,7 +25,6 @@ class _CanvasVideoState extends State<CanvasVideo> {
   late final mk.Player _video;
   late final VideoController _controller;
   StreamSubscription<String>? _errorSubscription;
-  StreamSubscription<bool>? _playingSubscription;
   bool _ready = false;
   bool _failed = false;
   int _generation = 0;
@@ -54,11 +53,6 @@ class _CanvasVideoState extends State<CanvasVideo> {
       _reportFailure();
       unawaited(_video.stop());
     });
-    _playingSubscription = _video.stream.playing.listen((playing) {
-      if (playing && mounted && !_failed && !_ready) {
-        setState(() => _ready = true);
-      }
-    });
     _start();
   }
 
@@ -82,8 +76,13 @@ class _CanvasVideoState extends State<CanvasVideo> {
         'User-Agent': 'Mozilla/5.0',
         'Accept': '*/*',
       }));
-      // Do not treat open() as proof that HLS segments were loaded.
-      // _ready is only set when MPV actually reports playback.
+      if (!mounted || generation != _generation) return;
+      // MPV can report "playing" while the texture still contains a black
+      // frame. Wait for media_kit_video's actual first-render notification.
+      await _controller.waitUntilFirstFrameRendered
+          .timeout(const Duration(seconds: 15));
+      if (!mounted || generation != _generation || _failed) return;
+      setState(() => _ready = true);
     } catch (e) {
       debugPrint('[Orchid Artwork] Video could not open: $e');
       if (mounted && generation == _generation) {
@@ -108,34 +107,46 @@ class _CanvasVideoState extends State<CanvasVideo> {
   void dispose() {
     ++_generation;
     _errorSubscription?.cancel();
-    _playingSubscription?.cancel();
     unawaited(_video.dispose());
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_failed || !_ready) {
-      if (widget.fallbackArtworkUrl != null &&
-          widget.fallbackArtworkUrl!.startsWith('https://')) {
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: CachedNetworkImage(
-            imageUrl: widget.fallbackArtworkUrl!,
-            fit: BoxFit.cover,
-            errorWidget: (_, __, ___) =>
-                const Center(child: Icon(LucideIcons.music2, size: 52)),
-          ),
+    Widget cover() {
+      final url = widget.fallbackArtworkUrl;
+      if (url != null && url.startsWith('https://')) {
+        return CachedNetworkImage(
+          imageUrl: url,
+          fit: BoxFit.cover,
+          errorWidget: (_, __, ___) =>
+              const Center(child: Icon(LucideIcons.music2, size: 52)),
         );
       }
       return const Center(child: Icon(LucideIcons.music2, size: 52));
     }
+    // Keep the video mounted from the first build so its first frame can
+    // actually render, but paint the static artwork above it until then.
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
-      child: Video(
-        controller: _controller,
-        controls: NoVideoControls,
-        fit: BoxFit.cover,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (!_failed)
+            Video(
+              controller: _controller,
+              controls: NoVideoControls,
+              fit: BoxFit.cover,
+            ),
+          IgnorePointer(
+            child: AnimatedOpacity(
+              opacity: _ready && !_failed ? 0 : 1,
+              duration: const Duration(milliseconds: 350),
+              curve: Curves.easeInOut,
+              child: cover(),
+            ),
+          ),
+        ],
       ),
     );
   }
