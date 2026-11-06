@@ -9,6 +9,7 @@ import '../widgets/mini_player_bar.dart';
 import '../widgets/apple_cover.dart';
 import 'song_detail_screen.dart';
 import '../widgets/song_context_menu.dart';
+import '../widgets/content_drawer.dart';
 
 class DailyMixesScreen extends StatefulWidget {
   final int? initialMixIndex;
@@ -145,13 +146,7 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
         footers: [MiniPlayerBar(player: widget.player, library: widget.library)],
         child: ListView(padding: const EdgeInsets.all(24), children: [
           Align(alignment: Alignment.centerLeft, child: IconButton.ghost(
-            onPressed: () {
-              if (widget.initialMixIndex != null) {
-                Navigator.of(context).pop();
-              } else {
-                setState(() => _selectedMix = null);
-              }
-            },
+            onPressed: () => setState(() => _selectedMix = null),
             icon: const Icon(LucideIcons.arrowLeft),
           )),
           const SizedBox(height: 16),
@@ -245,7 +240,7 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
           padding: const EdgeInsets.all(24),
           children: [
             Align(alignment: Alignment.centerLeft, child: IconButton.ghost(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => dismissContentDrawer(context),
               icon: const Icon(LucideIcons.arrowLeft),
             )),
             const SizedBox(height: 16),
