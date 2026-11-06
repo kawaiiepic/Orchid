@@ -144,7 +144,7 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
 
  @override
  Widget build(BuildContext context) => Scaffold(
-   footers:[MiniPlayerBar(player:widget.player)],
+   footers:[MiniPlayerBar(player:widget.player,library:widget.library)],
    child:ListView(
      padding:const EdgeInsets.fromLTRB(20,12,20,28),
      children:[
