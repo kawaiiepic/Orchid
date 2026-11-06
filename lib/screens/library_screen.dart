@@ -93,7 +93,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   child: const Text('Play all'),
                 ),
               const SizedBox(height: 10),
-              if (playlist != null)
+              if (playlist != null) ...[
+                OutlineButton(
+                  onPressed: () => widget.library.setPlaylistPinned(
+                    playlist, !playlist.pinned),
+                  child: Text(playlist.pinned
+                    ? 'Unpin from Home' : 'Pin to Home'),
+                ),
+                const SizedBox(height: 8),
                 OutlineButton(
                   onPressed: () async {
                     await widget.library.deletePlaylist(playlist);
@@ -101,6 +108,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   },
                   child: const Text('Delete playlist'),
                 ),
+              ],
               const SizedBox(height: 14),
               if (songs.isEmpty)
                 const Text('No songs yet. Explore music and add your favorites.').muted()
@@ -122,7 +130,20 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     child: Row(children: [
                     Expanded(child: Button(
                       style: const ButtonStyle.ghost(),
-                      onPressed: () => _openSong(song),
+                      onPressed: () {
+                        widget.player.setAddons(widget.addons);
+                        widget.player.playTrack(TrackResult(
+                          id: song.key,
+                          title: song.title,
+                          artist: song.artist,
+                          album: song.album,
+                          artworkUrl: song.artwork,
+                          sourceId: 'orchid-library',
+                          sourceName: 'Library',
+                        )).catchError((Object e) {
+                          debugPrint('[Orchid Library] Track playback failed: $e');
+                        });
+                      },
                       child: Row(children: [
                         const Icon(LucideIcons.music2, size: 18),
                         const SizedBox(width: 12),
@@ -135,6 +156,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         )),
                       ]),
                     )),
+                    IconButton.ghost(
+                      onPressed: () => _openSong(song),
+                      icon: const Icon(LucideIcons.info, size: 18),
+                    ),
                     if (playlist != null) IconButton.ghost(
                       onPressed: () => widget.library.removeFromPlaylist(playlist, song),
                       icon: const Icon(LucideIcons.x, size: 18),
