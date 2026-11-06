@@ -343,6 +343,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 6),
                 _builtInRow(
+                  'Apple Music Animated Artwork',
+                  'Public API · portrait/square HLS covers in fullscreen player',
+                ),
+                const SizedBox(height: 6),
+                _builtInRow(
                   'LRCLIB',
                   'Synced LRC fallback when Spicy has nothing',
                 ),
