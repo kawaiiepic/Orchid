@@ -1,4 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:file_picker/file_picker.dart';
 import '../services/orchid_account.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -14,6 +15,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
  @override void initState(){super.initState();widget.account.addListener(_changed);}
  void _changed(){if(mounted)setState((){});}
  @override void dispose(){widget.account.removeListener(_changed);email.dispose();password.dispose();username.dispose();super.dispose();}
+ Future<void> _chooseAvatar() async {
+  final result=await FilePicker.platform.pickFiles(
+    type:FileType.custom,
+    allowedExtensions:['png','jpg','jpeg','gif','webp'],
+    withData:true,
+  );
+  if(result==null||result.files.isEmpty)return;
+  final file=result.files.single;
+  final bytes=file.bytes;
+  if(bytes==null) {
+    if(mounted)setState(()=>error='Could not read the selected image.');
+    return;
+  }
+  if(bytes.lengthInBytes>5*1024*1024) {
+    if(mounted)setState(()=>error='Avatar must be smaller than 5 MB.');
+    return;
+  }
+  final ext=(file.extension??'').toLowerCase();
+  final type=switch(ext){
+    'png'=>'image/png',
+    'jpg'||'jpeg'=>'image/jpeg',
+    'gif'=>'image/gif',
+    'webp'=>'image/webp',
+    _=>'',
+  };
+  if(type.isEmpty)return;
+  await _run(()=>widget.account.uploadAccountAvatar(bytes,type));
+ }
  Future<void> _run(Future<void> Function() action) async{
   setState((){busy=true;error=null;});
   try{await action();}catch(e){if(mounted)setState(()=>error=e.toString());}
@@ -48,6 +77,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
    ]else...[
     Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(
      crossAxisAlignment:CrossAxisAlignment.start,children:[
+      Row(children:[
+       ClipOval(child:SizedBox(width:64,height:64,child:
+        a.avatarUrl==null
+          ? Container(color:const Color(0xFF69468F),
+              child:const Icon(LucideIcons.user,size:30))
+          : Image.network(a.avatarUrl!,fit:BoxFit.cover,
+              errorBuilder:(_,__,___)=>const Icon(LucideIcons.user,size:30)),
+       )),
+       const SizedBox(width:14),
+       Expanded(child:Column(
+        crossAxisAlignment:CrossAxisAlignment.start,children:[
+          const Text('Account avatar').semiBold(),
+          const Text('Shared across Petal and Orchid').small().muted(),
+          const SizedBox(height:8),
+          Wrap(spacing:8,runSpacing:8,children:[
+           OutlineButton(onPressed:busy?null:_chooseAvatar,
+             child:const Text('Change avatar')),
+           if(a.avatarUrl!=null)
+             GhostButton(
+               onPressed:busy?null:()=>_run(a.removeAccountAvatar),
+               child:const Text('Remove')),
+          ]),
+        ],
+       )),
+      ]),
+      const SizedBox(height:16),
       Text(a.username??'Account').large().semiBold(),
       Text(a.email??'').muted(),
       const SizedBox(height:12),
