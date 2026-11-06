@@ -30,7 +30,7 @@ class OrchidHomeScreen extends StatelessWidget {
        child:Text(current==null?'Explore music':player.player.playing?'Pause':'Resume')),
      ]))),
     const SizedBox(height:24),
-    Row(children:[const Expanded(child:Text('Recently played').large().semiBold()),
+    Row(children:[Expanded(child:const Text('Recently played').large().semiBold()),
      GhostButton(onPressed:openExplore,child:const Text('Explore'))]),
     const SizedBox(height:10),
     if(recent.isEmpty)const Text('Your listening history will appear here.').muted()
