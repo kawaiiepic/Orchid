@@ -1,5 +1,4 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import 'package:flutter/foundation.dart';
 
 import '../models/addon.dart';
 import '../services/addon_service.dart';
@@ -31,74 +30,10 @@ class LibraryScreen extends StatefulWidget {
 
 class _LibraryScreenState extends State<LibraryScreen> {
   final _name = TextEditingController();
-  List<SavedSong> _lastfm = [];
-  List<List<SavedSong>> _serverMixes = [];
-  bool _loadingMixes = false;
-  String? _mixError;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadMixes();
-  }
-
   @override
   void dispose() {
     _name.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadMixes() async {
-    if (!widget.account.lastfmConnected) return;
-    setState(() { _loadingMixes = true; _mixError = null; });
-    try {
-      final data = await widget.account.lastfmHome();
-      final raw = data['recent'];
-      if (!mounted) return;
-      final result = <SavedSong>[];
-      if (raw is List) {
-        for (final item in raw) {
-          if (item is! Map) continue;
-          final title = (item['title'] ?? '').toString();
-          final artist = (item['artist'] ?? '').toString();
-          if (title.isEmpty || artist.isEmpty) continue;
-          result.add(SavedSong(title, artist,
-            album: item['album']?.toString(), artwork: item['image']?.toString()));
-        }
-      }
-      setState(() => _lastfm = result);
-      // The backend returns recommendations, including new related tracks.
-      // Keep local mixes available when its migration has not been deployed.
-      try {
-        final server = await widget.account.dailyMixes();
-        if (!mounted) return;
-        final rawMixes = server['mixes'];
-        if (rawMixes is List) {
-          final parsed = <List<SavedSong>>[];
-          for (final mix in rawMixes) {
-            if (mix is! Map || mix['tracks'] is! List) {
-              parsed.add([]);
-              continue;
-            }
-            parsed.add((mix['tracks'] as List).whereType<Map>().map((song) =>
-              SavedSong(
-                (song['title'] ?? '').toString(),
-                (song['artist'] ?? '').toString(),
-                album: song['album']?.toString(),
-                artwork: song['image']?.toString(),
-              )).where((song) => song.title.isNotEmpty &&
-                  song.artist.isNotEmpty).toList());
-          }
-          setState(() => _serverMixes = parsed);
-        }
-      } catch (e) {
-        debugPrint('[Orchid] Using local mixes until backend is available: $e');
-      }
-    } catch (e) {
-      if (mounted) setState(() => _mixError = 'Last.fm mixes unavailable: $e');
-    } finally {
-      if (mounted) setState(() => _loadingMixes = false);
-    }
   }
 
   void _openSong(SavedSong song) {
@@ -264,49 +199,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
             p.name, '${p.songs.length} songs',
             () => _openCollection(p.name, () => p.songs, playlist: p),
           )),
-        const SizedBox(height: 24),
-        Row(children: [
-          Expanded(child: const Text('Daily Mixes').large().semiBold()),
-          IconButton.ghost(
-            onPressed: _loadingMixes ? null : _loadMixes,
-            icon: const Icon(LucideIcons.refreshCw),
-          ),
-        ]),
-        const SizedBox(height: 4),
-        const Text('Refreshed daily from your favorites and recent listening.').small().muted(),
-        if (_mixError != null)
-          Text(_mixError!).small().muted(),
-        const SizedBox(height: 8),
-        for (var i = 0; i < 3; i++)
-          Builder(builder: (context) {
-            final mixIndex = i;
-            final songs = _mixSongs(mixIndex);
-            final titles = ['Favorites Mix', 'Similar Sounds', 'Discover'];
-            return _collectionTile(
-              titles[i],
-              _loadingMixes ? 'Updating…' : '${songs.length} songs · changes daily',
-              () => _openCollection(titles[mixIndex],
-                () => _mixSongs(mixIndex)),
-              icon: LucideIcons.sparkles,
-            );
-          }),
-        if (widget.library.favorites.isEmpty &&
-            widget.library.recentlyPlayed.isEmpty && _lastfm.isEmpty) ...[
-          const SizedBox(height: 8),
-          const Text('Play or favorite some tracks to build your mixes. Connect Last.fm for more listening history.').muted(),
-          const SizedBox(height: 12),
-          OutlineButton(onPressed: widget.openExplore, child: const Text('Explore songs')),
-        ],
       ],
     ),
   );
-
-  List<SavedSong> _mixSongs(int index) {
-    if (index < _serverMixes.length && _serverMixes[index].isNotEmpty) {
-      return _serverMixes[index];
-    }
-    return widget.library.dailyMix(index, _lastfm);
-  }
 
   Future<void> _createPlaylist() async {
     final value = _name.text.trim();
