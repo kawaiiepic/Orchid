@@ -3,6 +3,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import '../models/addon.dart';
 import '../services/player_service.dart';
+import 'track_duration.dart';
 
 const Symbol _queueDrawerAnchor = #orchidQueueDrawer;
 
@@ -228,6 +229,10 @@ class _TrackTile extends StatelessWidget {
                 ],
               ),
             ),
+            if(trackDurationLabel(track.duration)!=null) ...[
+              Text(trackDurationLabel(track.duration)!).xSmall().muted(),
+              const SizedBox(width:8),
+            ],
             if (highlighted)
               Icon(LucideIcons.audioLines, size: 16, color: scheme.primary),
           ],
