@@ -111,6 +111,85 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     return raw.whereType<Map>().map((v) => Map<String, dynamic>.from(v)).toList();
   }
 
+  /// Last.fm may report the same song repeatedly. Keep the most recent
+  /// occurrence while preserving listening-order and now-playing metadata.
+  List<Map<String, dynamic>> _uniqueRecent() {
+    final seen = <String>{};
+    return _items('recent').where((track) {
+      String norm(Object? value) => (value ?? '').toString()
+          .toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), ' ').trim();
+      final key = '${norm(track['artist'])}|${norm(track['title'])}';
+      return key != '|' && seen.add(key);
+    }).toList();
+  }
+
+  List<SavedSong> _lastfmMixPool() => [
+    for (final item in _uniqueRecent())
+      if ((item['artist'] ?? '').toString().isNotEmpty &&
+          (item['title'] ?? '').toString().isNotEmpty)
+        SavedSong(
+          item['title'].toString(),
+          item['artist'].toString(),
+          album: item['album']?.toString(),
+          artwork: item['image']?.toString(),
+        ),
+  ];
+
+  Widget _dailyMixCards() => ListenableBuilder(
+    listenable: widget.library,
+    builder: (context, _) {
+      final source = _lastfmMixPool();
+      const titles = ['Favorites Mix', 'Similar Sounds', 'Discover'];
+      const subtitles = ['Your comfort songs', 'Songs in your orbit', 'Something different'];
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(children: [
+          for (var i = 0; i < titles.length; i++) ...[
+            _clickable(
+              onTap: widget.openDailyMixes,
+              child: Container(
+                width: 168,
+                height: 245,
+                padding: const EdgeInsets.all(12),
+                decoration: OrchidStyle.panelDecoration(radius: 18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Stack(children: [
+                      _art(widget.library.dailyMix(i, source).isNotEmpty
+                          ? widget.library.dailyMix(i, source).first.artwork
+                          : null, size: 144),
+                      Positioned(
+                        bottom: 8, right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: OrchidStyle.panel,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(LucideIcons.sparkles,
+                            size: 16, color: OrchidStyle.lilac),
+                        ),
+                      ),
+                    ]),
+                    const SizedBox(height: 10),
+                    Text(titles[i], maxLines: 1,
+                      overflow: TextOverflow.ellipsis).semiBold(),
+                    const SizedBox(height: 4),
+                    Text(subtitles[i], maxLines: 1,
+                      overflow: TextOverflow.ellipsis).small().muted(),
+                    const Spacer(),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+          ],
+        ]),
+      );
+    },
+  );
+
   String _count(dynamic value) {
     final number = value is num ? value : num.tryParse('$value') ?? 0;
     if (number >= 1000000) return '${(number / 1000000).toStringAsFixed(1)}m';
@@ -365,14 +444,17 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 28),
+            const OrchidSectionHeader(
+              title: 'Daily Mixes',
+              subtitle: 'Fresh rotations for your listening mood',
+            ),
+            _dailyMixCards(),
+            const SizedBox(height: 28),
             OrchidSectionHeader(
               title: 'Your listening',
               subtitle: 'A little portrait of your music taste',
-              trailing: linked ? GhostButton(
-                onPressed: _loading ? null : _refresh,
-                child: Text(_loading ? 'Loading…' : 'Refresh'),
-              ) : null,
+
             ),
             const SizedBox(height: 10),
             if (!linked)
@@ -418,10 +500,10 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                 const SizedBox(height: 24),
                 const OrchidSectionHeader(title: 'Recently played'),
                 const SizedBox(height: 10),
-                if (_items('recent').isEmpty)
+                if (_uniqueRecent().isEmpty)
                   const Text('No Last.fm listening history yet.').muted()
                 else
-                  ..._items('recent').map(_recentRow),
+                  ..._uniqueRecent().map(_recentRow),
                 const SizedBox(height: 24),
                 const OrchidSectionHeader(title: 'Artists on repeat'),
                 const SizedBox(height: 5),
