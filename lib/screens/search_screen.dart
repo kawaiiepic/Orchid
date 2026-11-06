@@ -97,47 +97,71 @@ class _SearchScreenState extends State<SearchScreen> {
       return;
     }
     setState(() { _searching=true; _status='Searching…'; });
-    Future<List<T>> safe<T>(Future<List<T>> Function() load) async {
-      try { return await load(); }
-      catch(e) {
-        debugPrint('[Orchid Search] Search provider unavailable: $e');
-        return <T>[];
+    try {
+      final data=await widget.account.searchAppleCatalog(query);
+      if(!mounted || generation!=_generation)return;
+      List<Map<String,dynamic>> rows(String key) {
+        final value=data[key];
+        if(value is! List)return [];
+        return value.whereType<Map>()
+            .map((item)=>Map<String,dynamic>.from(item)).toList();
       }
+      final seen=<String>{};
+      final tracks=<TrackResult>[];
+      for(final item in rows('tracks')) {
+        final title=(item['title']??'').toString();
+        final artist=(item['artist']??'').toString();
+        if(title.isEmpty||artist.isEmpty)continue;
+        final album=item['album']?.toString();
+        if(!seen.add('${_norm(artist)}|${_norm(title)}|${_norm(album??'')}'))continue;
+        tracks.add(TrackResult(
+          id:item['id']?.toString()??'',
+          title:title,artist:artist,album:album,
+          artworkUrl:item['image']?.toString(),
+          duration:item['duration'] is num?(item['duration'] as num).toInt():null,
+          previewUrl:item['previewUrl']?.toString(),
+          sourceId:'apple-music',sourceName:'Apple Music',
+        ));
+      }
+      final albums=<MusicAlbum>[];
+      for(final item in rows('albums')) {
+        final id=int.tryParse(item['id']?.toString()??'');
+        if(id==null)continue;
+        albums.add(MusicAlbum(
+          id:id,title:item['title']?.toString()??'',
+          artist:item['artist']?.toString()??'',
+          artwork:item['image']?.toString(),
+          trackCount:item['trackCount'] is num
+              ?(item['trackCount'] as num).toInt():null,
+        ));
+      }
+      final artists=rows('artists').map((item)=>
+          item['name']?.toString()??'')
+          .where((name)=>name.isNotEmpty).take(1).toList();
+      final playlists=rows('playlists');
+      setState(() {
+        _tracks=_tracksOn?tracks:[];
+        _albums=_albumsOn?albums:[];
+        _artists=_artistsOn?artists:[];
+        _applePlaylists=_playlistsOn?playlists:[];
+        _applePlaylistsConfigured=true;
+        _searching=false;
+        final count=_tracks.length+_albums.length+_artists.length+
+            (_playlistsOn?_playlists.length+_applePlaylists.length:0);
+        _status=count==0?'No results found':'$count results';
+      });
+    }catch(error) {
+      debugPrint('[Orchid Search] Apple Music catalog error: $error');
+      if(!mounted||generation!=_generation)return;
+      setState(() {
+        _tracks=[];
+        _albums=[];
+        _artists=[];
+        _applePlaylists=[];
+        _searching=false;
+        _status='Music search unavailable: $error';
+      });
     }
-    final catalog = MusicCatalogService.instance;
-    final response = await Future.wait<dynamic>([
-      _tracksOn ? safe<TrackResult>(() => catalog.searchTracks(query))
-                : Future.value(<TrackResult>[]),
-      _albumsOn ? safe<MusicAlbum>(() => catalog.searchAlbums(query))
-                : Future.value(<MusicAlbum>[]),
-      _artistsOn ? safe<String>(() => catalog.searchArtists(query))
-                 : Future.value(<String>[]),
-      _playlistsOn && query.length >= 2
-          ? widget.account.searchApplePlaylists(query).catchError((Object e) {
-              debugPrint('[Orchid Search] Apple playlists unavailable: $e');
-              return <String, dynamic>{'playlists': <dynamic>[]};
-            })
-          : Future.value(<String, dynamic>{'playlists': <dynamic>[]}),
-    ]);
-    if (!mounted || generation != _generation) return;
-    setState(() {
-      final tracks = response[0] as List<TrackResult>;
-      final unique = <String>{};
-      _tracks = tracks.where((t) => unique.add('${_norm(t.artist)}|${_norm(t.title)}|${_norm(t.album ?? '')}')).toList();
-      _albums = response[1] as List<MusicAlbum>;
-      _artists = (response[2] as List<String>).take(1).toList();
-      final apple = Map<String, dynamic>.from(response[3] as Map);
-      _applePlaylistsConfigured = apple['configured'] == true;
-      _applePlaylists = (apple['playlists'] is List
-          ? (apple['playlists'] as List)
-              .whereType<Map>()
-              .map((p) => Map<String, dynamic>.from(p)).toList()
-          : <Map<String, dynamic>>[]);
-      _searching = false;
-      final count = _tracks.length + _albums.length + _artists.length +
-          (_playlistsOn ? _playlists.length + _applePlaylists.length : 0);
-      _status = count == 0 ? 'No results found' : '$count results';
-    });
   }
 
   void _choose(SearchCategory category) {
