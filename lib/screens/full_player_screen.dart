@@ -9,7 +9,6 @@ import '../services/lyrics_service.dart';
 import '../services/player_service.dart';
 import '../services/animated_artwork_service.dart';
 import '../widgets/canvas_video.dart';
-import '../widgets/content_drawer.dart';
 
 class FullPlayerScreen extends StatefulWidget {
   final PlayerService player;
