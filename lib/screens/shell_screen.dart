@@ -260,9 +260,25 @@ class _ShellScreenState extends State<ShellScreen>{
       openExplore:()=>setState(()=>selected=const ValueKey(1)),
       openProfile:_openProfile,
       openLibrary:()=>setState(()=>selected=const ValueKey(2)),
-      openAiDj:()=>Navigator.of(context).push(
-       ShadcnPageRoute<void>(
-        builder:(_)=>DrawerOverlay(child:AiDjScreen(account:_account)),
+      openAiDj:()=>showContentDrawer(
+       context,
+       builder:(sheetContext)=>Scaffold(
+        child:Column(children:[
+         Padding(
+          padding:const EdgeInsets.fromLTRB(16,12,16,2),
+          child:Row(children:[
+           const Icon(LucideIcons.bot,color:OrchidStyle.lilac),
+           const SizedBox(width:10),
+           const Text('AI DJ').large().semiBold(),
+           const Spacer(),
+           IconButton.ghost(
+            onPressed:()=>dismissContentDrawer(sheetContext),
+            icon:const Icon(LucideIcons.x),
+           ),
+          ]),
+         ),
+         Expanded(child:AiDjScreen(account:_account)),
+        ]),
        ),
       ),
       openRadio:()=>Navigator.of(context).push(
