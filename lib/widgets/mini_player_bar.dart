@@ -4,6 +4,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../screens/full_player_screen.dart';
 import '../services/player_service.dart';
 import 'orchid_style.dart';
+import 'queue_sheet.dart';
 
 class MiniPlayerBar extends StatelessWidget {
   final PlayerService player;
@@ -101,6 +102,13 @@ class MiniPlayerBar extends StatelessWidget {
               IconButton.ghost(
                 onPressed: player.hasNext ? () => player.playNext() : null,
                 icon: const Icon(LucideIcons.skipForward, size: 18),
+              ),
+              OverlayAnchor(
+                anchor: #orchidQueueDrawer,
+                child: IconButton.ghost(
+                  onPressed: () => showQueueSheet(context, player),
+                  icon: const Icon(LucideIcons.listMusic, size: 18),
+                ),
               ),
               const SizedBox(width: 8),
               const Icon(LucideIcons.volume2, size: 17),
