@@ -35,6 +35,8 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
   bool _loading = false;
   String? _error;
   String? _mixError;
+  final Map<String, String> _appleArtwork = {};
+  int _artworkGeneration = 0;
 
   @override
   void initState() {
@@ -48,6 +50,42 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
           ? _serverMixes[i]
           : i == 2 ? <SavedSong>[] : widget.library.dailyMix(i, _lastfmSongs);
 
+  Future<void> _loadAppleArtwork(List<List<SavedSong>> mixes) async {
+    final generation = ++_artworkGeneration;
+    final unique = <String, SavedSong>{};
+    for (final mix in mixes) {
+      for (final song in mix) {
+        unique.putIfAbsent(song.key, () => song);
+      }
+    }
+    final songs = unique.values.toList();
+    // Apple Music's authenticated catalog API is the preferred source.
+    // Request a few songs per batch to stay below Worker request limits.
+    for (var offset = 0; offset < songs.length; offset += 10) {
+      if (!mounted || generation != _artworkGeneration) return;
+      final batch = songs.skip(offset).take(10).toList();
+      try {
+        final artwork = await widget.account.appleArtworkBatch([
+          for (final song in batch)
+            {
+              'artist': song.artist,
+              'title': song.title,
+              'album': song.album ?? '',
+            },
+        ]);
+        if (!mounted || generation != _artworkGeneration) return;
+        setState(() {
+          for (var i = 0; i < batch.length; i++) {
+            final url = artwork[i];
+            if (url != null) _appleArtwork[batch[i].key] = url;
+          }
+        });
+      } catch (error) {
+        debugPrint('[Orchid Mix] Apple Music artwork batch failed: $error');
+      }
+    }
+  }
+
   Future<void> _refresh() async {
     if (!widget.account.lastfmConnected) {
       setState(() {
@@ -55,6 +93,8 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
       });
       return;
     }
+    ++_artworkGeneration;
+    _appleArtwork.clear();
     setState(() { _loading = true; _error = null; _mixError = null; });
     try {
       final home = await widget.account.lastfmHome();
@@ -97,6 +137,8 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
                 )).where((s) => s.title.isNotEmpty && s.artist.isNotEmpty)
                 .toList();
           }).toList());
+          // Populate covers progressively without delaying the mix list.
+          _loadAppleArtwork(_serverMixes);
         }
       } catch (e) {
         debugPrint('[Orchid] Backend Daily Mixes unavailable: $e');
@@ -191,6 +233,7 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
                   name: song.title,
                   fallbackUrl: song.artwork,
                   album: song.album,
+                  preferredUrl: _appleArtwork[song.key],
                   size: 44,
                 ),
                 const SizedBox(width: 12),
@@ -264,6 +307,7 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
                           name: _mix(i).first.title,
                           fallbackUrl: _mix(i).first.artwork,
                           album: _mix(i).first.album,
+                          preferredUrl: _appleArtwork[_mix(i).first.key],
                           size: 48,
                         )
                       else const Icon(LucideIcons.sparkles, size: 24),
