@@ -32,6 +32,7 @@ class _ShellScreenState extends State<ShellScreen>{
   _player.addListener(_trackChanged);
   _positionSubscription=_player.player.positionStream.listen(_positionChanged);
   LyricsAppearance.instance.load();
+  _account.addListener(_accountChanged);
   _account.restore();
   _loadAddons();
  }
@@ -42,6 +43,7 @@ class _ShellScreenState extends State<ShellScreen>{
    setState(()=>_addons=list);_player.setAddons(list);
   }catch(e){debugPrint('Error loading addons: $e');}
  }
+ void _accountChanged(){if(mounted)setState((){});}
  void _trackChanged(){
   if(_trackGeneration==_player.lyricsGeneration)return;
   _trackGeneration=_player.lyricsGeneration;
@@ -79,13 +81,19 @@ class _ShellScreenState extends State<ShellScreen>{
  }
  @override void dispose(){
   _positionSubscription?.cancel();_player.removeListener(_trackChanged);
-  _player.dispose();_account.dispose();super.dispose();
+  _player.dispose();_account.removeListener(_accountChanged);_account.dispose();super.dispose();
  }
  NavigationItem _button(String title,IconData icon,int index)=>NavigationItem(
   key:ValueKey(index),style:const ButtonStyle.muted(density:ButtonDensity.icon),
   selectedStyle:const ButtonStyle.fixed(density:ButtonDensity.icon),
   label:Text(title),child:Icon(icon));
  @override Widget build(BuildContext context){
+  if(_account.loading){
+   return const Scaffold(child:Center(child:Text('Checking your Petal session…')));
+  }
+  if(!_account.signedIn){
+   return Scaffold(child:ProfileScreen(account:_account));
+  }
   final page=(selected as ValueKey<int>?)?.value??0;
   final explore=SearchScreen(addonService:_addonService,player:_player,addons:_addons);
   final pages=<Widget>[
