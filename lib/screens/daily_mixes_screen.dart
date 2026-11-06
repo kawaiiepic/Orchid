@@ -12,6 +12,7 @@ import 'song_detail_screen.dart';
 import '../widgets/song_context_menu.dart';
 
 class DailyMixesScreen extends StatefulWidget {
+  final int? initialMixIndex;
   final OrchidAccount account;
   final MusicLibrary library;
   final PlayerService player;
@@ -19,7 +20,7 @@ class DailyMixesScreen extends StatefulWidget {
   final List<InstalledAddon> addons;
 
   const DailyMixesScreen({
-    super.key, required this.account, required this.library,
+    super.key, this.initialMixIndex, required this.account, required this.library,
     required this.player, required this.addonService, required this.addons,
   });
 
@@ -30,19 +31,21 @@ class DailyMixesScreen extends StatefulWidget {
 class _DailyMixesScreenState extends State<DailyMixesScreen> {
   List<List<SavedSong>> _serverMixes = [];
   List<SavedSong> _lastfmSongs = [];
+  int? _selectedMix;
   bool _loading = false;
   String? _error;
 
   @override
   void initState() {
     super.initState();
+    _selectedMix = widget.initialMixIndex;
     _refresh();
   }
 
   List<SavedSong> _mix(int i) =>
-      i < _serverMixes.length && _serverMixes[i].isNotEmpty
+      i < _serverMixes.length
           ? _serverMixes[i]
-          : widget.library.dailyMix(i, _lastfmSongs);
+          : i == 2 ? <SavedSong>[] : widget.library.dailyMix(i, _lastfmSongs);
 
   Future<void> _refresh() async {
     if (!widget.account.lastfmConnected) {
@@ -120,14 +123,19 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
     }
   }
 
-  void _openMix(int index) {
+  Widget _mixDetails(int index) {
     final titles = ['Favorites Mix', 'Similar Sounds', 'Discover'];
-    Navigator.of(context).push(ShadcnPageRoute<void>(
-      builder: (_) => Scaffold(
+    return Scaffold(
         footers: [MiniPlayerBar(player: widget.player)],
         child: ListView(padding: const EdgeInsets.all(24), children: [
           Align(alignment: Alignment.centerLeft, child: IconButton.ghost(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () {
+              if (widget.initialMixIndex != null) {
+                Navigator.of(context).pop();
+              } else {
+                setState(() => _selectedMix = null);
+              }
+            },
             icon: const Icon(LucideIcons.arrowLeft),
           )),
           const SizedBox(height: 16),
@@ -140,6 +148,12 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
             ),
             const SizedBox(height: 12),
           ],
+          if (_loading && _mix(index).isEmpty)
+            const Text('Preparing your mix…').muted(),
+          if (!_loading && _mix(index).isEmpty)
+            Text(index == 2
+                ? 'No unheard recommendations found yet. Try again after more listening history is available.'
+                : 'No songs available in this mix yet.').muted(),
           ..._mix(index).map((song) => SongContextMenu(
             track: TrackResult(
               id: song.key, title: song.title, artist: song.artist,
@@ -192,12 +206,12 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
             ),
           )),
         ]),
-      ),
-    ));
+      );
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_selectedMix != null) return _mixDetails(_selectedMix!);
     final titles = ['Favorites Mix', 'Similar Sounds', 'Discover'];
     return Scaffold(
       footers: [MiniPlayerBar(player: widget.player)],
@@ -227,11 +241,18 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 child: Button(
                   style: const ButtonStyle.ghost(),
-                  onPressed: () => _openMix(i),
+                  onPressed: () => setState(() => _selectedMix = i),
                   child: Padding(
                     padding: const EdgeInsets.all(12),
                     child: Row(children: [
-                      const Icon(LucideIcons.sparkles, size: 24),
+                      if (_mix(i).isNotEmpty)
+                        AppleCover(
+                          artist: _mix(i).first.artist,
+                          name: _mix(i).first.title,
+                          fallbackUrl: _mix(i).first.artwork,
+                          size: 48,
+                        )
+                      else const Icon(LucideIcons.sparkles, size: 24),
                       const SizedBox(width: 16),
                       Expanded(child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
