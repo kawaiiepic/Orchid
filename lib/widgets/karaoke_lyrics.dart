@@ -674,8 +674,11 @@ class _EmphasizedWord extends StatelessWidget {
             targetGlow = restGlow + (baseGlow - restGlow) * glowFalloff;
             if (st == _SylState.active && i == activeLetter) {
               gradient = -0.2 + 1.2 * math.sin(activeP * math.pi / 2);
-            } else if (st == _SylState.sung) gradient = 1;
-            else gradient = -0.2;
+            } else if (st == _SylState.sung) {
+              gradient = 1;
+            } else {
+              gradient = -0.2;
+            }
           } else {
             gradient = st == _SylState.sung ? 1.0 : -0.2;
           }
