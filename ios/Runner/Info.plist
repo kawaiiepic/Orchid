@@ -24,6 +24,10 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Orchid may access the camera if you choose to take a photo for your account profile picture.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Orchid may access your location while you use an optional feature that requires location access.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Orchid lets you choose a photo from your library to use as your account profile picture.</string>
 	<key>LSRequiresIPhoneOS</key>
