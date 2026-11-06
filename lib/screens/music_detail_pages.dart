@@ -21,11 +21,9 @@ void openArtistPage(BuildContext context, {
   required List<InstalledAddon> addons,
   required MusicLibrary library,
 }) {
-  Navigator.of(context).push(ShadcnPageRoute<void>(
-    builder: (_) => ArtistDetailPage(
-      artist: artist, artwork: artwork, player: player,
-      addonService: addonService, addons: addons, library: library,
-    ),
+  showContentDrawer(context, builder: (_) => ArtistDetailPage(
+    artist:artist, artwork:artwork, player:player,
+    addonService:addonService, addons:addons, library:library,
   ));
 }
 
@@ -39,12 +37,10 @@ void openAlbumPage(BuildContext context, {
   required List<InstalledAddon> addons,
   required MusicLibrary library,
 }) {
-  Navigator.of(context).push(ShadcnPageRoute<void>(
-    builder: (_) => AlbumDetailPage(
-      artist: artist, album: album, artwork: artwork,
-      collectionId: collectionId, player: player,
-      addonService: addonService, addons: addons, library: library,
-    ),
+  showContentDrawer(context, builder: (_) => AlbumDetailPage(
+    artist:artist, album:album, artwork:artwork,
+    collectionId:collectionId, player:player,
+    addonService:addonService, addons:addons, library:library,
   ));
 }
 
