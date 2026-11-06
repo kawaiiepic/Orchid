@@ -10,19 +10,25 @@ void main() {
   // Release builds otherwise replace failed widget subtrees with a blank area.
   // Keep a visible diagnostic instead of an unexplained grey screen.
   ErrorWidget.builder = (details) {
-    debugPrint('[Orchid UI] ${details.exceptionAsString()}');
+    final exception = details.exceptionAsString();
+    debugPrint('[Orchid UI] $exception');
+    debugPrintStack(stackTrace: details.stack);
+    // Display the real widget exception on TestFlight/iOS release builds so
+    // the first failure can be diagnosed without Xcode device logs.
     return Directionality(
       textDirection: TextDirection.ltr,
       child: ColoredBox(
         color: const Color(0xFF17141D),
         child: Center(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Text(
-              'Orchid couldn’t display this screen.\\n'
-              'Please restart the app or report the error from device logs.',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFFE0CBFF),fontSize:14),
+              'Orchid hit a UI error:\\n$exception',
+              textAlign: TextAlign.left,
+              style: const TextStyle(
+                color: Color(0xFFE0CBFF),
+                fontSize: 13,
+              ),
             ),
           ),
         ),
