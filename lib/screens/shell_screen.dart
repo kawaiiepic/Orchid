@@ -9,6 +9,8 @@ import '../services/music_library.dart';
 import 'library_screen.dart';
 import 'daily_mixes_screen.dart';
 import '../widgets/mini_player_bar.dart';
+import '../widgets/profile_menu.dart';
+import '../widgets/orchid_style.dart';
 import 'orchid_home_screen.dart';
 import 'profile_screen.dart';
 import 'search_screen.dart';
@@ -97,6 +99,31 @@ class _ShellScreenState extends State<ShellScreen>{
   _positionSubscription?.cancel();_player.removeListener(_trackChanged);
   _player.dispose();_library.dispose();_account.removeListener(_accountChanged);_account.dispose();super.dispose();
  }
+ void _openProfile() {
+  Navigator.of(context).push(ShadcnPageRoute<void>(
+   builder: (_) => Scaffold(
+    footers: [MiniPlayerBar(player:_player)],
+    child: ProfileScreen(account:_account),
+   ),
+  ));
+ }
+ void _openSettings() {
+  Navigator.of(context).push(ShadcnPageRoute<void>(
+   builder: (_) => Scaffold(
+    footers: [MiniPlayerBar(player:_player)],
+    child: SettingsScreen(
+     account:_account,
+     addonService:_addonService,
+     addons:_addons,
+     onAddonsChanged:(list) {
+      if(!mounted)return;
+      setState(()=>_addons=list);
+      _player.setAddons(list);
+     },
+    ),
+   ),
+  ));
+ }
  NavigationItem _button(String title,IconData icon,int index)=>NavigationItem(
   key:ValueKey(index),style:const ButtonStyle.muted(density:ButtonDensity.icon),
   selectedStyle:const ButtonStyle.fixed(density:ButtonDensity.icon),
@@ -148,18 +175,33 @@ class _ShellScreenState extends State<ShellScreen>{
       _button('Home',BootstrapIcons.house,0),
       _button('Explore',BootstrapIcons.compass,1),
       _button('Library',BootstrapIcons.musicNoteList,2),
-      _button('Settings',BootstrapIcons.gear,3),
      ],
     ),
    ],
-   // Preserve tab state, including Last.fm data, search results, and settings.
-   child:IndexedStack(
-    index:page.clamp(0,3),
+   // Keep all three browsing tabs alive while showing a global profile button.
+   child:Column(
+    children:[
+     Padding(
+      padding:const EdgeInsets.fromLTRB(20, 12, 20, 6),
+      child:Row(children:[
+       const Icon(LucideIcons.music2, size:20, color:OrchidStyle.violet),
+       const SizedBox(width:9),
+       const Text('Orchid').large().semiBold(),
+       const Spacer(),
+       ProfileMenu(
+        account:_account,
+        onProfile:_openProfile,
+        onSettings:_openSettings,
+       ),
+      ]),
+     ),
+     Expanded(child:IndexedStack(
+    index:page.clamp(0,2),
     children:[
      OrchidHomeScreen(
       player:_player,addonService:_addonService,addons:_addons,account:_account,
       openExplore:()=>setState(()=>selected=const ValueKey(1)),
-      openProfile:()=>setState(()=>selected=const ValueKey(3)),
+      openProfile:_openProfile,
       openLibrary:()=>setState(()=>selected=const ValueKey(2)),
       openDailyMixes:()=>Navigator.of(context).push(
        ShadcnPageRoute<void>(
@@ -180,15 +222,8 @@ class _ShellScreenState extends State<ShellScreen>{
       addons:_addons,
       openExplore:()=>setState(()=>selected=const ValueKey(1)),
      ),
-     SettingsScreen(
-      account:_account,
-      addonService:_addonService,
-      addons:_addons,
-      onAddonsChanged:(list){
-       setState(()=>_addons=list);
-       _player.setAddons(list);
-      },
-     ),
+    ],
+     )),
     ],
    ),
   );
