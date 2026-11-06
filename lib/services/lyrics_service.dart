@@ -718,51 +718,5 @@ class LyricsService {
     return '$min:${sec.toString().padLeft(2, '0')}.${ms.toString().padLeft(3, '0')}';
   }
 
-  Future<TrackResult?> _resolveViaItunes(TrackResult originalTrack) async {
-    try {
-      final searchTerm = '${originalTrack.artist} ${originalTrack.title}';
-      final uri = Uri.parse('https://itunes.apple.com/search').replace(
-        queryParameters: {
-          'term': searchTerm,
-          'entity': 'song',
-          'media': 'music',
-          'limit': '1',
-        },
-      );
-      final res = await _client.get(uri).timeout(const Duration(seconds: 15));
-      if (res.statusCode != 200) return null;
-      final body = jsonDecode(res.body) as Map<String, dynamic>;
-      final results = body['results'] as List? ?? [];
-      if (results.isEmpty) return null;
-      final item = results[0];
-      if (item is! Map) return null;
-      final m = Map<String, dynamic>.from(item);
-      if (m['wrapperType'] != 'track' || m['kind'] != 'song') return null;
-      final spotifyUrl =
-          m['spotifyUrl'] as String? ?? m['spotifyURL'] as String? ?? '';
-      final match = RegExp(r'/track/([a-zA-Z0-9_-]+)').firstMatch(spotifyUrl);
-      final spotifyTrackId = match?.group(1);
-      if (spotifyTrackId == null || spotifyTrackId.isEmpty) return null;
-      return TrackResult(
-        id: '${m['trackId']}',
-        title: m['trackName'] as String? ?? '',
-        artist: m['artistName'] as String? ?? '',
-        album: m['collectionName'] as String?,
-        duration: m['trackTimeMillis'] is int
-            ? ((m['trackTimeMillis'] as int) / 1000).round()
-            : null,
-        artworkUrl: (m['artworkUrl100'] as String?)
-            ?.replaceAll('100x100bb', '600x600bb'),
-        format: 'm4a',
-        previewUrl: m['previewUrl'] as String?,
-        spotifyTrackId: spotifyTrackId,
-        sourceId: 'itunes-resolution',
-        sourceName: 'iTunes Resolution',
-        fromStreamAddon: false,
-      );
-    } catch (e) {
-      debugPrint('[Orchid] lyrics: iTunes resolution error: $e');
-      return null;
-    }
-  }
+
 }
