@@ -17,6 +17,11 @@ class PlayerService extends ChangeNotifier {
   bool _disposed = false;
   bool keepPlaying = true;
   static const _keepPlayingKey = 'orchid_keep_playing';
+  /// Suggested songs, shown separately from the user's actual queue.
+  List<TrackResult> recommendations = [];
+  bool recommendationsLoading = false;
+  Future<void>? _recommendationRequest;
+  int _recommendationToken = 0;
 
   TrackResult? current;
   String? playingVia;
@@ -65,6 +70,13 @@ class PlayerService extends ChangeNotifier {
 
   Future<void> setKeepPlaying(bool enabled) async {
     keepPlaying = enabled;
+    if (!enabled) {
+      ++_recommendationToken;
+      recommendations = [];
+      recommendationsLoading = false;
+    } else {
+      unawaited(prepareRecommendations());
+    }
     notifyListeners();
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -84,36 +96,78 @@ class PlayerService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Similar music is discovered from currently available catalog/addon
-  /// searches, not guessed from arbitrary song titles.
-  Future<bool> _appendRecommendations() async {
-    final seed = current;
-    if (seed == null || !keepPlaying || _disposed) return false;
-    final generation = lyricsGeneration;
-    try {
-      final found = await addonService.search(_addons, seed.artist)
-          .timeout(const Duration(seconds: 22));
-      if (_disposed || !keepPlaying || generation != lyricsGeneration ||
-          current != seed) return false;
-      String identity(TrackResult t) =>
-          '${t.artist.trim().toLowerCase()}|${t.title.trim().toLowerCase()}';
-      final excluded = <String>{
-        ...queue.map(identity),
-        ...history.map(identity),
-        identity(seed),
-      };
-      final candidates = found.where((t) =>
-          t.title.isNotEmpty && t.artist.isNotEmpty &&
-          !excluded.contains(identity(t))).toList();
-      if (candidates.isEmpty) return false;
-      // Preserve existing queued songs and append a batch of fresh results.
-      queue.addAll(candidates.take(8));
-      notifyListeners();
-      return true;
-    } catch (e) {
-      debugPrint('[Orchid] Keep Playing recommendations unavailable: $e');
-      return false;
+  String _trackIdentity(TrackResult t) =>
+      '${t.artist.trim().toLowerCase()}|${t.title.trim().toLowerCase()}';
+
+  /// Prefetch suggestions while the current song is playing. The suggestions
+  /// remain separate from manually queued tracks until the listener skips or
+  /// the existing queue ends.
+  Future<void> prepareRecommendations({bool refresh = false}) async {
+    if (_disposed || !keepPlaying || current == null) return;
+    if (_recommendationRequest != null) {
+      await _recommendationRequest;
+      if (!refresh) return;
     }
+    if (!refresh && recommendations.isNotEmpty) return;
+
+    final seed = current!;
+    final token = ++_recommendationToken;
+    recommendationsLoading = true;
+    notifyListeners();
+
+    Future<void> load() async {
+      try {
+        // Artist is a meaningful starting point and works for both catalog
+        // tracks and tracks provided by external addons.
+        final found = await addonService.search(_addons, seed.artist)
+            .timeout(const Duration(seconds: 22));
+        if (_disposed || !keepPlaying || token != _recommendationToken) return;
+        final seen = <String>{
+          ...queue.map(_trackIdentity),
+          ...history.map(_trackIdentity),
+          _trackIdentity(seed),
+        };
+        recommendations = [
+          for (final track in found)
+            if (track.title.trim().isNotEmpty &&
+                track.artist.trim().isNotEmpty &&
+                seen.add(_trackIdentity(track))) track,
+        ].take(12).toList();
+      } catch (e) {
+        debugPrint('[Orchid] Keep Playing lookup unavailable: $e');
+      } finally {
+        if (!_disposed && token == _recommendationToken) {
+          recommendationsLoading = false;
+          notifyListeners();
+        }
+      }
+    }
+
+    final task = load();
+    _recommendationRequest = task;
+    try {
+      await task;
+    } finally {
+      if (identical(_recommendationRequest, task)) {
+        _recommendationRequest = null;
+      }
+    }
+  }
+
+  Future<bool> _appendRecommendations() async {
+    if (_disposed || !keepPlaying || current == null) return false;
+    if (recommendations.isEmpty) await prepareRecommendations(refresh: true);
+    if (_disposed || !keepPlaying || recommendations.isEmpty) return false;
+    final seen = queue.map(_trackIdentity).toSet();
+    final added = <TrackResult>[];
+    for (final track in recommendations) {
+      if (seen.add(_trackIdentity(track))) added.add(track);
+    }
+    recommendations = [];
+    if (added.isEmpty) return false;
+    queue.addAll(added);
+    notifyListeners();
+    return true;
   }
 
   Future<void> _advanceAfterCompletion() async {
@@ -122,10 +176,10 @@ class PlayerService extends ChangeNotifier {
       // The guard prevents duplicate advances while the next source resolves.
       if (_disposed || resolving ||
           player.processingState != ProcessingState.completed) return;
-      if (!hasNext && keepPlaying) {
+      if (!hasQueuedNext && keepPlaying) {
         await _appendRecommendations();
       }
-      if (_disposed || !hasNext || resolving ||
+      if (_disposed || resolving ||
           player.processingState != ProcessingState.completed) return;
       await playNext();
     } catch (e) {
@@ -161,7 +215,10 @@ class PlayerService extends ChangeNotifier {
     return raw.length > 32 ? '${raw.substring(0, 32)}…' : raw;
   }
 
-  bool get hasNext => queueIndex >= 0 && queueIndex < queue.length - 1;
+  bool get hasQueuedNext =>
+      queueIndex >= 0 && queueIndex < queue.length - 1;
+  bool get hasNext =>
+      hasQueuedNext || (keepPlaying && current != null);
   bool get hasPrevious => queueIndex > 0;
 
   void setAddons(List<InstalledAddon> addons) {
@@ -215,6 +272,13 @@ class PlayerService extends ChangeNotifier {
     await _loadAndPlay(track);
   }
 
+  Future<void> _beginNewRecommendations() async {
+    ++_recommendationToken;
+    recommendations = [];
+    notifyListeners();
+    if (keepPlaying) await prepareRecommendations();
+  }
+
   Future<void> _loadAndPlay(TrackResult track) async {
     resolving = true;
     playingVia = null;
@@ -243,6 +307,7 @@ class PlayerService extends ChangeNotifier {
       // Lyrics are optional metadata. Never block playback or the Play button
       // on a third-party lyrics provider.
       unawaited(_loadLyricsFor(track, generation));
+      unawaited(_beginNewRecommendations());
     } catch (e) {
       if (generation == lyricsGeneration) {
         resolving = false;
@@ -275,7 +340,10 @@ class PlayerService extends ChangeNotifier {
   }
 
   Future<void> playNext() async {
-    if (!hasNext) return;
+    if (!hasQueuedNext && keepPlaying) {
+      await _appendRecommendations();
+    }
+    if (!hasQueuedNext) return;
     if (current != null) _pushHistory(current);
     queueIndex++;
     await _loadAndPlay(queue[queueIndex]);
@@ -314,6 +382,7 @@ class PlayerService extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    ++_recommendationToken;
     _stateSubscription?.cancel();
     player.dispose();
     super.dispose();
