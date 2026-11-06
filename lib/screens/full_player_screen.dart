@@ -28,7 +28,6 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
   static const _animatedPreferenceKey = 'orchid_animated_artwork_enabled';
   OverlayEntry? _optionsOverlay;
   AnimatedArtwork? _appleArtwork;
-  bool _appleLoading = false;
   String? _artworkTrackKey;
   int _artworkRequest = 0;
 
@@ -51,10 +50,9 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
         track.title.trim().isNotEmpty;
     setState(() {
       _appleArtwork = null;
-      _appleLoading = canSearch;
       _animationFailed = false;
     });
-    if (!canSearch || track == null) return;
+    if (!canSearch) return;
     AnimatedArtworkService.instance.fetch(
       artist: track.artist,
       album: track.album,
@@ -63,7 +61,6 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
       if (!mounted || request != _artworkRequest) return;
       setState(() {
         _appleArtwork = artwork;
-        _appleLoading = false;
       });
     });
   }
@@ -79,9 +76,11 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
   Future<void> _restoreArtworkPreference() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      if (mounted) setState(() {
-        _animatedEnabled = prefs.getBool(_animatedPreferenceKey) ?? true;
-      });
+      if (mounted) {
+        setState(() {
+          _animatedEnabled = prefs.getBool(_animatedPreferenceKey) ?? true;
+        });
+      }
     } catch (_) {
       // Animated covers remain enabled by default if storage is unavailable.
     }
@@ -371,7 +370,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   height: 1.3,
-                  color: scheme.foreground.withOpacity(0.92),
+                  color: scheme.foreground.withValues(alpha: 0.92),
                 ),
               ),
             );
