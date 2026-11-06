@@ -57,23 +57,24 @@ class _DailyMixesScreenState extends State<DailyMixesScreen> {
       final recent = home['recent'];
       final tracks = <SavedSong>[];
       if (recent is List) {
-        for (final raw in recent) {
-          if (raw is! Map) continue;
+        final items = recent.whereType<Map>().toList();
+        final enriched = await Future.wait(items.map((raw) async {
           final title = (raw['title'] ?? '').toString();
           final artist = (raw['artist'] ?? '').toString();
-          if (title.isEmpty || artist.isEmpty) continue;
+          if (title.isEmpty || artist.isEmpty) return null;
           final canonical = await AppleCatalogService.instance.matchTrack(
             artist: artist,
             title: title,
             album: raw['album']?.toString(),
           );
-          tracks.add(SavedSong(
+          return SavedSong(
             canonical?.title ?? title,
             canonical?.artist ?? artist,
             album: canonical?.album ?? raw['album']?.toString(),
             artwork: canonical?.artwork ?? raw['image']?.toString(),
-          ));
-        }
+          );
+        }));
+        tracks.addAll(enriched.whereType<SavedSong>());
       }
       if (!mounted) return;
       setState(() => _lastfmSongs = tracks);
