@@ -37,6 +37,32 @@ class PlayerService extends ChangeNotifier {
     player.playerStateStream.listen((_) => notifyListeners());
   }
 
+  /// A human-readable playback provider label, never a raw stream URL.
+  String get sourceLabel => playingVia ?? 'Now playing';
+
+  String _sourceName(String? via, StreamInfo stream, TrackResult track) {
+    final raw = (via ?? '').trim();
+    if (raw.isEmpty) return track.sourceName.isNotEmpty ? track.sourceName : 'Stream';
+    for (final addon in _addons) {
+      if (raw == addon.baseUrl || raw.startsWith('${addon.baseUrl}/')) {
+        return addon.manifest.name;
+      }
+    }
+    if (raw == track.addonBaseUrl && track.sourceName.isNotEmpty) {
+      return track.sourceName;
+    }
+    if (raw.contains('://') || raw.startsWith('www.')) {
+      final uri = Uri.tryParse(raw.startsWith('www.') ? 'https://$raw' : raw);
+      final host = (uri?.host ?? '').toLowerCase();
+      if (host.contains('youtube') || host == 'youtu.be' ||
+          host.contains('googlevideo')) return 'YouTube';
+      if (host.contains('spotify')) return 'Spotify';
+      if (host.contains('apple.com') || host.contains('itunes')) return 'iTunes';
+      return track.sourceName.isNotEmpty ? track.sourceName : 'Stream';
+    }
+    return raw.length > 32 ? '${raw.substring(0, 32)}…' : raw;
+  }
+
   bool get hasNext => queueIndex >= 0 && queueIndex < queue.length - 1;
   bool get hasPrevious => queueIndex > 0;
 
@@ -105,7 +131,7 @@ class PlayerService extends ChangeNotifier {
           .resolvePlayback(track, _addons)
           .timeout(const Duration(seconds: 30));
       if (generation != lyricsGeneration) return;
-      playingVia = stream.via ?? stream.quality;
+      playingVia = _sourceName(stream.via ?? stream.quality, stream, track);
       await player.setUrl(stream.url).timeout(const Duration(seconds: 20));
       if (generation != lyricsGeneration) return;
       await player.setVolume(volume);
@@ -177,8 +203,8 @@ class PlayerService extends ChangeNotifier {
 
   Future<void> setVolume(double v) async {
     volume = v.clamp(0.0, 1.0);
-    await player.setVolume(volume);
     notifyListeners();
+    await player.setVolume(volume);
   }
 
   Future<void> seek(Duration position) async {
