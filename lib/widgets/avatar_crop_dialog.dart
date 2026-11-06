@@ -41,11 +41,14 @@ class _AvatarCropDialogState extends State<AvatarCropDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
+  Widget build(BuildContext context) {
+    final side = (MediaQuery.sizeOf(context).width - 88)
+        .clamp(220.0, 420.0).toDouble();
+    return AlertDialog(
     title: const Text('Crop profile picture'),
     content: SizedBox(
-      width: 420,
-      height: 420,
+      width: side,
+      height: side,
       child: Crop(
         image: widget.image,
         controller: _controller,
@@ -76,4 +79,5 @@ class _AvatarCropDialogState extends State<AvatarCropDialog> {
       ),
     ],
   );
+  }
 }
