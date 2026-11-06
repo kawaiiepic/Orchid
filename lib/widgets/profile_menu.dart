@@ -142,12 +142,24 @@ class _ProfileMenuState extends State<ProfileMenu> {
                     end: Alignment.bottomRight,
                   ),
                 ),
-                child: Center(
-                  child: Text(initial, style: const TextStyle(
-                    color: Color(0xFFFFFFFF),
-                    fontWeight: FontWeight.w700,
-                    fontSize: 17,
-                  )),
+                child: ClipOval(
+                  child: widget.account.avatarUrl == null
+                      ? Center(child: Text(initial, style: const TextStyle(
+                          color: Color(0xFFFFFFFF),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 17,
+                        )))
+                      : Image.network(
+                          widget.account.avatarUrl!,
+                          width: 35, height: 35, fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              Center(child: Text(initial,
+                                style: const TextStyle(
+                                  color: Color(0xFFFFFFFF),
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 17,
+                                ))),
+                        ),
                 ),
               ),
               const SizedBox(width: 9),
