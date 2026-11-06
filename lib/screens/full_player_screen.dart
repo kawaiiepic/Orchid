@@ -20,7 +20,7 @@ class FullPlayerScreen extends StatefulWidget {
 
 class _FullPlayerScreen extends State<FullPlayerScreen> {
   // 0 = lyrics, 1 = album cover, 2 = animated Apple Music artwork.
-  int _viewMode = 0;
+  int _viewMode = 2;
   AnimatedArtwork? _appleArtwork;
   bool _appleLoading = false;
   String? _artworkTrackKey;
@@ -101,6 +101,79 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
           ),
           const SizedBox(height: 12),
           const Text('Apple Music animated artwork').small().muted(),
+        ],
+      ),
+    );
+  }
+
+  /// Full-bleed animation for narrow/mobile player layouts. The video fills
+  /// the viewport, with dark gradients keeping controls readable.
+  Widget _mobileAnimatedBackdrop() {
+    final artwork = _appleArtwork;
+    final cover = widget.player.current?.artworkUrl;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (artwork != null)
+          CanvasVideo(
+            key: ValueKey('mobile-${artwork.url}'),
+            url: artwork.url,
+            fallbackArtworkUrl: cover,
+          )
+        else if (cover != null && cover.startsWith('https://'))
+          CachedNetworkImage(
+            imageUrl: cover,
+            fit: BoxFit.cover,
+            errorWidget: (_, __, ___) =>
+                const ColoredBox(color: Color(0xFF14111D)),
+          )
+        else
+          const ColoredBox(color: Color(0xFF14111D)),
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              stops: [0.0, 0.23, 0.48, 0.73, 1.0],
+              colors: [
+                Color(0xC9000000),
+                Color(0x31000000),
+                Color(0x16000000),
+                Color(0xA9000000),
+                Color(0xEE000000),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _mobileTrackDetails() {
+    final track = widget.player.current;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            track?.title ?? 'No track playing',
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 24, fontWeight: FontWeight.w700,
+              color: Color(0xFFFFFFFF),
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            track?.artist ?? 'Unknown artist',
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 15, color: Color(0xFFDCCDF0)),
+          ),
         ],
       ),
     );
@@ -231,14 +304,26 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final isMobile = MediaQuery.sizeOf(context).shortestSide < 600;
     return ListenableBuilder(
       listenable: widget.player,
       builder: (context, _) {
         final track = widget.player.current;
+        final mobileAnimated = isMobile && _viewMode == 2;
         return Scaffold(
-          child: LiquidArtworkBackground(
-            imageUrl: track?.artworkUrl,
-            child: GestureDetector(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Positioned.fill(
+                child: mobileAnimated
+                    ? _mobileAnimatedBackdrop()
+                    : LiquidArtworkBackground(
+                        imageUrl: track?.artworkUrl,
+                        child: const SizedBox.expand(),
+                      ),
+              ),
+              Positioned.fill(
+                child: GestureDetector(
               onHorizontalDragEnd: _onHorizontalDragEnd,
               child: Column(
                 children: [
@@ -293,14 +378,19 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                   ),
 
                   Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: _viewMode == 0
-                          ? _lyricsBody()
-                          : _viewMode == 1
-                              ? _artworkBody(scheme)
-                              : _animatedArtworkBody(scheme),
-                    ),
+                    child: mobileAnimated
+                        ? Align(
+                            alignment: Alignment.bottomCenter,
+                            child: _mobileTrackDetails(),
+                          )
+                        : Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: _viewMode == 0
+                                ? _lyricsBody()
+                                : _viewMode == 1
+                                    ? _artworkBody(scheme)
+                                    : _animatedArtworkBody(scheme),
+                          ),
                   ),
 
                   Padding(
@@ -441,7 +531,8 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                   const SizedBox(height: 12),
                 ],
               ),
-            ),
+              ),
+            ],
           ),
         );
       },
