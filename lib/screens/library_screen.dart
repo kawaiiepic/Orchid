@@ -9,6 +9,7 @@ import '../services/player_service.dart';
 import '../widgets/mini_player_bar.dart';
 import 'song_detail_screen.dart';
 import '../widgets/orchid_style.dart';
+import '../widgets/song_context_menu.dart';
 
 class LibraryScreen extends StatefulWidget {
   final MusicLibrary library;
@@ -31,13 +32,6 @@ class LibraryScreen extends StatefulWidget {
 }
 
 class _LibraryScreenState extends State<LibraryScreen> {
-  final _name = TextEditingController();
-  @override
-  void dispose() {
-    _name.dispose();
-    super.dispose();
-  }
-
   void _openSong(SavedSong song) {
     Navigator.of(context).push(ShadcnPageRoute<void>(
       builder: (_) => SongDetailScreen(
@@ -113,7 +107,19 @@ class _LibraryScreenState extends State<LibraryScreen> {
               else
                 ...songs.map((song) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: Row(children: [
+                  child: SongContextMenu(
+                    track: TrackResult(
+                      id: song.key,
+                      title: song.title,
+                      artist: song.artist,
+                      album: song.album,
+                      artworkUrl: song.artwork,
+                      sourceId: 'orchid-library',
+                      sourceName: 'Library',
+                    ),
+                    player: widget.player,
+                    library: widget.library,
+                    child: Row(children: [
                     Expanded(child: Button(
                       style: const ButtonStyle.ghost(),
                       onPressed: () => _openSong(song),
@@ -134,6 +140,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       icon: const Icon(LucideIcons.x, size: 18),
                     ),
                   ]),
+                  ),
                 )),
             ]);
           },
@@ -204,21 +211,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
           subtitle: 'Little worlds built one song at a time',
         ),
         const SizedBox(height: 8),
-        Row(children: [
-          Expanded(child: TextField(
-            controller: _name,
-            placeholder: const Text('New playlist name'),
-            onSubmitted: (_) => _createPlaylist(),
-          )),
-          const SizedBox(width: 8),
-          PrimaryButton(
-            onPressed: _createPlaylist,
-            child: const Text('Create'),
-          ),
-        ]),
-        const SizedBox(height: 10),
         if (widget.library.playlists.isEmpty)
-          const Text('Create a playlist, then add tracks from any song page.').muted()
+          const Text('Right-click a song and choose Create new playlist to get started.').muted()
         else
           ...widget.library.playlists.map((p) => _collectionTile(
             p.name, '${p.songs.length} songs',
@@ -228,10 +222,4 @@ class _LibraryScreenState extends State<LibraryScreen> {
     ),
   );
 
-  Future<void> _createPlaylist() async {
-    final value = _name.text.trim();
-    if (value.isEmpty) return;
-    await widget.library.createPlaylist(value);
-    if (mounted) _name.clear();
-  }
 }
