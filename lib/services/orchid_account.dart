@@ -203,6 +203,13 @@ class OrchidAccount extends ChangeNotifier {
   if(!signedIn)throw StateError('Sign in first');
   return _request('GET','/orchid/home');
  }
+ Future<String> sendAiDjMessage(String message) async {
+  if(!signedIn)throw StateError('Sign in to talk to AI DJ');
+  final response=await _request('POST','/orchid/ai-dj/chat',{'message':message});
+  final text=response['message'];
+  if(text is! String)throw StateError('Unexpected AI DJ response');
+  return text;
+ }
  Future<Map<String,dynamic>> allTimeTopSongs() =>
     _request('GET','/orchid/top-songs');
  Future<Map<String,dynamic>> radioSongs({
