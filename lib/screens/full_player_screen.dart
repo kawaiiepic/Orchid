@@ -165,7 +165,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                         ),
                         const Spacer(),
                         Text(
-                          widget.player.playingVia ?? 'Now playing',
+                          widget.player.sourceLabel,
                           style: TextStyle(
                             fontSize: 14,
                             color: scheme.primary,
@@ -299,6 +299,34 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                         ),
                       ),
                     ],
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+                    child: Row(
+                      children: [
+                        Icon(widget.player.volume == 0
+                            ? LucideIcons.volumeX
+                            : LucideIcons.volume2, size: 20),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Slider(
+                            value: SliderValue.single(widget.player.volume),
+                            min: 0,
+                            max: 1,
+                            onChanged: (value) =>
+                                widget.player.setVolume(value.value),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        SizedBox(
+                          width: 42,
+                          child: Text(
+                            '${(widget.player.volume * 100).round()}%',
+                            textAlign: TextAlign.end,
+                          ).xSmall().muted(),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 12),
                 ],
