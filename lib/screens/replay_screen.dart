@@ -183,11 +183,11 @@ class _ReplayScreenState extends State<ReplayScreen> {
         _ranking('Top songs',_items('topSongs')),
         _ranking('Top artists',_items('topArtists'),artists:true),
         _ranking('Top albums',_items('topAlbums')),
-        Text('Top genres').large().semiBold(),
-        const SizedBox(height:8),
-        if(_items('topGenres').isEmpty)
-          const Text('No genre metadata matched the tracks in this period yet.').muted()
-        else _ranking('Most played genres',_items('topGenres'),artists:true),
+        if(_items('topGenres').isEmpty)...[
+          Text('Top genres').large().semiBold(),
+          const SizedBox(height:8),
+          const Text('No genre metadata matched the tracks in this period yet.').muted(),
+        ]else _ranking('Top genres',_items('topGenres'),artists:true),
         const SizedBox(height:25),
       ],
     ]);
