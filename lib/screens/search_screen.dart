@@ -204,7 +204,11 @@ class _SearchScreenState extends State<SearchScreen> {
       artwork:AppleCover(
         artist:t.artist,
         name:t.title,
+        album:t.album,
         fallbackUrl:t.artworkUrl,
+        // Tracks returned by the Apple Music playlist API already include
+        // canonical artwork. Do not replace it with an iTunes search guess.
+        preferredUrl:t.sourceId == 'apple-music' ? t.artworkUrl : null,
         size:50,
       ),
       title:t.title,
