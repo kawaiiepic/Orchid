@@ -25,6 +25,7 @@ class FullPlayerScreen extends StatefulWidget {
 class _FullPlayerScreen extends State<FullPlayerScreen> {
   // Two views only: animated/static artwork or lyrics.
   int _viewMode = 1;
+  bool _showVolume = false;
   bool _animatedEnabled = true;
   bool _animationFailed = false;
   static const _animatedPreferenceKey = 'orchid_animated_artwork_enabled';
@@ -290,35 +291,127 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
     );
   }
 
-  Widget _mobileTrackDetails() {
-    final track = widget.player.current;
+  Widget _trackDetails() {
+    final track=widget.player.current;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 28),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
+      padding:const EdgeInsets.fromLTRB(20, 8, 20, 6),
+      child:Column(
+        crossAxisAlignment:CrossAxisAlignment.start,
+        children:[
           Text(
-            track?.title ?? 'No track playing',
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 24, fontWeight: FontWeight.w700,
-              color: Color(0xFFFFFFFF),
-            ),
+            track?.title??'No track playing',
+            textAlign:TextAlign.left,
+            maxLines:2,
+            overflow:TextOverflow.ellipsis,
+            style:const TextStyle(fontSize:26,fontWeight:FontWeight.w700),
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height:4),
           Text(
-            track?.artist ?? 'Unknown artist',
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 15, color: Color(0xFFDCCDF0)),
+            [
+              if(track!=null)track.artist,
+              if(track?.album?.trim().isNotEmpty==true)track!.album!,
+            ].join(' · '),
+            textAlign:TextAlign.left,
+            maxLines:1,
+            overflow:TextOverflow.ellipsis,
+            style:const TextStyle(fontSize:15,color:Color(0xFFDCCDF0)),
           ),
         ],
       ),
     );
   }
+
+  Widget _transportControl({
+    required IconData icon,
+    required VoidCallback? onTap,
+    bool active=false,
+    double size=24,
+  }) => GestureDetector(
+    behavior:HitTestBehavior.opaque,
+    onTap:onTap,
+    child:SizedBox(
+      width:48,height:56,
+      child:Center(child:Icon(icon,size:size,
+        color:active?const Color(0xFFD8B9FF):null)),
+    ),
+  );
+
+  Widget _transportBar() => Padding(
+    padding:const EdgeInsets.symmetric(horizontal:16,vertical:4),
+    child:Row(
+      mainAxisAlignment:MainAxisAlignment.spaceBetween,
+      children:[
+        _transportControl(
+          icon:LucideIcons.shuffle,
+          onTap:widget.player.toggleShuffle,
+          active:widget.player.shuffleEnabled,
+        ),
+        _transportControl(
+          icon:LucideIcons.skipBack,
+          onTap:()=>widget.player.playPrevious(),
+          size:31,
+        ),
+        GestureDetector(
+          behavior:HitTestBehavior.opaque,
+          onTap:widget.player.togglePlayPause,
+          child:Container(
+            width:72,height:72,
+            decoration:const BoxDecoration(
+              shape:BoxShape.circle,
+              color:Color(0xFFD6B9FF),
+            ),
+            child:Icon(
+              widget.player.player.playing
+                  ?LucideIcons.pause:LucideIcons.play,
+              size:35,color:const Color(0xFF1D1426),
+            ),
+          ),
+        ),
+        _transportControl(
+          icon:LucideIcons.skipForward,
+          onTap:widget.player.hasNext
+              ?()=>widget.player.playNext():null,
+          size:31,
+        ),
+        _transportControl(
+          icon:widget.player.repeatMode==RepeatMode.one
+              ?LucideIcons.repeat1:LucideIcons.repeat,
+          onTap:widget.player.cycleRepeatMode,
+          active:widget.player.repeatMode!=RepeatMode.off,
+        ),
+      ],
+    ),
+  );
+
+  Widget _displayToggles() => Padding(
+    padding:const EdgeInsets.fromLTRB(16, 2, 16, 8),
+    child:Row(
+      mainAxisAlignment:MainAxisAlignment.end,
+      children:[
+        if(_showVolume)SizedBox(
+          width:110,
+          child:Slider(
+            value:SliderValue.single(widget.player.volume),
+            min:0,max:1,
+            onChanged:(value)=>widget.player.setVolume(value.value),
+          ),
+        ),
+        IconButton(
+          variance:ButtonVariance.ghost,
+          onPressed:()=>setState(()=>_showVolume=!_showVolume),
+          icon:Icon(widget.player.volume==0
+              ?LucideIcons.volumeX:LucideIcons.volume2,size:23),
+        ),
+        const SizedBox(width:8),
+        IconButton(
+          variance:ButtonVariance.ghost,
+          onPressed:_nextView,
+          icon:Icon(_viewMode==0?LucideIcons.image:LucideIcons.mic,
+              size:23),
+        ),
+      ],
+    ),
+  );
 
   void _nextView() {
     setState(() => _viewMode = _viewMode == 0 ? 1 : 0);
@@ -396,19 +489,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
               borderRadius: BorderRadius.circular(12),
             ),
           ),
-        const SizedBox(height: 20),
-        Text(
-          track?.title ?? 'No track playing',
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          track?.artist ?? 'Unknown artist',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 14, color: scheme.primary),
-        ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         StreamBuilder<Duration>(
           stream: widget.player.player.positionStream,
           initialData: widget.player.player.position,
@@ -457,12 +538,10 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
             fit: StackFit.expand,
             children: [
               Positioned.fill(
-                child: mobileAnimated
-                    ? _mobileAnimatedBackdrop()
-                    : LiquidArtworkBackground(
-                        imageUrl: track?.artworkUrl,
-                        child: const SizedBox.expand(),
-                      ),
+                child: LiquidArtworkBackground(
+                  imageUrl: track?.artworkUrl,
+                  child: const SizedBox.expand(),
+                ),
               ),
               Positioned.fill(
                 child: GestureDetector(
@@ -529,10 +608,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                                 padding: const EdgeInsets.symmetric(horizontal: 12),
                                 child: _lyricsBody(),
                               )
-                            : Align(
-                                alignment: Alignment.bottomCenter,
-                                child: _mobileTrackDetails(),
-                              ))
+                            : _animatedArtworkBody(scheme))
                         : Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                             // Keep CanvasVideo mounted while lyrics are visible:
@@ -548,6 +624,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                           ),
                   ),
 
+                  _trackDetails(),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: StreamBuilder<Duration>(
@@ -606,82 +683,9 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                     ),
                   ),
 
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          IconButton(
-                            variance: ButtonVariance.ghost,
-                            onPressed: () => widget.player.playPrevious(),
-                            icon: const Icon(LucideIcons.skipBack),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            variance: ButtonVariance.ghost,
-                            onPressed: widget.player.togglePlayPause,
-                            icon: Icon(
-                              widget.player.player.playing
-                                  ? LucideIcons.pause
-                                  : LucideIcons.play,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            variance: ButtonVariance.ghost,
-                            onPressed: widget.player.hasNext
-                                ? () => widget.player.playNext()
-                                : null,
-                            icon: const Icon(LucideIcons.skipForward),
-                          ),
-                        ],
-                      ),
-                      Positioned(
-                        right: 12,
-                        child: IconButton(
-                          variance: ButtonVariance.ghost,
-                          onPressed: () {
-                            _nextView();
-                          },
-                          icon: Icon(
-                            _viewMode == 0
-                                ? LucideIcons.image
-                                : LucideIcons.mic,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                  _transportBar(),
+                  _displayToggles(),
                   _libraryActions(),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
-                    child: Row(
-                      children: [
-                        Icon(widget.player.volume == 0
-                            ? LucideIcons.volumeX
-                            : LucideIcons.volume2, size: 20),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Slider(
-                            value: SliderValue.single(widget.player.volume),
-                            min: 0,
-                            max: 1,
-                            onChanged: (value) =>
-                                widget.player.setVolume(value.value),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        SizedBox(
-                          width: 42,
-                          child: Text(
-                            '${(widget.player.volume * 100).round()}%',
-                            textAlign: TextAlign.end,
-                          ).xSmall().muted(),
-                        ),
-                      ],
-                    ),
-                  ),
                   const SizedBox(height: 12),
                 ],
               ),
