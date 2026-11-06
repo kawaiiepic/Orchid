@@ -39,6 +39,22 @@ class AppleArtworkService {
         () => _find(artist: artist, name: album, entity: 'album'));
   }
 
+  /// Cache combined lookups so rebuilding a list row doesn't restart
+  /// track/album requests and flicker between artwork and placeholders.
+  Future<String?> trackOrAlbum({
+    required String artist,
+    required String title,
+    String? album,
+  }) {
+    final key = 'track-or-album|${_normalize(artist)}|${_normalize(title)}|${_normalize(album ?? '')}';
+    return _requests.putIfAbsent(key, () async {
+      final artwork = await track(artist: artist, title: title);
+      if (artwork != null) return artwork;
+      if (album == null || album.trim().isEmpty) return null;
+      return this.album(artist: artist, album: album);
+    });
+  }
+
   Future<String?> _find({
     required String artist,
     required String name,
