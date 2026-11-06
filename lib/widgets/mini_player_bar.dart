@@ -1,5 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:flutter/cupertino.dart' as ios;
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
 import '../screens/full_player_screen.dart';
 import '../services/player_service.dart';
@@ -30,6 +32,8 @@ class MiniPlayerBar extends StatelessWidget {
         if (track == null) return const SizedBox.shrink();
 
         final scheme = Theme.of(context).colorScheme;
+        final compact = MediaQuery.sizeOf(context).width < 610;
+        final nativeIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
         return Container(
           margin: const EdgeInsets.fromLTRB(10, 6, 10, 5),
@@ -82,7 +86,7 @@ class MiniPlayerBar extends StatelessWidget {
                   ),
                 ),
               ),
-              IconButton.ghost(
+              if (!compact) IconButton.ghost(
                 onPressed: () => player.playPrevious(),
                 icon: const Icon(LucideIcons.skipBack, size: 18),
               ),
@@ -93,36 +97,46 @@ class MiniPlayerBar extends StatelessWidget {
                   color: OrchidStyle.violet,
                   borderRadius: BorderRadius.circular(13),
                 ),
-                child: IconButton.ghost(
-                  onPressed: () => player.togglePlayPause(),
-                  icon: Icon(player.player.playing
-                    ? LucideIcons.pause : LucideIcons.play,
-                    color: OrchidStyle.ink, size: 20),
-                ),
+                child: nativeIOS
+                  ? ios.CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () => player.togglePlayPause(),
+                      child: Icon(player.player.playing
+                        ? ios.CupertinoIcons.pause_fill : ios.CupertinoIcons.play_fill,
+                        color: OrchidStyle.ink, size: 21),
+                    )
+                  : IconButton.ghost(
+                      onPressed: () => player.togglePlayPause(),
+                      icon: Icon(player.player.playing
+                        ? LucideIcons.pause : LucideIcons.play,
+                        color: OrchidStyle.ink, size: 20),
+                    ),
               ),
               IconButton.ghost(
                 onPressed: player.hasNext ? () => player.playNext() : null,
                 icon: const Icon(LucideIcons.skipForward, size: 18),
               ),
-              OverlayAnchor(
+              if (!compact) OverlayAnchor(
                 anchor: #orchidQueueDrawer,
                 child: IconButton.ghost(
                   onPressed: () => showQueueSheet(context, player),
                   icon: const Icon(LucideIcons.listMusic, size: 18),
                 ),
               ),
-              const SizedBox(width: 8),
-              const Icon(LucideIcons.volume2, size: 17),
-              const SizedBox(width: 6),
-              SizedBox(
-                width: 104,
-                child: Slider(
-                  value: SliderValue.single(player.volume),
-                  min: 0,
-                  max: 1,
-                  onChanged: (value) => player.setVolume(value.value),
+              if (!compact) ...[
+                const SizedBox(width: 8),
+                const Icon(LucideIcons.volume2, size: 17),
+                const SizedBox(width: 6),
+                SizedBox(
+                  width: 104,
+                  child: Slider(
+                    value: SliderValue.single(player.volume),
+                    min: 0,
+                    max: 1,
+                    onChanged: (value) => player.setVolume(value.value),
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         );
