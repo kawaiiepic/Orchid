@@ -164,14 +164,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                           icon: const Icon(LucideIcons.arrowLeft),
                         ),
                         const Spacer(),
-                        Text(
-                          widget.player.sourceLabel,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: scheme.primary,
-                          ),
-                        ),
-                        const Spacer(),
+
                         // Anchor for shadcn drawer overlay.
                         OverlayAnchor(
                           anchor: #orchidQueueDrawer,
