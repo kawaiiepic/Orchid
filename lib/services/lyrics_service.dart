@@ -223,75 +223,151 @@ class LyricsService {
   LyricsService({http.Client? client}) : _client = client ?? http.Client();
 
   Future<LyricsResult?> fetchFor(TrackResult track) async {
-    debugPrint(
-        '[Orchid] lyrics: Starting lookup for "${track.title}" by "${track.artist}"');
-
-    LyricsResult? spicy;
-    if (track.spotifyTrackId != null && track.spotifyTrackId!.isNotEmpty) {
-      spicy = await _fetchBySpotifyTrackId(track.spotifyTrackId!);
-    } else {
-      final itunesTrack = await _resolveViaItunes(track);
-      if (itunesTrack?.spotifyTrackId != null &&
-          itunesTrack!.spotifyTrackId!.isNotEmpty) {
-        spicy = await _fetchBySpotifyTrackId(itunesTrack.spotifyTrackId!);
-      } else {
-        final spotifyTrack =
-            await _resolveViaSpotifySearch(track.title, track.artist);
-        if (spotifyTrack != null &&
-            (spotifyTrack.spotifyTrackId ?? '').isNotEmpty) {
-          spicy = await _fetchBySpotifyTrackId(spotifyTrack.spotifyTrackId!);
-        }
-      }
-    }
+    debugPrint('[Orchid] lyrics: lookup "${track.title}" by "${track.artist}"');
+    // Start LRCLIB immediately. Spotify matching can take longer than the
+    // player's lyrics timeout, so it must never prevent the fallback request.
+    final lrclib = _fetchLrclib(track);
+    final spicy = await _fetchSpicy(track)
+        .timeout(const Duration(seconds: 4), onTimeout: () => null);
     if (spicy?.hasAny == true) return spicy;
-
-    final lrc = await _fetchLrclib(track);
-    if (lrc?.hasAny == true) return lrc;
-
-    return spicy;
+    final fallback = await lrclib;
+    if (fallback?.hasAny == true) return fallback;
+    debugPrint('[Orchid] lyrics: no match from Spicy Lyrics or LRCLIB');
+    return null;
   }
 
-  /// LRCLIB line-synced LRC fallback (https://lrclib.net).
+  Future<LyricsResult?> _fetchSpicy(TrackResult track) async {
+    try {
+      final direct = track.spotifyTrackId;
+      if (direct != null && direct.isNotEmpty) {
+        return await _fetchBySpotifyTrackId(direct);
+      }
+      // iTunes does not normally provide Spotify IDs. Prefer a direct
+      // Spotify search without the extra iTunes network round trip.
+      final match = await _resolveViaSpotifySearch(track.title, track.artist);
+      final id = match?.spotifyTrackId;
+      if (id == null || id.isEmpty) return null;
+      return await _fetchBySpotifyTrackId(id);
+    } catch (e) {
+      debugPrint('[Orchid] Spicy Lyrics lookup error: $e');
+      return null;
+    }
+  }
+
+  static const _lrclibHeaders = <String, String>{
+    'User-Agent': 'Orchid/0.1 (https://github.com/kawaiiepic/Orchid)',
+    'Accept': 'application/json',
+  };
+
   Future<LyricsResult?> _fetchLrclib(TrackResult track) async {
     try {
+      // Do not require duration here: LRCLIB allows only ±2 seconds, but
+      // addon metadata may describe a preview, video or alternative release.
       final uri = Uri.https('lrclib.net', '/api/get', {
         'artist_name': track.artist,
         'track_name': track.title,
-        if (track.album != null) 'album_name': track.album!,
-        if (track.duration != null)
-          'duration': '${track.duration}',
+        if (track.album?.isNotEmpty == true) 'album_name': track.album!,
       });
-      final res = await _client.get(
-        uri,
-        headers: {'User-Agent': 'Orchid/0.1 (Flutter music player)'},
-      ).timeout(const Duration(seconds: 15));
-      if (res.statusCode != 200) return null;
-      final data = jsonDecode(res.body) as Map<String, dynamic>;
-      final synced = data['syncedLyrics'] as String?;
-      final plain = data['plainLyrics'] as String?;
-      if (synced == null || synced.trim().isEmpty) {
-        if (plain == null || plain.trim().isEmpty) return null;
-        return LyricsResult(
-          plain: plain.trim(),
-          hasSync: false,
-          source: 'lrclib',
-          bodyType: 'Static',
-        );
+      final res = await _client.get(uri, headers: _lrclibHeaders)
+          .timeout(const Duration(seconds: 4));
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        if (decoded is Map) {
+          final lyrics = _lrclibResult(Map<String, dynamic>.from(decoded));
+          if (lyrics?.hasAny == true) return lyrics;
+        }
+      } else {
+        debugPrint('[Orchid] LRCLIB exact HTTP ${res.statusCode}');
+        if (res.statusCode == 429) return null;
       }
-      final lines = _parseLrc(synced);
-      final withInterludes = _insertInterludes(lines);
-      return LyricsResult(
-        plain: plain?.trim(),
-        synced: synced,
-        lines: withInterludes,
-        hasSync: withInterludes.isNotEmpty,
-        source: 'lrclib',
-        bodyType: 'Line',
-      );
     } catch (e) {
-      debugPrint('[Orchid] LRCLIB error: $e');
-      return null;
+      debugPrint('[Orchid] LRCLIB exact lookup error: $e');
     }
+
+    // A metadata mismatch should not result in "Lyrics not found".
+    // Search returns several candidates, which we rank before using.
+    try {
+      final uri = Uri.https('lrclib.net', '/api/search', {
+        'track_name': track.title,
+        'artist_name': track.artist,
+      });
+      final res = await _client.get(uri, headers: _lrclibHeaders)
+          .timeout(const Duration(seconds: 5));
+      if (res.statusCode != 200) {
+        debugPrint('[Orchid] LRCLIB search HTTP ${res.statusCode}');
+        return null;
+      }
+      final data = jsonDecode(res.body);
+      if (data is! List) return null;
+      final normalizedTitle = _normalizeLyricName(track.title);
+      final normalizedArtist = _normalizeLyricName(track.artist);
+      Map<String, dynamic>? best;
+      var bestScore = -1;
+      for (final item in data) {
+        if (item is! Map) continue;
+        final candidate = Map<String, dynamic>.from(item);
+        if (_lrclibResult(candidate)?.hasAny != true) continue;
+        final title = _normalizeLyricName(
+            (candidate['trackName'] ?? candidate['name'] ?? '').toString());
+        final artist = _normalizeLyricName(
+            (candidate['artistName'] ?? '').toString());
+        // Never silently substitute another artist's lyrics.
+        if (title != normalizedTitle || artist != normalizedArtist) continue;
+        var score = 0;
+        final album = _normalizeLyricName(
+            (candidate['albumName'] ?? '').toString());
+        if (track.album != null && album == _normalizeLyricName(track.album!)) {
+          score += 3;
+        }
+        final duration = candidate['duration'];
+        if (track.duration != null && duration is num &&
+            (duration - track.duration!).abs() <= 3) score += 2;
+        if ((candidate['syncedLyrics'] as String?)?.trim().isNotEmpty == true) {
+          score += 1;
+        }
+        if (score > bestScore) {
+          bestScore = score;
+          best = candidate;
+        }
+      }
+      if (best != null) {
+        debugPrint('[Orchid] lyrics: LRCLIB search matched');
+        return _lrclibResult(best);
+      }
+    } catch (e) {
+      debugPrint('[Orchid] LRCLIB search error: $e');
+    }
+    return null;
+  }
+
+  String _normalizeLyricName(String value) => value
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9]+'), ' ')
+      .trim()
+      .replaceAll(RegExp(r'\s+'), ' ');
+
+  LyricsResult? _lrclibResult(Map<String, dynamic> data) {
+    if (data['instrumental'] == true) return null;
+    final synced = data['syncedLyrics'] as String?;
+    final plain = data['plainLyrics'] as String?;
+    if (synced?.trim().isNotEmpty != true) {
+      if (plain?.trim().isNotEmpty != true) return null;
+      return LyricsResult(
+        plain: plain!.trim(),
+        hasSync: false,
+        source: 'lrclib',
+        bodyType: 'Static',
+      );
+    }
+    final lines = _insertInterludes(_parseLrc(synced!));
+    return LyricsResult(
+      plain: plain?.trim(),
+      synced: synced,
+      lines: lines,
+      hasSync: lines.isNotEmpty,
+      source: 'lrclib',
+      bodyType: lines.isNotEmpty ? 'Line' : 'Static',
+    );
   }
 
   List<LyricLine> _parseLrc(String lrc) {
