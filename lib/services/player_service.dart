@@ -20,6 +20,56 @@ class PlayerService extends ChangeNotifier {
   bool _disposed = false;
   bool keepPlaying = true;
   bool shuffleEnabled = false;
+  Future<List<TrackResult>> Function()? radioNextBatch;
+  bool radioLoading = false;
+  int _radioToken = 0;
+  final Set<String> _radioSeen = {};
+  Future<void>? _radioTask;
+
+  void stopRadio() {
+    ++_radioToken;
+    radioNextBatch = null;
+    radioLoading = false;
+    _radioSeen.clear();
+    notifyListeners();
+  }
+
+  Future<void> startRadio(List<TrackResult> tracks,
+      Future<List<TrackResult>> Function() nextBatch) async {
+    if (tracks.isEmpty) throw StateError('No tracks available for this station');
+    stopRadio();
+    radioNextBatch = nextBatch;
+    _radioSeen.addAll(tracks.map(_trackIdentity));
+    await playTrack(tracks.first, fromQueue:tracks);
+  }
+
+  Future<void> _extendRadio() async {
+    if (radioNextBatch == null || radioLoading || _disposed) return;
+    final token = _radioToken;
+    radioLoading = true;
+    notifyListeners();
+    Future<void> run() async {
+      try {
+        final batch = await radioNextBatch!();
+        if (_disposed || token != _radioToken) return;
+        for (final track in batch) {
+          if (_radioSeen.add(_trackIdentity(track))) queue.add(track);
+        }
+      } catch (e) {
+        debugPrint('[Orchid Radio] Unable to extend station: $e');
+      } finally {
+        if (!_disposed && token == _radioToken) {
+          radioLoading = false;
+          notifyListeners();
+        }
+      }
+    }
+    final task = run();
+    _radioTask = task;
+    await task;
+    if (identical(_radioTask, task)) _radioTask = null;
+  }
+
   OrchidRepeatMode repeatMode = OrchidRepeatMode.off;
   final Random _shuffleRandom = Random();
   static const _keepPlayingKey = 'orchid_keep_playing';
@@ -195,7 +245,10 @@ class PlayerService extends ChangeNotifier {
         queueIndex = -1;
         if (shuffleEnabled) _shuffleUpcoming();
       }
-      if (!hasQueuedNext && keepPlaying) {
+      if (!hasQueuedNext && radioNextBatch != null) {
+        await _extendRadio();
+      }
+      if (!hasQueuedNext && keepPlaying && radioNextBatch == null) {
         await _appendRecommendations();
       }
       if (_disposed || !hasQueuedNext || resolving ||
@@ -241,7 +294,7 @@ class PlayerService extends ChangeNotifier {
   bool get hasQueuedNext =>
       queueIndex >= 0 && queueIndex < queue.length - 1;
   bool get hasNext =>
-      hasQueuedNext || (repeatMode == OrchidRepeatMode.all && queue.isNotEmpty) ||
+      radioNextBatch != null || hasQueuedNext || (repeatMode == OrchidRepeatMode.all && queue.isNotEmpty) ||
       (keepPlaying && current != null);
   bool get hasPrevious => queueIndex > 0;
 
@@ -289,6 +342,7 @@ class PlayerService extends ChangeNotifier {
       _pushHistory(current);
     }
 
+    if (radioNextBatch != null && track.sourceId != 'orchid-radio') stopRadio();
     if (fromQueue != null) {
       queue = List<TrackResult>.from(fromQueue);
       queueIndex = queue.indexWhere(
@@ -352,7 +406,11 @@ class PlayerService extends ChangeNotifier {
       // Lyrics are optional metadata. Never block playback or the Play button
       // on a third-party lyrics provider.
       unawaited(_loadLyricsFor(track, generation));
-      unawaited(_beginNewRecommendations());
+      if (radioNextBatch != null) {
+        if (queue.length - queueIndex <= 3) unawaited(_extendRadio());
+      } else {
+        unawaited(_beginNewRecommendations());
+      }
     } catch (e) {
       if (generation == lyricsGeneration) {
         resolving = false;
@@ -389,7 +447,8 @@ class PlayerService extends ChangeNotifier {
       queueIndex = -1;
       if (shuffleEnabled) _shuffleUpcoming();
     }
-    if (!hasQueuedNext && keepPlaying) {
+    if (!hasQueuedNext && radioNextBatch != null) await _extendRadio();
+    if (!hasQueuedNext && keepPlaying && radioNextBatch == null) {
       await _appendRecommendations();
     }
     if (!hasQueuedNext) return;
@@ -431,6 +490,8 @@ class PlayerService extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    ++_radioToken;
+    radioNextBatch = null;
     ++_recommendationToken;
     _stateSubscription?.cancel();
     player.dispose();
