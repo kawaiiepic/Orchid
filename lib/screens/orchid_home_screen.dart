@@ -179,78 +179,186 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
   }
 
 
-  Widget _pinnedPlaylists() => ListenableBuilder(
-    listenable:widget.library,
-    builder:(context,_) {
-      final playlists=widget.library.playlists.where((p)=>p.pinned).toList();
-      if(playlists.isEmpty)return const SizedBox.shrink();
-      return Column(
-        crossAxisAlignment:CrossAxisAlignment.start,
-        children:[
-          const OrchidSectionHeader(
-            title:'Pinned playlists',
-            subtitle:'Your favorites, right where you left them',
-          ),
-          const SizedBox(height:12),
-          SingleChildScrollView(
-            scrollDirection:Axis.horizontal,
-            child:Row(children:[
-              for(final playlist in playlists)...[
-                _clickable(
-                  onTap:(){
-                    if(playlist.songs.isEmpty)return;
-                    widget.player.setAddons(widget.addons);
-                    final queue=playlist.songs.map((song)=>TrackResult(
-                      id:song.key,title:song.title,artist:song.artist,
-                      album:song.album,artworkUrl:song.artwork,
-                      sourceId:'orchid-library',sourceName:'Library',
-                    )).toList();
-                    widget.player.playTrack(queue.first,fromQueue:queue)
-                      .catchError((Object e) {
-                        debugPrint('[Orchid] Cannot play pinned playlist: $e');
-                      });
-                  },
-                  child:Container(
-                    width:OrchidStyle.compact(context,168),height:OrchidStyle.compact(context,232),
-                    padding:const EdgeInsets.all(12),
-                    decoration:OrchidStyle.panelDecoration(radius:18),
-                    child:Column(
-                      crossAxisAlignment:CrossAxisAlignment.start,
-                      children:[
-                        Stack(children:[
-                          if (playlist.songs.isNotEmpty)
-                            AppleCover(
-                              artist: playlist.songs.first.artist,
-                              name: playlist.songs.first.title,
-                              fallbackUrl: playlist.songs.first.artwork,
-                              size: OrchidStyle.compact(context,168)-24,
-                              radius: 12,
-                            )
-                          else _art(null, size: OrchidStyle.compact(context,168)-24),
-                          Positioned(right:7,bottom:7,
-                            child:Container(
-                              padding:const EdgeInsets.all(7),
-                              decoration:BoxDecoration(
-                                color:OrchidStyle.panel,
-                                borderRadius:BorderRadius.circular(9)),
-                              child:const Icon(LucideIcons.pin,
-                                color:OrchidStyle.lilac,size:16)),
-                          ),
-                        ]),
-                        const SizedBox(height:10),
-                        Text(playlist.name,maxLines:2,
-                          overflow:TextOverflow.ellipsis).semiBold(),
-                        const Spacer(),
-                        Text('${playlist.songs.length} songs').xSmall().muted(),
+
+  /// Artwork-first home tile shared by mixes, playlists, and features.
+  /// Text is part of the image rather than a separate bordered panel.
+  Widget _coverTile({
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+    Widget? artwork,
+    IconData? icon,
+    List<Color>? colors,
+    IconData? badge,
+    double? width,
+    double? height,
+  }) {
+    final cardWidth = width ?? OrchidStyle.compact(context, 186);
+    final cardHeight = height ?? OrchidStyle.compact(context, 216);
+    return _clickable(
+      onTap: onTap,
+      child: SizedBox(
+        width: cardWidth,
+        height: cardHeight,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(17),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (artwork != null)
+                ClipRect(
+                  child: FittedBox(
+                    fit: BoxFit.cover,
+                    child: SizedBox(
+                      width: cardWidth,
+                      height: cardWidth,
+                      child: artwork,
+                    ),
+                  ),
+                )
+              else
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: colors ?? const [
+                        Color(0xFF7A3DB3),
+                        Color(0xFF332247),
+                        Color(0xFF151326),
                       ],
                     ),
                   ),
+                  child: Center(
+                    child: Icon(
+                      icon ?? LucideIcons.music2,
+                      size: OrchidStyle.compact(context, 62),
+                      color: const Color(0xFFF6E5FF),
+                    ),
+                  ),
                 ),
-                const SizedBox(width:10),
-              ],
-            ]),
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: [0, 0.37, 0.70, 1],
+                    colors: [
+                      Color(0x00000000),
+                      Color(0x00000000),
+                      Color(0x99000000),
+                      Color(0xE9000000),
+                    ],
+                  ),
+                ),
+              ),
+              if (badge != null)
+                Positioned(
+                  top: 11,
+                  right: 11,
+                  child: Icon(
+                    badge,
+                    size: 19,
+                    color: const Color(0xFFF8F5FF),
+                  ),
+                ),
+              Positioned(
+                left: 13,
+                right: 13,
+                bottom: 12,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFFFFFFFF),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        height: 1.14,
+                        shadows: [Shadow(blurRadius: 8, color: Color(0xAA000000))],
+                      ),
+                    ),
+                    if (subtitle.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(0xFFE6E0E9),
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
           ),
-          SizedBox(height:OrchidStyle.compact(context,28)),
+        ),
+      ),
+    );
+  }
+
+  Widget _pinnedPlaylists() => ListenableBuilder(
+    listenable: widget.library,
+    builder: (context, _) {
+      final playlists = widget.library.playlists.where((p) => p.pinned).toList();
+      if (playlists.isEmpty) return const SizedBox.shrink();
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const OrchidSectionHeader(
+            title: 'Pinned playlists',
+            subtitle: 'Your favorites, right where you left them',
+          ),
+          const SizedBox(height: 12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final playlist in playlists) ...[
+                  _coverTile(
+                    title: playlist.name,
+                    subtitle: '${playlist.songs.length} songs',
+                    badge: LucideIcons.pin,
+                    artwork: playlist.songs.isNotEmpty
+                        ? AppleCover(
+                            artist: playlist.songs.first.artist,
+                            name: playlist.songs.first.title,
+                            fallbackUrl: playlist.songs.first.artwork,
+                            size: OrchidStyle.compact(context, 186),
+                            radius: 0,
+                          )
+                        : null,
+                    onTap: () {
+                      if (playlist.songs.isEmpty) return;
+                      widget.player.setAddons(widget.addons);
+                      final queue = playlist.songs.map((song) => TrackResult(
+                        id: song.key,
+                        title: song.title,
+                        artist: song.artist,
+                        album: song.album,
+                        artworkUrl: song.artwork,
+                        sourceId: 'orchid-library',
+                        sourceName: 'Library',
+                      )).toList();
+                      widget.player.playTrack(queue.first, fromQueue: queue)
+                        .catchError((Object e) {
+                          debugPrint('[Orchid] Cannot play pinned playlist: $e');
+                        });
+                    },
+                  ),
+                  const SizedBox(width: 10),
+                ],
+              ],
+            ),
+          ),
+          SizedBox(height: OrchidStyle.compact(context, 28)),
         ],
       );
     },
@@ -261,110 +369,69 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     builder: (context, _) {
       final source = _homeMixes;
       const titles = ['Favorites Mix', 'Similar Sounds', 'Discover'];
-      const subtitles = ['Your comfort songs', 'Songs in your orbit', 'Something different'];
+      const subtitles = [
+        'Your comfort songs',
+        'Songs in your orbit',
+        'Something different',
+      ];
       return SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: Row(children: [
-          for (var i = 0; i < titles.length; i++) ...[
-            _clickable(
-              onTap: () => widget.openDailyMixes(i),
-              child: Container(
-                width: OrchidStyle.compact(context,168),
-                height: OrchidStyle.compact(context,245),
-                padding: const EdgeInsets.all(12),
-                decoration: OrchidStyle.panelDecoration(radius: 18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Stack(children: [
-                      if (i < source.length && source[i].isNotEmpty)
-                        AppleCover(
-                          artist: source[i].first.artist,
-                          name: source[i].first.title,
-                          fallbackUrl: source[i].first.artwork,
-                          size: OrchidStyle.compact(context,168)-24,
-                          radius: 12,
-                        )
-                      else _art(null, size: OrchidStyle.compact(context,168)-24),
-                      Positioned(
-                        bottom: 8, right: 8,
-                        child: Container(
-                          padding: const EdgeInsets.all(7),
-                          decoration: BoxDecoration(
-                            color: OrchidStyle.panel,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(LucideIcons.sparkles,
-                            size: 16, color: OrchidStyle.lilac),
-                        ),
-                      ),
-                    ]),
-                    const SizedBox(height: 10),
-                    Text(titles[i], maxLines: 1,
-                      overflow: TextOverflow.ellipsis).semiBold(),
-                    const SizedBox(height: 4),
-                    Text(subtitles[i], maxLines: 1,
-                      overflow: TextOverflow.ellipsis).small().muted(),
-                    const Spacer(),
-                  ],
-                ),
+        child: Row(
+          children: [
+            for (var i = 0; i < titles.length; i++) ...[
+              _coverTile(
+                title: titles[i],
+                subtitle: subtitles[i],
+                badge: LucideIcons.sparkles,
+                colors: const [
+                  Color(0xFF7131A6),
+                  Color(0xFF33274E),
+                  Color(0xFF171526),
+                ],
+                artwork: i < source.length && source[i].isNotEmpty
+                    ? AppleCover(
+                        artist: source[i].first.artist,
+                        name: source[i].first.title,
+                        fallbackUrl: source[i].first.artwork,
+                        size: OrchidStyle.compact(context, 186),
+                        radius: 0,
+                      )
+                    : null,
+                onTap: () => widget.openDailyMixes(i),
               ),
-            ),
-            const SizedBox(width: 10),
+              const SizedBox(width: 10),
+            ],
           ],
-        ]),
+        ),
       );
     },
   );
 
-  Widget _madeForYouCard() => _clickable(
-    onTap:widget.openReplay,
-    child:Container(
-      width:OrchidStyle.compact(context,168),height:OrchidStyle.compact(context,245),padding:const EdgeInsets.all(12),
-      decoration:OrchidStyle.panelDecoration(radius:18),
-      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Container(
-          width:OrchidStyle.compact(context,168)-24,height:OrchidStyle.compact(context,168)-24,
-          decoration:BoxDecoration(
-            borderRadius:BorderRadius.circular(12),
-            gradient:const LinearGradient(
-              begin:Alignment.topLeft,end:Alignment.bottomRight,
-              colors:[Color(0xFF7A3DB3),Color(0xFF262047),Color(0xFF151326)],
-            ),
-          ),
-          child:const Stack(children:[
-            Center(child:Icon(LucideIcons.audioLines,size:50,color:Color(0xFFEACFFF))),
-            Positioned(right:9,bottom:9,child:Icon(LucideIcons.sparkles,
-              size:21,color:Color(0xFFFFFFFF))),
-          ]),
-        ),
-        const SizedBox(height:10),
-        const Text('Replay').semiBold(),
-        const SizedBox(height:4),
-        const Text('Your listening story').small().muted(),
-      ]),
-    ),
+  Widget _madeForYouCard() => _coverTile(
+    title: 'Replay',
+    subtitle: 'Your listening story',
+    icon: LucideIcons.audioLines,
+    badge: LucideIcons.sparkles,
+    colors: const [
+      Color(0xFFA348A2),
+      Color(0xFF5C266B),
+      Color(0xFF20142E),
+    ],
+    onTap: widget.openReplay,
   );
 
-  Widget _personalCard(String title,String subtitle,IconData icon,
-      List<Color> colors,VoidCallback onTap) => _clickable(
-    onTap:onTap,
-    child:Container(
-      width:OrchidStyle.compact(context,168),height:OrchidStyle.compact(context,245),padding:const EdgeInsets.all(12),
-      decoration:OrchidStyle.panelDecoration(radius:18),
-      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Container(width:OrchidStyle.compact(context,168)-24,height:OrchidStyle.compact(context,168)-24,
-          decoration:BoxDecoration(borderRadius:BorderRadius.circular(12),
-            gradient:LinearGradient(begin:Alignment.topLeft,
-              end:Alignment.bottomRight,colors:colors)),
-          child:Center(child:Icon(icon,size:OrchidStyle.compact(context,64),color:const Color(0xFFFFFFFF))),
-        ),
-        const SizedBox(height:10),
-        Text(title,maxLines:1,overflow:TextOverflow.ellipsis).semiBold(),
-        const SizedBox(height:4),
-        Text(subtitle,maxLines:2,overflow:TextOverflow.ellipsis).small().muted(),
-      ]),
-    ),
+  Widget _personalCard(
+    String title,
+    String subtitle,
+    IconData icon,
+    List<Color> colors,
+    VoidCallback onTap,
+  ) => _coverTile(
+    title: title,
+    subtitle: subtitle,
+    icon: icon,
+    colors: colors,
+    onTap: onTap,
   );
 
   String _count(dynamic value) {
@@ -544,44 +611,30 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
   }
 
   Widget _topCard(Map<String, dynamic> item, {required bool isAlbum}) {
-    final title=item['name']?.toString()??'Unknown';
-    final artist=item['artist']?.toString()??'';
-    return _clickable(
-      onTap:()=>_showMusicDetail(item,isAlbum:isAlbum),
-      child:SizedBox(
-        width:OrchidStyle.compact(context,168),
-        height:OrchidStyle.compact(context,258),
-        child:Container(
-          decoration:OrchidStyle.panelDecoration(radius:18),
-          padding:const EdgeInsets.all(12),
-          child:Column(
-            crossAxisAlignment:CrossAxisAlignment.start,
-            children:[
-              isAlbum
-                  ? AppleCover(
-                      artist: artist,
-                      name: title,
-                      isAlbum: true,
-                      fallbackUrl: item['image']?.toString(),
-                      size: OrchidStyle.compact(context,168)-24,
-                      radius: 12,
-                    )
-                  : ArtistArtwork(artist: title, size: OrchidStyle.compact(context,168)-24, radius: 12),
-              const SizedBox(height:10),
-              SizedBox(
-                height:38,
-                child:Text(title,maxLines:2,overflow:TextOverflow.ellipsis).semiBold(),
-              ),
-              if(isAlbum)
-                Text(artist,maxLines:1,overflow:TextOverflow.ellipsis).small().muted()
-              else
-                const SizedBox(height:17),
-              const Spacer(),
-              Text('${_count(item['plays'])} plays').xSmall().muted(),
-            ],
-          ),
-        ),
-      ),
+    final title = item['name']?.toString() ?? 'Unknown';
+    final artist = item['artist']?.toString() ?? '';
+    final size = OrchidStyle.compact(context, 186);
+    return _coverTile(
+      title: title,
+      subtitle: isAlbum ? artist : '${_count(item['plays'])} plays',
+      width: size,
+      height: OrchidStyle.compact(context, 216),
+      artwork: isAlbum
+          ? AppleCover(
+              artist: artist,
+              name: title,
+              isAlbum: true,
+              fallbackUrl: item['image']?.toString(),
+              size: size,
+              radius: 0,
+            )
+          : ArtistArtwork(
+              artist: title,
+              size: size,
+              fallbackUrl: item['image']?.toString(),
+              radius: 0,
+            ),
+      onTap: () => _showMusicDetail(item, isAlbum: isAlbum),
     );
   }
 
