@@ -12,6 +12,7 @@ import '../widgets/orchid_style.dart';
 import '../widgets/song_context_menu.dart';
 
 class LibraryScreen extends StatefulWidget {
+  final Widget header;
   final MusicLibrary library;
   final OrchidAccount account;
   final PlayerService player;
@@ -20,6 +21,7 @@ class LibraryScreen extends StatefulWidget {
   final VoidCallback openExplore;
   const LibraryScreen({
     super.key,
+    required this.header,
     required this.library,
     required this.account,
     required this.player,
@@ -219,6 +221,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     builder: (context, _) => ListView(
       padding: EdgeInsets.fromLTRB(20,20,20,20+OrchidStyle.iosDockClearance(context)),
       children: [
+        widget.header,
         const OrchidHero(
           eyebrow: 'Your collection',
           title: 'Keep what you love.',
