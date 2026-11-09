@@ -157,14 +157,14 @@ class _ProfileMenuState extends State<ProfileMenu> {
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         child: Container(
-          padding: const EdgeInsets.fromLTRB(7, 5, 11, 5),
+          padding: EdgeInsets.fromLTRB(7, OrchidStyle.compact(context,5), 11, OrchidStyle.compact(context,5)),
           decoration: OrchidStyle.panelDecoration(radius: 24),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 35,
-                height: 35,
+                width: OrchidStyle.compact(context,35),
+                height: OrchidStyle.compact(context,35),
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
@@ -182,7 +182,7 @@ class _ProfileMenuState extends State<ProfileMenu> {
                         )))
                       : Image.network(
                           widget.account.avatarUrl!,
-                          width: 35, height: 35, fit: BoxFit.cover,
+                          width: OrchidStyle.compact(context,35), height: OrchidStyle.compact(context,35), fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) =>
                               Center(child: Text(initial,
                                 style: const TextStyle(
@@ -193,8 +193,8 @@ class _ProfileMenuState extends State<ProfileMenu> {
                         ),
                 ),
               ),
-              const SizedBox(width: 9),
-              const Icon(LucideIcons.chevronDown, size: 16,
+              SizedBox(width: OrchidStyle.compact(context,9)),
+              Icon(LucideIcons.chevronDown, size: OrchidStyle.compact(context,16),
                 color: OrchidStyle.lilac),
             ],
           ),
