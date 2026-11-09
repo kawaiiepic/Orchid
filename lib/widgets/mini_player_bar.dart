@@ -38,8 +38,8 @@ class MiniPlayerBar extends StatelessWidget {
         final nativeIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
         return Container(
-          margin: const EdgeInsets.fromLTRB(10, 6, 10, 5),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          margin: EdgeInsets.fromLTRB(10, OrchidStyle.compact(context,6), 10, OrchidStyle.compact(context,5)),
+          padding: EdgeInsets.symmetric(horizontal: 14, vertical: OrchidStyle.compact(context,10)),
           decoration: OrchidStyle.panelDecoration(radius: 18),
           child: Row(
             children: [
@@ -54,21 +54,21 @@ class MiniPlayerBar extends StatelessWidget {
                           borderRadius: BorderRadius.circular(11),
                           child: CachedNetworkImage(
                             imageUrl: track.artworkUrl!,
-                            width: 44,
-                            height: 44,
+                            width: OrchidStyle.compact(context,44),
+                            height: OrchidStyle.compact(context,44),
                             fit: BoxFit.cover,
                           ),
                         )
                       else
                         Container(
-                          width: 44,
-                          height: 44,
+                          width: OrchidStyle.compact(context,44),
+                          height: OrchidStyle.compact(context,44),
                           decoration: BoxDecoration(
                             color: scheme.muted,
                             borderRadius: BorderRadius.circular(6),
                           ),
                         ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: OrchidStyle.compact(context,12)),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
