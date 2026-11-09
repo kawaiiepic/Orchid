@@ -511,71 +511,59 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
 
   Widget _recentRow(Map<String, dynamic> track) {
     final artist = track['artist']?.toString() ?? '';
+    final title = track['title']?.toString() ?? 'Unknown track';
     final album = track['album']?.toString() ?? '';
+    final image = track['image']?.toString();
     final nowPlaying = track['nowPlaying'] == true;
-    final timestamp = track['timestamp'] is num
-        ? (track['timestamp'] as num).toInt()
-        : null;
-    final time = timestamp == null
-        ? ''
-        : _relativeTime(DateTime.fromMillisecondsSinceEpoch(timestamp * 1000));
+    final result = TrackResult(
+      id: '${artist.toLowerCase()}|${title.toLowerCase()}',
+      title: title,
+      artist: artist,
+      album: album,
+      artworkUrl: image,
+      sourceId: 'orchid-history',
+      sourceName: 'Orchid History',
+    );
+    final size = OrchidStyle.compact(context, 186);
     return SongContextMenu(
-      track: TrackResult(
-        id: '${artist.toLowerCase()}|${(track['title'] ?? '').toString().toLowerCase()}',
-        title: track['title']?.toString() ?? '',
-        artist: artist,
-        album: album,
-        artworkUrl: track['image']?.toString(),
-        sourceId: 'orchid-history',
-        sourceName: 'Orchid History',
-      ),
+      track: result,
       player: widget.player,
       library: widget.library,
-      child: _clickable(
-      onTap:(){
-        widget.player.setAddons(widget.addons);
-        widget.player.playTrack(TrackResult(
-          id:'${artist.toLowerCase()}|${(track['title'] ?? '').toString().toLowerCase()}',
-          title:track['title']?.toString() ?? '',
-          artist:artist, album:album,
-          artworkUrl:track['image']?.toString(),
-          sourceId:'orchid-history', sourceName:'Orchid History',
-        )).catchError((Object e) {
-          debugPrint('[Orchid] Recent track playback failed: $e');
-        });
-      },
-      child:Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Container(
-      decoration: OrchidStyle.panelDecoration(radius:14),
-      padding: const EdgeInsets.symmetric(horizontal:12,vertical:9),
+      child: _coverTile(
+        title: title,
+        subtitle: artist,
+        width: size,
+        height: OrchidStyle.compact(context, 216),
+        badge: nowPlaying ? LucideIcons.audioLines : null,
+        artwork: AppleCover(
+          artist: artist,
+          name: title,
+          album: album,
+          fallbackUrl: image,
+          size: size,
+          radius: 0,
+        ),
+        onTap: () {
+          widget.player.setAddons(widget.addons);
+          widget.player.playTrack(result).catchError((Object error) {
+            debugPrint('[Orchid] Recent track playback failed: $error');
+          });
+        },
+      ),
+    );
+  }
+
+  Widget _recentCards(List<Map<String, dynamic>> tracks) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          AppleCover(
-            artist: artist,
-            name: (track['title'] ?? '').toString(),
-            fallbackUrl: track['image']?.toString(),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(track['title']?.toString() ?? 'Unknown track').semiBold(),
-                Text(album.isEmpty ? artist : '$artist · $album').small().muted(),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(nowPlaying ? 'Now playing' : time).xSmall().muted(),
-          const SizedBox(width:6),
-          IconButton.ghost(
-            onPressed:()=>_openSong(track),
-            icon:const Icon(LucideIcons.info,size:17),
-          ),
+          for (final track in tracks) ...[
+            _recentRow(track),
+            const SizedBox(width: 10),
+          ],
         ],
-      )),
-    )),
+      ),
     );
   }
 
@@ -767,7 +755,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
               const SizedBox(height:10),
               if (_uniqueRecent().isEmpty)
                 const Text('Play some music to start your Orchid history.').muted()
-              else ..._uniqueRecent().map(_recentRow),
+              else _recentCards(_uniqueRecent()),
               const SizedBox(height:24),
               const OrchidSectionHeader(
                 title:'Popular on Apple Music',
@@ -776,7 +764,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
               const SizedBox(height:10),
               if(_items('charts').isEmpty)
                 const Text('Apple Music charts are unavailable.').muted()
-              else ..._items('charts').take(12).map(_recentRow),
+              else _recentCards(_items('charts').take(12).toList()),
               const SizedBox(height:24),
               const OrchidSectionHeader(title:'Featured albums'),
               const SizedBox(height:10),
