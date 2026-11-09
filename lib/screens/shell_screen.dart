@@ -197,6 +197,30 @@ class _ShellScreenState extends State<ShellScreen>{
     ),
   );
  }
+ Widget _iosTab(int index,String label,IconData inactive,IconData active,int page) {
+  final selected=page==index;
+  final color=selected?OrchidStyle.violet:const Color(0xFF99909F);
+  return Expanded(
+   child:GestureDetector(
+    behavior:HitTestBehavior.opaque,
+    onTap:()=>_selectTab(index),
+    child:SizedBox(
+     height:54,
+     child:Column(
+      mainAxisAlignment:MainAxisAlignment.center,
+      children:[
+       Icon(selected?active:inactive,size:24,color:color),
+       const SizedBox(height:3),
+       Text(label,style:TextStyle(
+        color:color,fontSize:10,
+        fontWeight:selected?FontWeight.w600:FontWeight.w400,
+       )),
+      ],
+     ),
+    ),
+   ),
+  );
+ }
  NavigationItem _button(String title,IconData icon,int index)=>NavigationItem(
   key:ValueKey(index),style:const ButtonStyle.muted(density:ButtonDensity.icon),
   selectedStyle:const ButtonStyle.fixed(density:ButtonDensity.icon),
@@ -244,28 +268,15 @@ class _ShellScreenState extends State<ShellScreen>{
        top:false,
        left:false,
        right:false,
-       child:ios.CupertinoTabBar(
-        currentIndex:page.clamp(0,2),
-        onTap:_selectTab,
-        activeColor:OrchidStyle.violet,
-        inactiveColor:const Color(0xFF99909F),
-        backgroundColor:const Color(0xFF17141D),
-        border:const Border(top:BorderSide(color:Color(0xFF343042),width:0.5)),
-        items:const [
-         ios.BottomNavigationBarItem(
-          icon:Icon(ios.CupertinoIcons.house),
-          activeIcon:Icon(ios.CupertinoIcons.house_fill),
-          label:'Home',
-         ),
-         ios.BottomNavigationBarItem(
-          icon:Icon(ios.CupertinoIcons.search),
-          label:'Explore',
-         ),
-         ios.BottomNavigationBarItem(
-          icon:Icon(ios.CupertinoIcons.music_note_list),
-          label:'Library',
-         ),
-        ],
+       child:Container(
+        decoration:const BoxDecoration(
+         border:Border(top:BorderSide(color:Color(0xFF343042),width:0.5)),
+        ),
+        child:Row(children:[
+         _iosTab(0,'Home',ios.CupertinoIcons.house,ios.CupertinoIcons.house_fill,page),
+         _iosTab(1,'Explore',ios.CupertinoIcons.search,ios.CupertinoIcons.search,page),
+         _iosTab(2,'Library',ios.CupertinoIcons.music_note_list,ios.CupertinoIcons.music_note_list,page),
+        ]),
        ),
       ),
      )
