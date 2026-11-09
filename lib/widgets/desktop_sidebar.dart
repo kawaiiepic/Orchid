@@ -69,23 +69,18 @@ class DesktopSidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 236,
-      decoration: const BoxDecoration(
-        color: Color(0xFF12142D),
-        border: Border(right: BorderSide(color: Color(0xFF34304C), width: .7)),
+      decoration: BoxDecoration(
+        color: const Color(0xEE171529),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFF423853), width: .8),
+        boxShadow: const [BoxShadow(
+          color: Color(0x55000000), blurRadius: 26, offset: Offset(0, 9),
+        )],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(21, 22, 14, 22),
-            child: Row(children: [
-              const Icon(LucideIcons.music2, color: OrchidStyle.violet, size: 23),
-              const SizedBox(width: 9),
-              const Text('Orchid', style: TextStyle(
-                fontSize: 20, fontWeight: FontWeight.w700,
-                color: Color(0xFFF5EDFF))),
-            ]),
-          ),
+          const SizedBox(height: 20),
           _nav('Home', LucideIcons.house, onHome, selected: selectedTab == 0),
           _nav('Search', LucideIcons.search, onSearch, selected: selectedTab == 1),
           _nav('Discover', LucideIcons.compass, onSearch),
