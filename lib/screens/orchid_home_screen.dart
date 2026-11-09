@@ -209,7 +209,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                       });
                   },
                   child:Container(
-                    width:168,height:232,
+                    width:OrchidStyle.compact(context,168),height:OrchidStyle.compact(context,232),
                     padding:const EdgeInsets.all(12),
                     decoration:OrchidStyle.panelDecoration(radius:18),
                     child:Column(
@@ -221,10 +221,10 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                               artist: playlist.songs.first.artist,
                               name: playlist.songs.first.title,
                               fallbackUrl: playlist.songs.first.artwork,
-                              size: 144,
+                              size: OrchidStyle.compact(context,168)-24,
                               radius: 12,
                             )
-                          else _art(null, size: 144),
+                          else _art(null, size: OrchidStyle.compact(context,168)-24),
                           Positioned(right:7,bottom:7,
                             child:Container(
                               padding:const EdgeInsets.all(7),
@@ -248,7 +248,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
               ],
             ]),
           ),
-          const SizedBox(height:28),
+          SizedBox(height:OrchidStyle.compact(context,28)),
         ],
       );
     },
@@ -280,10 +280,10 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                           artist: source[i].first.artist,
                           name: source[i].first.title,
                           fallbackUrl: source[i].first.artwork,
-                          size: 144,
+                          size: OrchidStyle.compact(context,168)-24,
                           radius: 12,
                         )
-                      else _art(null, size: 144),
+                      else _art(null, size: OrchidStyle.compact(context,168)-24),
                       Positioned(
                         bottom: 8, right: 8,
                         child: Container(
@@ -318,11 +318,11 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
   Widget _madeForYouCard() => _clickable(
     onTap:widget.openReplay,
     child:Container(
-      width:168,height:245,padding:const EdgeInsets.all(12),
+      width:OrchidStyle.compact(context,168),height:OrchidStyle.compact(context,245),padding:const EdgeInsets.all(12),
       decoration:OrchidStyle.panelDecoration(radius:18),
       child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         Container(
-          width:144,height:144,
+          width:OrchidStyle.compact(context,168)-24,height:OrchidStyle.compact(context,168)-24,
           decoration:BoxDecoration(
             borderRadius:BorderRadius.circular(12),
             gradient:const LinearGradient(
@@ -348,10 +348,10 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
       List<Color> colors,VoidCallback onTap) => _clickable(
     onTap:onTap,
     child:Container(
-      width:168,height:245,padding:const EdgeInsets.all(12),
+      width:OrchidStyle.compact(context,168),height:OrchidStyle.compact(context,245),padding:const EdgeInsets.all(12),
       decoration:OrchidStyle.panelDecoration(radius:18),
       child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Container(width:144,height:144,
+        Container(width:OrchidStyle.compact(context,168)-24,height:OrchidStyle.compact(context,168)-24,
           decoration:BoxDecoration(borderRadius:BorderRadius.circular(12),
             gradient:LinearGradient(begin:Alignment.topLeft,
               end:Alignment.bottomRight,colors:colors)),
@@ -407,7 +407,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     return _clickable(
       onTap:_refresh,
       child:SizedBox(
-      width: 138,
+      width: OrchidStyle.compact(context,138),
       child: Card(
         child: Padding(
           padding: const EdgeInsets.all(14),
@@ -485,7 +485,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
           AppleCover(
             artist: artist,
             name: (track['title'] ?? '').toString(),
-            fallbackUrl: track['image'] as String?,
+            fallbackUrl: track['image']?.toString(),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -547,8 +547,8 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     return _clickable(
       onTap:()=>_showMusicDetail(item,isAlbum:isAlbum),
       child:SizedBox(
-        width:168,
-        height:258,
+        width:OrchidStyle.compact(context,168),
+        height:OrchidStyle.compact(context,258),
         child:Container(
           decoration:OrchidStyle.panelDecoration(radius:18),
           padding:const EdgeInsets.all(12),
@@ -560,11 +560,11 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                       artist: artist,
                       name: title,
                       isAlbum: true,
-                      fallbackUrl: item['image'] as String?,
-                      size: 144,
+                      fallbackUrl: item['image']?.toString(),
+                      size: OrchidStyle.compact(context,168)-24,
                       radius: 12,
                     )
-                  : ArtistArtwork(artist: title, size: 144, radius: 12),
+                  : ArtistArtwork(artist: title, size: OrchidStyle.compact(context,168)-24, radius: 12),
               const SizedBox(height:10),
               SizedBox(
                 height:38,
@@ -610,7 +610,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
             ? Map<String, dynamic>.from(_history!['stats'] as Map)
             : <String, dynamic>{};
         return ListView(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.all(OrchidStyle.compact(context,20)),
           children: [
             _pinnedPlaylists(),
             OrchidHero(
@@ -633,7 +633,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 28),
+            SizedBox(height:OrchidStyle.compact(context,28)),
             const OrchidSectionHeader(
               title: 'Made for You',
               subtitle: 'A little more personal',
@@ -654,7 +654,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                   widget.openRadio),
 
               ])),
-            const SizedBox(height:28),
+            SizedBox(height:OrchidStyle.compact(context,28)),
             const OrchidSectionHeader(
               title: 'AI DJ',
               subtitle: 'Talk music with your personal DJ',
@@ -674,13 +674,13 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                 ]),
               ),
             ),
-            const SizedBox(height:28),
+            SizedBox(height:OrchidStyle.compact(context,28)),
             const OrchidSectionHeader(
               title: 'Daily Mixes',
               subtitle: 'Fresh rotations for your listening mood',
             ),
             _dailyMixCards(),
-            const SizedBox(height: 28),
+            SizedBox(height:OrchidStyle.compact(context,28)),
             const OrchidSectionHeader(
               title: 'Your listening',
               subtitle: 'A little portrait of your music taste',
