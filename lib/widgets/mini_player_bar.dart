@@ -1,3 +1,4 @@
+import 'dart:ui' show ImageFilter;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:cupertino_ui/cupertino_ui.dart' as ios;
@@ -137,6 +138,132 @@ class MiniPlayerBar extends StatelessWidget {
                 ),
               ],
             ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+
+/// A compact floating iOS music pill. Used independently of the desktop
+/// miniplayer so iPhone's Liquid Glass dock can animate without relayouting
+/// the active Flutter tab tree.
+class IOSMiniPlayer extends StatelessWidget {
+  final PlayerService player;
+  final MusicLibrary? library;
+  final bool compact;
+
+  const IOSMiniPlayer({
+    super.key,
+    required this.player,
+    this.library,
+    this.compact = false,
+  });
+
+  void _openFull(BuildContext context) {
+    if (player.current == null) return;
+    showContentDrawer(
+      context,
+      preferredWidth: 900,
+      builder: (_) => FullPlayerScreen(player: player, library: library),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: player,
+      builder: (context, _) {
+        final track = player.current;
+        if (track == null) return const SizedBox.shrink();
+        final artwork = track.artworkUrl;
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(32),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            child: Container(
+              height: 58,
+              padding: const EdgeInsets.symmetric(horizontal: 9),
+              decoration: BoxDecoration(
+                color: const Color(0xFF3A393F).withValues(alpha: 0.78),
+                borderRadius: BorderRadius.circular(32),
+                border: Border.all(color: const Color(0x70FFFFFF), width: 0.7),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => _openFull(context),
+                      child: Row(children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(13),
+                          child: artwork != null && artwork.isNotEmpty
+                              ? CachedNetworkImage(
+                                  imageUrl: artwork,
+                                  width: 42,
+                                  height: 42,
+                                  fit: BoxFit.cover,
+                                  errorWidget: (context, url, error) =>
+                                      const SizedBox(
+                                        width: 42,
+                                        height: 42,
+                                        child: Icon(LucideIcons.music2),
+                                      ),
+                                )
+                              : const SizedBox(
+                                  width: 42,
+                                  height: 42,
+                                  child: Icon(LucideIcons.music2),
+                                ),
+                        ),
+                        const SizedBox(width: 9),
+                        Expanded(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                track.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Color(0xFFFDFBFF),
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              Text(
+                                track.artist,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Color(0xFFC6C2CB),
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ]),
+                    ),
+                  ),
+                  ios.CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(44, 44),
+                    onPressed: player.togglePlayPause,
+                    child: Icon(
+                      player.player.playing
+                          ? ios.CupertinoIcons.pause_fill
+                          : ios.CupertinoIcons.play_fill,
+                      size: 23,
+                      color: const Color(0xFFFDFBFF),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         );
       },
