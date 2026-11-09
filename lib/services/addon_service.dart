@@ -1,19 +1,21 @@
-import 'dart:convert';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'orchid_account.dart';
 
 import '../models/addon.dart';
 import './internal_addons/spotify_addon_service.dart';
 import 'search_ranker.dart';
 
 class AddonService {
-  static const _storageKey = 'orchid_addons_v1';
   static const _itunesSearch = 'https://itunes.apple.com/search';
 
   final http.Client _client;
+  OrchidAccount? _account;
+  int _revision = 0;
+  void configure(OrchidAccount account) => _account = account;
+  void reset() { _revision = 0; }
 
   /// Last resolve steps for UI (newest last).
   final List<String> lastDebug = [];
@@ -40,21 +42,25 @@ class AddonService {
   }
 
   Future<List<InstalledAddon>> load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_storageKey);
-    if (raw == null || raw.isEmpty) return [];
-    final list = jsonDecode(raw) as List;
-    return list
-        .map((e) => InstalledAddon.fromJson(Map<String, dynamic>.from(e as Map)))
-        .toList();
+    final account = _account;
+    if (account == null || !account.signedIn) return [];
+    final response = await account.loadInstalledAddons();
+    _revision = (response['revision'] as num?)?.toInt() ?? 0;
+    final raw = response['addons'];
+    if (raw is! List) return [];
+    return raw.whereType<Map>().map((entry) =>
+      InstalledAddon.fromJson(Map<String,dynamic>.from(entry))
+    ).toList();
   }
 
   Future<void> save(List<InstalledAddon> addons) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      _storageKey,
-      jsonEncode(addons.map((a) => a.toJson()).toList()),
-    );
+    final account = _account;
+    if (account == null || !account.signedIn) {
+      throw StateError('Sign in before changing addons');
+    }
+    final response = await account.saveInstalledAddons(
+      addons.map((a) => a.toJson()).toList(), _revision);
+    _revision = (response['revision'] as num?)?.toInt() ?? _revision + 1;
   }
 
   Future<InstalledAddon> fetchAndBuild(String url) async {
