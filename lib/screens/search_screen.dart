@@ -540,7 +540,7 @@ class _SearchScreenState extends State<SearchScreen> {
       Expanded(child:ListenableBuilder(
         listenable:widget.library,
         builder:(context,_) => ListView(
-          padding:const EdgeInsets.fromLTRB(16,4,16,20),
+          padding:EdgeInsets.fromLTRB(16,4,16,20+OrchidStyle.iosDockClearance(context)),
           children:[
             if(_artistsOn && _artists.isNotEmpty)...[
               _section('Artist',_artists.length),
