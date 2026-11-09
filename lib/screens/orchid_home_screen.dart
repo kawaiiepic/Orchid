@@ -744,6 +744,119 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     );
   }
 
+  Widget _desktopSection(String title, {String? subtitle}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(children: [
+        Text(title, style: const TextStyle(
+          fontSize: 19, fontWeight: FontWeight.w700,
+          color: Color(0xFFF8F2FF),
+        )),
+        if (subtitle != null) ...[
+          const SizedBox(width: 12),
+          Expanded(child: Text(subtitle, maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Color(0xFF9E91B2), fontSize: 11))),
+        ],
+      ]),
+    );
+  }
+
+  Widget _desktopHome(Map<String, dynamic> stats) {
+    const gap = SizedBox(height: 31);
+    final charts = _items('charts');
+    final recent = _uniqueRecent();
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(28, 28, 30, 42),
+      children: [
+        widget.header,
+        _desktopShortcuts(),
+        gap,
+        _desktopSection('Made For You'),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(children: [
+            _madeForYouCard(),
+            const SizedBox(width: 13),
+            _personalCard(
+              'All-Time Top Songs', 'The songs that stay with you',
+              LucideIcons.audioLines,
+              const [Color(0xFF496B9A), Color(0xFF1E355B), Color(0xFF17182F)],
+              widget.openTopSongs,
+            ),
+            const SizedBox(width: 13),
+            _personalCard(
+              'Radio', 'Pick a sound and stay awhile',
+              LucideIcons.radio,
+              const [Color(0xFF197F78), Color(0xFF24536D), Color(0xFF17273B)],
+              widget.openRadio,
+            ),
+            const SizedBox(width: 13),
+            _personalCard(
+              'AI DJ', 'Your personal music companion',
+              LucideIcons.bot,
+              const [Color(0xFF4F2C59), Color(0xFF282036), Color(0xFF131625)],
+              widget.openAiDj,
+            ),
+          ]),
+        ),
+        gap,
+        _desktopSection('Daily Mixes'),
+        _dailyMixCards(),
+        gap,
+        _desktopSection('New For You'),
+        if (_loading && _history == null)
+          const Text('Finding music for you…').muted()
+        else if (charts.isNotEmpty)
+          _recentCards(charts.take(12).toList())
+        else
+          const Text('Fresh music will appear here soon.').muted(),
+        gap,
+        if (recent.isNotEmpty) ...[
+          _desktopSection('Recently Played'),
+          _recentCards(recent),
+          gap,
+        ],
+        if (_items('featuredAlbums').isNotEmpty) ...[
+          _desktopSection('Featured Albums'),
+          _horizontalItems(_items('featuredAlbums'), albums: true),
+          gap,
+        ],
+        if (_items('artists').isNotEmpty) ...[
+          _desktopSection('Your Top Artists'),
+          _horizontalItems(_items('artists'), albums: false),
+          gap,
+        ],
+        if (_items('albums').isNotEmpty) ...[
+          _desktopSection('Your Top Albums'),
+          _horizontalItems(_items('albums'), albums: true),
+          gap,
+        ],
+        if (_history != null) ...[
+          _desktopSection('Your Listening'),
+          Wrap(
+            spacing: 10, runSpacing: 10,
+            children: [
+              _stat('Listens', stats['scrobbles']),
+              _stat('Artists', stats['artists']),
+              _stat('Albums', stats['albums']),
+              _stat('Tracks', stats['tracks']),
+            ],
+          ),
+          gap,
+        ],
+        if (_error != null) ...[
+          Text(_error!, style: const TextStyle(
+            color: Color(0xFFD7A7BA), fontSize: 12)),
+          const SizedBox(height: 12),
+          Align(alignment: Alignment.centerLeft,
+            child: OutlineButton(
+              onPressed: _refresh, child: const Text('Try again'))),
+        ],
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -752,6 +865,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
         final stats = _history?['stats'] is Map
             ? Map<String, dynamic>.from(_history!['stats'] as Map)
             : <String, dynamic>{};
+        if (_desktop) return _desktopHome(stats);
         return ListView(
           padding: EdgeInsets.fromLTRB(OrchidStyle.compact(context,20),OrchidStyle.compact(context,20),OrchidStyle.compact(context,20),OrchidStyle.compact(context,20)+OrchidStyle.iosDockClearance(context)),
           children: [
