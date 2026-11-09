@@ -267,8 +267,8 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
             _clickable(
               onTap: () => widget.openDailyMixes(i),
               child: Container(
-                width: 168,
-                height: 245,
+                width: OrchidStyle.compact(context,168),
+                height: OrchidStyle.compact(context,245),
                 padding: const EdgeInsets.all(12),
                 decoration: OrchidStyle.panelDecoration(radius: 18),
                 child: Column(
@@ -331,7 +331,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
             ),
           ),
           child:const Stack(children:[
-            Center(child:Icon(LucideIcons.audioLines,size:65,color:Color(0xFFEACFFF))),
+            Center(child:Icon(LucideIcons.audioLines,size:50,color:Color(0xFFEACFFF))),
             Positioned(right:9,bottom:9,child:Icon(LucideIcons.sparkles,
               size:21,color:Color(0xFFFFFFFF))),
           ]),
@@ -355,7 +355,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
           decoration:BoxDecoration(borderRadius:BorderRadius.circular(12),
             gradient:LinearGradient(begin:Alignment.topLeft,
               end:Alignment.bottomRight,colors:colors)),
-          child:Center(child:Icon(icon,size:64,color:const Color(0xFFFFFFFF))),
+          child:Center(child:Icon(icon,size:OrchidStyle.compact(context,64),color:const Color(0xFFFFFFFF))),
         ),
         const SizedBox(height:10),
         Text(title,maxLines:1,overflow:TextOverflow.ellipsis).semiBold(),
@@ -664,13 +664,13 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
               onTap:widget.openAiDj,
               child:Container(
                 width:double.infinity,
-                padding:const EdgeInsets.symmetric(horizontal:18,vertical:14),
+                padding:EdgeInsets.symmetric(horizontal:OrchidStyle.compact(context,18),vertical:OrchidStyle.compact(context,14)),
                 decoration:OrchidStyle.panelDecoration(radius:15),
                 child:Row(children:[
-                  const Icon(LucideIcons.bot,size:22,color:OrchidStyle.lilac),
+                  Icon(LucideIcons.bot,size:OrchidStyle.compact(context,22),color:OrchidStyle.lilac),
                   const SizedBox(width:12),
                   Expanded(child:const Text('Chat with AI DJ').semiBold()),
-                  const Icon(LucideIcons.chevronRight,size:19,color:OrchidStyle.lilac),
+                  Icon(LucideIcons.chevronRight,size:OrchidStyle.compact(context,19),color:OrchidStyle.lilac),
                 ]),
               ),
             ),
