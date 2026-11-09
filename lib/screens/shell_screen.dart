@@ -478,8 +478,20 @@ class _ShellScreenState extends State<ShellScreen>{
             onSettings:_openSettings,
             onProfile:_openProfile,
           ),
-          Expanded(child:ColoredBox(
-            color:const Color(0xFF17101F),
+          Expanded(child:Container(
+            decoration:const BoxDecoration(
+              gradient:LinearGradient(
+                begin:Alignment.topLeft,
+                end:Alignment.bottomRight,
+                colors:[
+                  Color(0xFF2D1B36),
+                  Color(0xFF24152D),
+                  Color(0xFF130F1A),
+                  Color(0xFF0D0D15),
+                ],
+                stops:[0,0.32,0.72,1],
+              ),
+            ),
             child:browsing,
           )),
         ])),
