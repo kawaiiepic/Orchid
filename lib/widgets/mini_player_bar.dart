@@ -251,7 +251,6 @@ class IOSMiniPlayer extends StatelessWidget {
                   ),
                   ios.CupertinoButton(
                     padding: EdgeInsets.zero,
-                    minimumSize: const Size(44, 44),
                     onPressed: player.togglePlayPause,
                     child: Icon(
                       player.player.playing
