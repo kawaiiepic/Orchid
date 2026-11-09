@@ -386,8 +386,8 @@ class _ShellScreenState extends State<ShellScreen>{
    return SafeArea(child:Scaffold(child:ProfileScreen(account:_account)));
   }
   final page=(selected as ValueKey<int>?)?.value??0;
-  final desktop=!kIsWeb && defaultTargetPlatform!=TargetPlatform.iOS
-    && defaultTargetPlatform!=TargetPlatform.android
+  final desktop=(kIsWeb || (defaultTargetPlatform!=TargetPlatform.iOS
+    && defaultTargetPlatform!=TargetPlatform.android))
     && MediaQuery.sizeOf(context).width>=850;
   final browsing=NotificationListener<ScrollNotification>(
     onNotification:_onContentScroll,
@@ -483,7 +483,11 @@ class _ShellScreenState extends State<ShellScreen>{
             child:browsing,
           )),
         ])),
-        DesktopPlayerBar(player:_player,library:_library),
+        Row(children:[
+          const SizedBox(width:236,child:ColoredBox(
+            color:Color(0xFF12142D),child:SizedBox(height:82))),
+          Expanded(child:DesktopPlayerBar(player:_player,library:_library)),
+        ]),
       ]),
     );
   }
