@@ -293,13 +293,17 @@ class DesktopPlayerBar extends StatelessWidget {
         return Container(
           height: 82,
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
-          decoration: const BoxDecoration(
-            color: Color(0xFF151632),
-            border: Border(top: BorderSide(color: Color(0xFF3A3056), width: .8)),
+          decoration: BoxDecoration(
+            color: const Color(0xEF18152C),
+            borderRadius: BorderRadius.circular(17),
+            border: Border.all(color: const Color(0xFF4B3E5B), width: .8),
+            boxShadow: const [BoxShadow(
+              color: Color(0x66000000), blurRadius: 22, offset: Offset(0, 7),
+            )],
           ),
           child: Row(children: [
             SizedBox(
-              width: MediaQuery.sizeOf(context).width < 1200 ? 185 : 270,
+              width: MediaQuery.sizeOf(context).width < 1250 ? 155 : 245,
               child: track == null
                 ? const Align(alignment: Alignment.centerLeft,
                     child: Text('Nothing playing', style: TextStyle(
@@ -370,7 +374,7 @@ class DesktopPlayerBar extends StatelessWidget {
                     ],
                   ),
                   SizedBox(
-                    width: MediaQuery.sizeOf(context).width < 1200 ? 240 : 420,
+                    width: MediaQuery.sizeOf(context).width < 1250 ? 165 : 340,
                     child: StreamBuilder<Duration>(
                       stream: player.player.positionStream,
                       builder: (context, snapshot) {
@@ -394,14 +398,14 @@ class DesktopPlayerBar extends StatelessWidget {
               ),
             ),
             SizedBox(
-              width: MediaQuery.sizeOf(context).width < 1200 ? 125 : 230,
+              width: MediaQuery.sizeOf(context).width < 1250 ? 95 : 160,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   const Icon(LucideIcons.volume2, size: 16,
                     color: Color(0xFFBEB0D0)),
                   const SizedBox(width: 10),
-                  SizedBox(width: MediaQuery.sizeOf(context).width < 1200 ? 72 : 122,
+                  SizedBox(width: MediaQuery.sizeOf(context).width < 1250 ? 55 : 108,
                     child: Slider(
                       value: SliderValue.single(player.volume),
                       min: 0,
