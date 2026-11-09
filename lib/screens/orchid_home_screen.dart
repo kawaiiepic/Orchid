@@ -368,9 +368,9 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     );
   }
 
-  bool get _desktop => !kIsWeb &&
+  bool get _desktop => (kIsWeb || (
       defaultTargetPlatform != TargetPlatform.iOS &&
-      defaultTargetPlatform != TargetPlatform.android &&
+      defaultTargetPlatform != TargetPlatform.android)) &&
       MediaQuery.sizeOf(context).width >= 850;
 
   Widget _desktopShortcuts() => ListenableBuilder(
