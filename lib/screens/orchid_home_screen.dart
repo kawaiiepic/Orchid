@@ -13,6 +13,7 @@ import '../widgets/apple_cover.dart';
 import '../widgets/song_context_menu.dart';
 
 class OrchidHomeScreen extends StatefulWidget {
+  final Widget header;
   final PlayerService player;
   final MusicLibrary library;
   final AddonService addonService;
@@ -29,6 +30,7 @@ class OrchidHomeScreen extends StatefulWidget {
 
   const OrchidHomeScreen({
     super.key,
+    required this.header,
     required this.player,
     required this.library,
     required this.addonService,
@@ -612,6 +614,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
         return ListView(
           padding: EdgeInsets.fromLTRB(OrchidStyle.compact(context,20),OrchidStyle.compact(context,20),OrchidStyle.compact(context,20),OrchidStyle.compact(context,20)+OrchidStyle.iosDockClearance(context)),
           children: [
+            widget.header,
             _pinnedPlaylists(),
             OrchidHero(
               eyebrow: 'Your listening space',
