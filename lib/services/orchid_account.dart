@@ -35,6 +35,7 @@ class OrchidAccount extends ChangeNotifier {
   final uri=Uri.parse('$baseUrl$path');
   final response=await (method=='GET'?http.get(uri,headers:headers):
     method=='DELETE'?http.delete(uri,headers:headers):
+    method=='PUT'?http.put(uri,headers:headers,body:jsonEncode(payload??{})):
     http.post(uri,headers:headers,body:jsonEncode(payload??{}))).timeout(const Duration(seconds:15),onTimeout:()=>throw Exception('Connection timed out. Please try again.'));
   dynamic value;
   try{value=jsonDecode(response.body);}catch(_){throw Exception('Invalid response from Petal backend (HTTP ${response.statusCode}).');}
@@ -199,6 +200,14 @@ class OrchidAccount extends ChangeNotifier {
   lastfmUsername=data['connected']==true?data['username'] as String?:null;
   notifyListeners();
  }
+ // Account-backed Orchid collection and addon configuration.
+ Future<Map<String,dynamic>> loadLibrary() => _request('GET','/orchid/library');
+ Future<Map<String,dynamic>> saveLibrary(Map<String,dynamic> library,int revision) =>
+   _request('PUT','/orchid/library',{'library':library,'revision':revision});
+ Future<Map<String,dynamic>> loadInstalledAddons() => _request('GET','/orchid/addons');
+ Future<Map<String,dynamic>> saveInstalledAddons(List<Map<String,dynamic>> addons,int revision) =>
+   _request('PUT','/orchid/addons',{'addons':addons,'revision':revision});
+
  Future<Map<String,dynamic>> orchidHome() async {
   if(!signedIn)throw StateError('Sign in first');
   return _request('GET','/orchid/home');
