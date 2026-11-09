@@ -1,4 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
 import '../services/orchid_account.dart';
 import '../services/player_service.dart';
@@ -192,8 +193,72 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     double? width,
     double? height,
   }) {
-    final cardWidth = width ?? OrchidStyle.compact(context, 186);
-    final cardHeight = height ?? OrchidStyle.compact(context, 216);
+    final desktop = _desktop;
+    final cardWidth = width ?? (desktop ? 186.0 : OrchidStyle.compact(context, 186));
+    final cardHeight = height ?? (desktop ? 226.0 : OrchidStyle.compact(context, 216));
+    if (desktop) {
+      return _clickable(
+        onTap: onTap,
+        child: SizedBox(
+          width: cardWidth,
+          height: cardHeight,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Stack(fit: StackFit.expand, children: [
+                    if (artwork != null)
+                      FittedBox(
+                        fit: BoxFit.cover,
+                        child: SizedBox(
+                          width: cardWidth, height: cardWidth, child: artwork),
+                      )
+                    else
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: colors ?? const [
+                              Color(0xFF7A3DB3),
+                              Color(0xFF332247),
+                              Color(0xFF151326),
+                            ],
+                          ),
+                        ),
+                        child: Center(child: Icon(
+                          icon ?? LucideIcons.music2,
+                          size: 58,
+                          color: const Color(0xFFF6E5FF),
+                        )),
+                      ),
+                    if (badge != null)
+                      Positioned(
+                        top: 9, right: 9,
+                        child: Icon(badge, size: 16,
+                          color: const Color(0xFFF6E5FF)),
+                      ),
+                  ]),
+                ),
+              ),
+              const SizedBox(height: 7),
+              Text(title, maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 13, fontWeight: FontWeight.w600,
+                  color: Color(0xFFF5EDFF))),
+              const SizedBox(height: 2),
+              Text(subtitle, maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 11, color: Color(0xFFA99BB7))),
+            ],
+          ),
+        ),
+      );
+    }
     return _clickable(
       onTap: onTap,
       child: SizedBox(
@@ -302,6 +367,91 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
       ),
     );
   }
+
+  bool get _desktop => !kIsWeb &&
+      defaultTargetPlatform != TargetPlatform.iOS &&
+      defaultTargetPlatform != TargetPlatform.android &&
+      MediaQuery.sizeOf(context).width >= 850;
+
+  Widget _desktopShortcuts() => ListenableBuilder(
+    listenable: widget.library,
+    builder: (context, _) {
+      final playlists = widget.library.playlists;
+      return LayoutBuilder(builder: (context, box) {
+        final columns = box.maxWidth >= 940 ? 3 : 2;
+        const gap = 10.0;
+        final width = (box.maxWidth - gap * (columns - 1)) / columns;
+        Widget shortcut(String label, String subtitle, String? artist,
+            String? song, String? artwork) {
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: widget.openLibrary,
+            child: Container(
+              width: width,
+              height: 60,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: const Color(0xFF34243A),
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: Row(children: [
+                if (song != null && artist != null)
+                  AppleCover(artist: artist, name: song,
+                    fallbackUrl: artwork, size: 60, radius: 0)
+                else
+                  const SizedBox(
+                    width: 60, height: 60,
+                    child: ColoredBox(
+                      color: Color(0xFF6B4284),
+                      child: Icon(LucideIcons.heart, size: 24,
+                        color: Color(0xFFECD5FF)),
+                    ),
+                  ),
+                const SizedBox(width: 11),
+                Expanded(child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label, maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w600,
+                        color: Color(0xFFF5EDFF))),
+                    if (subtitle.isNotEmpty)
+                      Text(subtitle, maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 10, color: Color(0xFFA69AB4))),
+                  ],
+                )),
+                const SizedBox(width: 8),
+              ]),
+            ),
+          );
+        }
+        final items = <Widget>[
+          shortcut('Favorites',
+            '${widget.library.favorites.length} songs',
+            widget.library.favorites.isNotEmpty
+              ? widget.library.favorites.first.artist : null,
+            widget.library.favorites.isNotEmpty
+              ? widget.library.favorites.first.title : null,
+            widget.library.favorites.isNotEmpty
+              ? widget.library.favorites.first.artwork : null),
+          for (final p in playlists.take(8))
+            shortcut(p.name, '${p.songs.length} songs',
+              p.songs.isNotEmpty ? p.songs.first.artist : null,
+              p.songs.isNotEmpty ? p.songs.first.title : null,
+              p.songs.isNotEmpty ? p.songs.first.artwork : null),
+        ];
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: items,
+        );
+      });
+    },
+  );
 
   Widget _pinnedPlaylists() => ListenableBuilder(
     listenable: widget.library,
