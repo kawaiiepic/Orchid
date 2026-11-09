@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:flutter/cupertino.dart' as ios;
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../models/addon.dart';
 import '../services/addon_service.dart';
@@ -201,11 +203,11 @@ class _ShellScreenState extends State<ShellScreen>{
   label:Text(title),child:Icon(icon));
  @override Widget build(BuildContext context){
   if(_account.loading){
-   return const Scaffold(child:Center(child:Text('Checking your Petal session…')));
+   return const SafeArea(child:Scaffold(child:Center(child:Text('Checking your Petal session…'))));
   }
   if(!_account.signedIn){
    if(_account.hasStoredSession){
-    return Scaffold(
+    return SafeArea(child:Scaffold(
      child:Center(
       child:ConstrainedBox(
        constraints:const BoxConstraints(maxWidth:420),
@@ -227,34 +229,75 @@ class _ShellScreenState extends State<ShellScreen>{
        ),
       ),
      ),
-    );
+    ));
    }
-   return Scaffold(child:ProfileScreen(account:_account));
+   return SafeArea(child:Scaffold(child:ProfileScreen(account:_account)));
   }
   final page=(selected as ValueKey<int>?)?.value??0;
   return Scaffold(
    footers:[
     MiniPlayerBar(player:_player,library:_library),
-    const Divider(),
-NavigationBar(
-     alignment:NavigationBarAlignment.spaceAround,
-     labelType:NavigationLabelType.none,
-     expanded:true,
-     onSelected:(key)=>_selectTab((key as ValueKey<int>).value),
-     selectedKey:selected,
-     children:[
-      _button('Home',BootstrapIcons.house,0),
-      _button('Explore',BootstrapIcons.compass,1),
-      _button('Library',BootstrapIcons.musicNoteList,2),
-     ],
-    ),
+    if(!kIsWeb && defaultTargetPlatform==TargetPlatform.iOS)
+     ColoredBox(
+      color:const Color(0xFF17141D),
+      child:SafeArea(
+       top:false,
+       left:false,
+       right:false,
+       child:ios.CupertinoTabBar(
+        currentIndex:page.clamp(0,2),
+        onTap:_selectTab,
+        activeColor:OrchidStyle.violet,
+        inactiveColor:const Color(0xFF99909F),
+        backgroundColor:const Color(0xFF17141D),
+        border:const Border(top:BorderSide(color:Color(0xFF343042),width:0.5)),
+        items:const [
+         ios.BottomNavigationBarItem(
+          icon:Icon(ios.CupertinoIcons.house),
+          activeIcon:Icon(ios.CupertinoIcons.house_fill),
+          label:'Home',
+         ),
+         ios.BottomNavigationBarItem(
+          icon:Icon(ios.CupertinoIcons.search),
+          label:'Explore',
+         ),
+         ios.BottomNavigationBarItem(
+          icon:Icon(ios.CupertinoIcons.music_note_list),
+          label:'Library',
+         ),
+        ],
+       ),
+      ),
+     )
+    else ...[
+     const Divider(),
+     SafeArea(
+      top:false,
+      child:NavigationBar(
+       alignment:NavigationBarAlignment.spaceAround,
+       labelType:NavigationLabelType.none,
+       expanded:true,
+       onSelected:(key)=>_selectTab((key as ValueKey<int>).value),
+       selectedKey:selected,
+       children:[
+        _button('Home',BootstrapIcons.house,0),
+        _button('Explore',BootstrapIcons.compass,1),
+        _button('Library',BootstrapIcons.musicNoteList,2),
+       ],
+      ),
+     ),
+    ],
    ],
    // Keep all three browsing tabs alive while showing a global profile button.
    child:Column(
     children:[
-     Padding(
-      padding:const EdgeInsets.fromLTRB(20, 12, 20, 6),
-      child:Row(children:[
+     ColoredBox(
+      color:OrchidStyle.ink,
+      child:SafeArea(
+       bottom:false,
+       child:Padding(
+        padding:const EdgeInsets.fromLTRB(20, 12, 20, 6),
+        child:Row(children:[
        const Icon(LucideIcons.music2, size:20, color:OrchidStyle.violet),
        const SizedBox(width:9),
        const Text('Orchid').large().semiBold(),
@@ -264,7 +307,9 @@ NavigationBar(
         onProfile:_openProfile,
         onSettings:_openSettings,
        ),
-      ]),
+        ]),
+       ),
+      ),
      ),
      Expanded(child:IndexedStack(
     index:page.clamp(0,2),
