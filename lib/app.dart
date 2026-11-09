@@ -17,7 +17,10 @@ class OrchidApp extends StatelessWidget {
       // Every screen and route needs a DrawerOverlay ancestor for Shadcn sheets.
       // Wrapping only a pushed page does not cover the main profile/settings UI.
       home: DrawerOverlay(
-        child: SafeArea(child: ShellScreen()),
+        child: ColoredBox(
+          color: Color(0xFF101018),
+          child: ShellScreen(),
+        ),
       ),
     );
   }
