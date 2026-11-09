@@ -1,7 +1,16 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:sizer/sizer.dart';
 
 /// Shared visual language for Orchid's browsing surfaces.
 abstract final class OrchidStyle {
+  // Keep desktop's original metrics; use Sizer's viewport width to make
+  // phone layouts denser without scaling tap targets to unusable sizes.
+  static double compact(BuildContext context, double value) {
+    if (MediaQuery.sizeOf(context).width >= 600) return value;
+    final factor = (Adaptive.w(100) / 430).clamp(0.78, 0.92);
+    return value * factor;
+  }
+
   static const violet = Color(0xFFBE9AFF);
   static const lilac = Color(0xFFE0CBFF);
   static const pink = Color(0xFFF3A7D6);
@@ -38,18 +47,18 @@ class OrchidSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 14),
+    padding: EdgeInsets.only(bottom: OrchidStyle.compact(context, 14)),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
-          width: 4, height: 24,
+          width: 4, height: OrchidStyle.compact(context, 24),
           decoration: BoxDecoration(
             color: OrchidStyle.violet,
             borderRadius: BorderRadius.circular(4),
           ),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: OrchidStyle.compact(context, 12)),
         Expanded(child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -94,7 +103,7 @@ class OrchidHero extends StatelessWidget {
         Positioned(
           right: -54, top: -76,
           child: Container(
-            width: 240, height: 240,
+            width: OrchidStyle.compact(context, 240), height: OrchidStyle.compact(context, 240),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: OrchidStyle.violet.withValues(alpha: 0.11),
@@ -103,11 +112,11 @@ class OrchidHero extends StatelessWidget {
         ),
         Positioned(
           right: 24, top: 18,
-          child: Icon(icon, size: 102,
+          child: Icon(icon, size: OrchidStyle.compact(context, 102),
             color: OrchidStyle.lilac.withValues(alpha: 0.12)),
         ),
         Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(OrchidStyle.compact(context, 24)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -116,9 +125,9 @@ class OrchidHero extends StatelessWidget {
                   color: OrchidStyle.lilac, fontSize: 11,
                   letterSpacing: 2, fontWeight: FontWeight.w700,
                 )),
-              const SizedBox(height: 14),
-              Text(title, style: const TextStyle(
-                fontSize: 29, fontWeight: FontWeight.w700,
+              SizedBox(height: OrchidStyle.compact(context, 14)),
+              Text(title, style: TextStyle(
+                fontSize: OrchidStyle.compact(context, 29), fontWeight: FontWeight.w700,
                 height: 1.08, color: Color(0xFFF9F5FF),
               )),
               const SizedBox(height: 9),
@@ -129,7 +138,7 @@ class OrchidHero extends StatelessWidget {
                 )),
               ),
               if (action != null) ...[
-                const SizedBox(height: 20),
+                SizedBox(height: OrchidStyle.compact(context, 20)),
                 action!,
               ],
             ],
