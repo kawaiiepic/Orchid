@@ -1,4 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:sizer/sizer.dart';
 import 'package:shadcn_flutter_cupertino/shadcn_flutter_cupertino.dart';
 
 import 'screens/shell_screen.dart';
@@ -10,7 +11,10 @@ class OrchidApp extends StatelessWidget {
   Widget build(BuildContext context) {
     // Provide Cupertino context globally while keeping Orchid's platform-
     // specific navigation and controls in their existing widgets.
-    return const CupertinoShadcnApp(
+    return Sizer(
+      maxMobileWidth: 599,
+      maxTabletWidth: 1024,
+      builder: (context, orientation, screenType) => const CupertinoShadcnApp(
       title: 'Orchid',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -23,6 +27,7 @@ class OrchidApp extends StatelessWidget {
           color: Color(0xFF101018),
           child: ShellScreen(),
         ),
+      ),
       ),
     );
   }
