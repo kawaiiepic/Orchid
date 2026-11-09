@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show ImageFilter;
 import 'package:cupertino_native_better/cupertino_native.dart' as native;
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -36,10 +37,34 @@ class _ShellScreenState extends State<ShellScreen>{
  StreamSubscription<Duration>? _positionSubscription;
  Key? selected=const ValueKey(0);
  final Set<int> _initializedTabs={0};
+ bool _iosDockCollapsed=false;
+ double _verticalScrollAccum=0;
+ bool _onContentScroll(ScrollNotification notification) {
+  if (notification.metrics.axis != Axis.vertical ||
+      notification is! ScrollUpdateNotification) return false;
+  final delta=notification.scrollDelta ?? 0;
+  if (notification.metrics.pixels < 80) {
+   _verticalScrollAccum=0;
+   if (_iosDockCollapsed) setState(() => _iosDockCollapsed=false);
+   return false;
+  }
+  if (delta.abs()<1) return false;
+  _verticalScrollAccum=(_verticalScrollAccum+delta).clamp(-120.0,120.0);
+  if (!_iosDockCollapsed && _verticalScrollAccum>36) {
+   _verticalScrollAccum=0;
+   setState(() => _iosDockCollapsed=true);
+  } else if (_iosDockCollapsed && _verticalScrollAccum < -28) {
+   _verticalScrollAccum=0;
+   setState(() => _iosDockCollapsed=false);
+  }
+  return false;
+ }
  void _selectTab(int index) {
   setState(() {
    selected=ValueKey(index);
    _initializedTabs.add(index);
+   _iosDockCollapsed=false;
+   _verticalScrollAccum=0;
   });
  }
  List<InstalledAddon> _addons=[];
@@ -197,6 +222,81 @@ class _ShellScreenState extends State<ShellScreen>{
     ),
   );
  }
+ Widget _glassDockAction(IconData icon,int index,int page) {
+  return GestureDetector(
+   onTap:()=>_selectTab(index),
+   behavior:HitTestBehavior.opaque,
+   child:ClipRRect(
+    borderRadius:BorderRadius.circular(32),
+    child:BackdropFilter(
+     filter:ImageFilter.blur(sigmaX:18,sigmaY:18),
+     child:Container(
+      width:58,height:58,
+      decoration:BoxDecoration(
+       color:const Color(0xFF38373E).withValues(alpha:0.78),
+       borderRadius:BorderRadius.circular(32),
+       border:Border.all(color:const Color(0x70FFFFFF),width:0.7),
+      ),
+      child:Icon(icon,size:24,color:page==index?OrchidStyle.pink:const Color(0xFFF8F6FC)),
+     ),
+    ),
+   ),
+  );
+ }
+
+ Widget _iosFloatingDock(int page) {
+  final bottom=MediaQuery.paddingOf(context).bottom;
+  return Positioned(
+   left:12,right:12,bottom:bottom+8,
+   child:ListenableBuilder(
+    listenable:_player,
+    builder:(context,_) {
+     final hasTrack=_player.current!=null;
+     final collapsed=hasTrack && _iosDockCollapsed;
+     return AnimatedSize(
+      duration:const Duration(milliseconds:240),
+      curve:Curves.easeOutCubic,
+      alignment:Alignment.bottomCenter,
+      child:collapsed
+       ? Row(children:[
+          _glassDockAction(LucideIcons.house,0,page),
+          const SizedBox(width:8),
+          Expanded(child:IOSMiniPlayer(player:_player,library:_library,compact:true)),
+          const SizedBox(width:8),
+          _glassDockAction(LucideIcons.search,1,page),
+         ])
+       : Column(
+          mainAxisSize:MainAxisSize.min,
+          children:[
+           if(hasTrack)...[
+            Padding(
+             padding:const EdgeInsets.symmetric(horizontal:4),
+             child:IOSMiniPlayer(player:_player,library:_library),
+            ),
+            const SizedBox(height:8),
+           ],
+           native.CNTabBar(
+            items:const [
+             native.CNTabBarItem(
+              label:'Home',icon:native.CNSymbol('house'),
+              activeIcon:native.CNSymbol('house.fill')),
+             native.CNTabBarItem(
+              label:'Explore',icon:native.CNSymbol('safari'),
+              activeIcon:native.CNSymbol('safari.fill')),
+             native.CNTabBarItem(
+              label:'Library',icon:native.CNSymbol('music.note.list')),
+            ],
+            currentIndex:page.clamp(0,2),
+            onTap:_selectTab,
+            iconSize:23,
+           ),
+          ],
+         ),
+     );
+    },
+   ),
+  );
+ }
  NavigationItem _button(String title,IconData icon,int index)=>NavigationItem(
   key:ValueKey(index),style:const ButtonStyle.muted(density:ButtonDensity.icon),
   selectedStyle:const ButtonStyle.fixed(density:ButtonDensity.icon),
@@ -256,8 +356,9 @@ class _ShellScreenState extends State<ShellScreen>{
      ),
     ],
    ],
-   // Keep all three browsing tabs alive while showing a global profile button.
-   child:Column(
+   // iOS uses a floating overlay so content paints behind the dock.
+   child:Stack(children:[
+    Column(
     children:[
      ColoredBox(
       color:OrchidStyle.ink,
@@ -279,7 +380,9 @@ class _ShellScreenState extends State<ShellScreen>{
        ),
       ),
      ),
-     Expanded(child:IndexedStack(
+     Expanded(child:NotificationListener<ScrollNotification>(
+      onNotification:_onContentScroll,
+      child:IndexedStack(
     index:page.clamp(0,2),
     children:[
      OrchidHomeScreen(
@@ -342,33 +445,11 @@ class _ShellScreenState extends State<ShellScreen>{
       openExplore:()=>_selectTab(1),
      ) else const SizedBox.shrink(),
     ],
-     )),
-     if(!kIsWeb && defaultTargetPlatform==TargetPlatform.iOS) ...[
-      MiniPlayerBar(player:_player,library:_library),
-      native.CNTabBar(
-       items:const [
-        native.CNTabBarItem(
-         label:'Home',
-         icon:native.CNSymbol('house'),
-         activeIcon:native.CNSymbol('house.fill'),
-        ),
-        native.CNTabBarItem(
-         label:'Explore',
-         icon:native.CNSymbol('safari'),
-         activeIcon:native.CNSymbol('safari.fill'),
-        ),
-        native.CNTabBarItem(
-         label:'Library',
-         icon:native.CNSymbol('music.note.list'),
-        ),
-       ],
-       currentIndex:page.clamp(0,2),
-       onTap:_selectTab,
-       iconSize:23,
-      ),
-     ],
+     ))),
     ],
-   ),
+    if(!kIsWeb && defaultTargetPlatform==TargetPlatform.iOS)
+     _iosFloatingDock(page),
+   ]),
   );
  }
 }
