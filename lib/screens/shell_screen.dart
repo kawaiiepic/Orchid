@@ -297,6 +297,28 @@ class _ShellScreenState extends State<ShellScreen>{
    ),
   );
  }
+ Widget _topBar(BuildContext context) {
+  return ColoredBox(
+        color:OrchidStyle.ink,
+        child:SafeArea(
+         bottom:false,
+         child:Padding(
+          padding:EdgeInsets.fromLTRB(OrchidStyle.compact(context,20),OrchidStyle.compact(context,12),OrchidStyle.compact(context,20),OrchidStyle.compact(context,6)),
+          child:Row(children:[
+         Icon(LucideIcons.music2, size:OrchidStyle.compact(context,20), color:OrchidStyle.violet),
+         SizedBox(width:OrchidStyle.compact(context,9)),
+         const Text('Orchid').large().semiBold(),
+         const Spacer(),
+         ProfileMenu(
+          account:_account,
+          onProfile:_openProfile,
+          onSettings:_openSettings,
+         ),
+          ]),
+         ),
+        ),
+       );
+ }
  NavigationItem _button(String title,IconData icon,int index)=>NavigationItem(
   key:ValueKey(index),style:const ButtonStyle.muted(density:ButtonDensity.icon),
   selectedStyle:const ButtonStyle.fixed(density:ButtonDensity.icon),
@@ -360,32 +382,13 @@ class _ShellScreenState extends State<ShellScreen>{
    child:Stack(children:[
     Column(
     children:[
-     ColoredBox(
-      color:OrchidStyle.ink,
-      child:SafeArea(
-       bottom:false,
-       child:Padding(
-        padding:EdgeInsets.fromLTRB(OrchidStyle.compact(context,20),OrchidStyle.compact(context,12),OrchidStyle.compact(context,20),OrchidStyle.compact(context,6)),
-        child:Row(children:[
-       Icon(LucideIcons.music2, size:OrchidStyle.compact(context,20), color:OrchidStyle.violet),
-       SizedBox(width:OrchidStyle.compact(context,9)),
-       const Text('Orchid').large().semiBold(),
-       const Spacer(),
-       ProfileMenu(
-        account:_account,
-        onProfile:_openProfile,
-        onSettings:_openSettings,
-       ),
-        ]),
-       ),
-      ),
-     ),
      Expanded(child:NotificationListener<ScrollNotification>(
       onNotification:_onContentScroll,
       child:IndexedStack(
     index:page.clamp(0,2),
     children:[
      OrchidHomeScreen(
+      header:_topBar(context),
       player:_player,addonService:_addonService,addons:_addons,account:_account,
       openExplore:()=>_selectTab(1),
       openProfile:_openProfile,
@@ -434,9 +437,10 @@ class _ShellScreenState extends State<ShellScreen>{
       library:_library,
      ),
      if(_initializedTabs.contains(1))
-      SearchScreen(addonService:_addonService,player:_player,addons:_addons,library:_library,account:_account)
+      SearchScreen(header:_topBar(context),addonService:_addonService,player:_player,addons:_addons,library:_library,account:_account)
      else const SizedBox.shrink(),
      if(_initializedTabs.contains(2)) LibraryScreen(
+      header:_topBar(context),
       library:_library,
       account:_account,
       player:_player,
