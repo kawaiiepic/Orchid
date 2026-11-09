@@ -85,9 +85,11 @@ class _ShellScreenState extends State<ShellScreen>{
   _account.restore();
  }
  Future<void> _loadAddons() async{
+  final requestedUser=_addonsUser;
+  if(requestedUser==null)return;
   try{
    final list=await _addonService.load();
-   if(!mounted || !_account.signedIn)return;
+   if(!mounted || !_account.signedIn || requestedUser!=_addonsUser)return;
    setState(()=>_addons=list);_player.setAddons(list);
   }catch(e){debugPrint('Error loading addons: $e');}
  }
@@ -100,12 +102,9 @@ class _ShellScreenState extends State<ShellScreen>{
   if(user!=_addonsUser){
    _addonsUser=user;
    _addonService.reset();
-   if(user==null){
-    _addons=[];
-    _player.setAddons([]);
-   } else {
-    _loadAddons();
-   }
+   _addons=[];
+   _player.setAddons([]);
+   if(user!=null)_loadAddons();
   }
   if(mounted)setState((){});
  }
