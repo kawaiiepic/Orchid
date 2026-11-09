@@ -236,40 +236,8 @@ class _ShellScreenState extends State<ShellScreen>{
   final page=(selected as ValueKey<int>?)?.value??0;
   return Scaffold(
    footers:[
-    MiniPlayerBar(player:_player,library:_library),
-    if(!kIsWeb && defaultTargetPlatform==TargetPlatform.iOS)
-     ColoredBox(
-      color:const Color(0xFF17141D),
-      child:SafeArea(
-       top:false,
-       left:false,
-       right:false,
-       child:ios.CupertinoTabBar(
-        currentIndex:page.clamp(0,2),
-        onTap:_selectTab,
-        activeColor:OrchidStyle.violet,
-        inactiveColor:const Color(0xFF99909F),
-        backgroundColor:const Color(0xFF17141D),
-        border:const Border(top:BorderSide(color:Color(0xFF343042),width:0.5)),
-        items:const [
-         ios.BottomNavigationBarItem(
-          icon:Icon(ios.CupertinoIcons.house),
-          activeIcon:Icon(ios.CupertinoIcons.house_fill),
-          label:'Home',
-         ),
-         ios.BottomNavigationBarItem(
-          icon:Icon(ios.CupertinoIcons.search),
-          label:'Explore',
-         ),
-         ios.BottomNavigationBarItem(
-          icon:Icon(ios.CupertinoIcons.music_note_list),
-          label:'Library',
-         ),
-        ],
-       ),
-      ),
-     )
-    else ...[
+    if(kIsWeb || defaultTargetPlatform!=TargetPlatform.iOS) ...[
+     MiniPlayerBar(player:_player,library:_library),
      const Divider(),
      SafeArea(
       top:false,
@@ -375,6 +343,40 @@ class _ShellScreenState extends State<ShellScreen>{
      ) else const SizedBox.shrink(),
     ],
      )),
+     if(!kIsWeb && defaultTargetPlatform==TargetPlatform.iOS) ...[
+      MiniPlayerBar(player:_player,library:_library),
+      ColoredBox(
+            color:const Color(0xFF17141D),
+            child:SafeArea(
+             top:false,
+             left:false,
+             right:false,
+             child:ios.CupertinoTabBar(
+              currentIndex:page.clamp(0,2),
+              onTap:_selectTab,
+              activeColor:OrchidStyle.violet,
+              inactiveColor:const Color(0xFF99909F),
+              backgroundColor:const Color(0xFF17141D),
+              border:const Border(top:BorderSide(color:Color(0xFF343042),width:0.5)),
+              items:const [
+               ios.BottomNavigationBarItem(
+                icon:Icon(ios.CupertinoIcons.house),
+                activeIcon:Icon(ios.CupertinoIcons.house_fill),
+                label:'Home',
+               ),
+               ios.BottomNavigationBarItem(
+                icon:Icon(ios.CupertinoIcons.search),
+                label:'Explore',
+               ),
+               ios.BottomNavigationBarItem(
+                icon:Icon(ios.CupertinoIcons.music_note_list),
+                label:'Library',
+               ),
+              ],
+             ),
+            ),
+           ),
+     ],
     ],
    ),
   );
