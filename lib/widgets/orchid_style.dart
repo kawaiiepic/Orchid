@@ -1,5 +1,6 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:sizer/sizer.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
 /// Shared visual language for Orchid's browsing surfaces.
 abstract final class OrchidStyle {
@@ -9,6 +10,13 @@ abstract final class OrchidStyle {
     if (MediaQuery.sizeOf(context).width >= 600) return value;
     final factor = (Adaptive.w(100) / 450).clamp(0.76, 0.88);
     return value * factor;
+  }
+
+  // The iOS dock is an overlay, not a footer. Let content scroll behind it
+  // while leaving room to reach the last card at the bottom of the list.
+  static double iosDockClearance(BuildContext context) {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return 0;
+    return 152 + MediaQuery.paddingOf(context).bottom;
   }
 
   static const violet = Color(0xFFBE9AFF);
