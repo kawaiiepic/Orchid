@@ -299,7 +299,7 @@ class DesktopPlayerBar extends StatelessWidget {
           ),
           child: Row(children: [
             SizedBox(
-              width: 270,
+              width: MediaQuery.sizeOf(context).width < 1200 ? 185 : 270,
               child: track == null
                 ? const Align(alignment: Alignment.centerLeft,
                     child: Text('Nothing playing', style: TextStyle(
@@ -370,7 +370,7 @@ class DesktopPlayerBar extends StatelessWidget {
                     ],
                   ),
                   SizedBox(
-                    width: 420,
+                    width: MediaQuery.sizeOf(context).width < 1200 ? 240 : 420,
                     child: StreamBuilder<Duration>(
                       stream: player.player.positionStream,
                       builder: (context, snapshot) {
@@ -394,14 +394,14 @@ class DesktopPlayerBar extends StatelessWidget {
               ),
             ),
             SizedBox(
-              width: 230,
+              width: MediaQuery.sizeOf(context).width < 1200 ? 125 : 230,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   const Icon(LucideIcons.volume2, size: 16,
                     color: Color(0xFFBEB0D0)),
                   const SizedBox(width: 10),
-                  SizedBox(width: 122,
+                  SizedBox(width: MediaQuery.sizeOf(context).width < 1200 ? 72 : 122,
                     child: Slider(
                       value: SliderValue.single(player.volume),
                       min: 0,
