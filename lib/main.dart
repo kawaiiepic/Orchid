@@ -38,7 +38,13 @@ void main() {
   MediaKit.ensureInitialized();
   JustAudioMediaKit.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(systemNavigationBarColor: Color(0x00000000)),
+    const SystemUiOverlayStyle(
+      statusBarColor: Color(0x00000000),
+      statusBarBrightness: Brightness.dark,
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: Color(0xFF17141D),
+      systemNavigationBarIconBrightness: Brightness.light,
+    ),
   );
   runApp(const OrchidApp());
 }
