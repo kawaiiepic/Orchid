@@ -5,7 +5,6 @@ import '../services/player_service.dart';
 import '../services/music_library.dart';
 import '../services/addon_service.dart';
 import '../models/addon.dart';
-import 'song_detail_screen.dart';
 import 'music_detail_pages.dart';
 import '../widgets/orchid_style.dart';
 import '../widgets/artist_artwork.dart';
@@ -441,30 +440,6 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     return number.toStringAsFixed(0);
   }
 
-  Widget _art(String? url, {double size = 48}) {
-    if (url == null || !url.startsWith('https://')) {
-      return Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.muted,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: const Icon(LucideIcons.music2, size: 20),
-      );
-    }
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: Image.network(
-        url,
-        width: size,
-        height: size,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _art(null, size: size),
-      ),
-    );
-  }
-
   Widget _clickable({required Widget child,required VoidCallback onTap}) {
     return MouseRegion(
       cursor:SystemMouseCursors.click,
@@ -491,22 +466,6 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
         ),
       ),
     ));
-  }
-
-  void _openSong(Map<String,dynamic> track) {
-    final timestamp=track['timestamp'];
-    final listenedAt=timestamp is num
-      ? DateTime.fromMillisecondsSinceEpoch(timestamp.toInt()*1000)
-      : null;
-    showSongDetailDrawer(context,
-      player:widget.player, library:widget.library,
-      addonService:widget.addonService, addons:widget.addons,
-      title:track['title']?.toString()??'Unknown',
-      artist:track['artist']?.toString()??'Unknown',
-      album:track['album']?.toString(),
-      artworkUrl:track['image']?.toString(),
-      listenedAt:listenedAt, nowPlaying:track['nowPlaying']==true,
-    );
   }
 
   Widget _recentRow(Map<String, dynamic> track) {
@@ -565,15 +524,6 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
         ],
       ),
     );
-  }
-
-  String _relativeTime(DateTime when) {
-    final difference = DateTime.now().difference(when);
-    if (difference.isNegative || difference.inMinutes < 1) return 'Just now';
-    if (difference.inHours < 1) return '${difference.inMinutes}m ago';
-    if (difference.inDays < 1) return '${difference.inHours}h ago';
-    if (difference.inDays < 7) return '${difference.inDays}d ago';
-    return '${when.month}/${when.day}/${when.year}';
   }
 
   void _showMusicDetail(Map<String, dynamic> item, {required bool isAlbum}) {
