@@ -11,23 +11,28 @@ void main() {
   // Keep a visible diagnostic instead of an unexplained grey screen.
   ErrorWidget.builder = (details) {
     final exception = details.exceptionAsString();
+    final stack = details.stack?.toString() ?? 'No stack trace available';
     debugPrint('[Orchid UI] $exception');
     debugPrintStack(stackTrace: details.stack);
-    // Display the real widget exception on TestFlight/iOS release builds so
-    // the first failure can be diagnosed without Xcode device logs.
+
+    // Release-mode ErrorWidgets do not expose a useful exception by default.
+    // The initial stack frames identify the failing widget and source line.
+    final firstFrames = stack.split('\\n').take(16).join('\\n');
     return Directionality(
       textDirection: TextDirection.ltr,
       child: ColoredBox(
         color: const Color(0xFF17141D),
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Text(
-              'Orchid hit a UI error:\\n$exception',
-              textAlign: TextAlign.left,
-              style: const TextStyle(
-                color: Color(0xFFE0CBFF),
-                fontSize: 13,
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: SelectableText(
+                'Orchid UI error:\\n$exception\\n\\nStack trace:\\n$firstFrames',
+                textAlign: TextAlign.left,
+                style: const TextStyle(
+                  color: Color(0xFFE0CBFF),
+                  fontSize: 12,
+                ),
               ),
             ),
           ),
