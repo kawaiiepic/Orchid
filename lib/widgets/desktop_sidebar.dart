@@ -90,7 +90,7 @@ class DesktopSidebar extends StatelessWidget {
           _nav('Search', LucideIcons.search, onSearch, selected: selectedTab == 1),
           _nav('Discover', LucideIcons.compass, onSearch),
           _nav('Library', LucideIcons.library, onLibrary, selected: selectedTab == 2),
-          _nav('Replay', LucideIcons.chartNoAxesColumn, onReplay),
+          _nav('Replay', LucideIcons.audioLines, onReplay),
           _nav('Radio', LucideIcons.radio, onRadio),
           _nav('AI DJ', LucideIcons.bot, onAiDj),
           const SizedBox(height: 17),
@@ -131,9 +131,13 @@ class DesktopSidebar extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(9),
                   child: Row(children: [
-                    CircleAvatar(
-                      radius: 16,
-                      backgroundColor: OrchidStyle.panelLight,
+                    Container(
+                      width: 32, height: 32,
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                        color: OrchidStyle.panelLight,
+                        shape: BoxShape.circle,
+                      ),
                       child: Text(
                         accountName.isNotEmpty ? accountName[0].toUpperCase() : '?',
                         style: const TextStyle(color: OrchidStyle.lilac,
