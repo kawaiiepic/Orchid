@@ -20,12 +20,13 @@ import 'song_detail_screen.dart';
 enum SearchCategory { all, artists, tracks, albums, playlists }
 
 class SearchScreen extends StatefulWidget {
+  final Widget header;
   final AddonService addonService;
   final OrchidAccount account;
   final PlayerService player;
   final MusicLibrary library;
   final List<InstalledAddon> addons;
-  const SearchScreen({super.key, required this.account, required this.addonService,
+  const SearchScreen({super.key, required this.header, required this.account, required this.addonService,
     required this.player, required this.library, required this.addons});
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -492,7 +493,12 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(children:[
+    return ListenableBuilder(
+      listenable:widget.library,
+      builder:(context,_) => ListView(
+        padding:EdgeInsets.only(bottom:OrchidStyle.iosDockClearance(context)),
+        children:[
+      widget.header,
       const Padding(
         padding:EdgeInsets.fromLTRB(20,20,20,14),
         child:OrchidHero(
@@ -537,11 +543,9 @@ class _SearchScreenState extends State<SearchScreen> {
         Padding(padding:const EdgeInsets.symmetric(horizontal:20,vertical:6),
           child:Align(alignment:Alignment.centerLeft,
             child:Text(_status!).small().muted())),
-      Expanded(child:ListenableBuilder(
-        listenable:widget.library,
-        builder:(context,_) => ListView(
-          padding:EdgeInsets.fromLTRB(16,4,16,20+OrchidStyle.iosDockClearance(context)),
-          children:[
+      Padding(
+        padding:const EdgeInsets.fromLTRB(16,4,16,20),
+        child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
             if(_artistsOn && _artists.isNotEmpty)...[
               _section('Artist',_artists.length),
               ..._artists.map(_artistTile),
@@ -585,9 +589,11 @@ class _SearchScreenState extends State<SearchScreen> {
                 padding:const EdgeInsets.symmetric(vertical:8),
                 child:const Text('Apple Music playlists require a server-side developer token.').small().muted(),
               ),
-          ],
-        ),
-      )),
-    ]);
+           ],
+         ),
+       ),
+     ],
+    ),
+   );
   }
 }
