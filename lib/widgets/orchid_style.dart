@@ -7,7 +7,7 @@ abstract final class OrchidStyle {
   // phone layouts denser without scaling tap targets to unusable sizes.
   static double compact(BuildContext context, double value) {
     if (MediaQuery.sizeOf(context).width >= 600) return value;
-    final factor = (Adaptive.w(100) / 430).clamp(0.78, 0.92);
+    final factor = (Adaptive.w(100) / 450).clamp(0.76, 0.88);
     return value * factor;
   }
 
