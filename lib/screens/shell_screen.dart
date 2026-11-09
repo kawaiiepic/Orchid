@@ -16,6 +16,7 @@ import 'radio_screen.dart';
 import 'ai_dj_screen.dart';
 import 'all_time_top_songs_screen.dart';
 import '../widgets/mini_player_bar.dart';
+import '../widgets/desktop_sidebar.dart';
 import '../widgets/profile_menu.dart';
 import '../widgets/orchid_style.dart';
 import '../widgets/content_drawer.dart';
@@ -330,6 +331,24 @@ class _ShellScreenState extends State<ShellScreen>{
         ),
        );
  }
+ Widget _desktopGreeting() {
+  final now=DateTime.now().hour;
+  final greeting=now<12?'Good morning':now<17?'Good afternoon':'Good evening';
+  return Padding(
+   padding:const EdgeInsets.only(bottom:22),
+   child:Column(
+    crossAxisAlignment:CrossAxisAlignment.start,
+    children:[
+     Text(greeting,style:const TextStyle(
+      color:Color(0xFF9D90AF),fontSize:12)),
+     const SizedBox(height:5),
+     Text(_account.username ?? 'Your music',
+      style:const TextStyle(fontSize:27,fontWeight:FontWeight.w700,
+       color:Color(0xFFF7EDFF))),
+    ],
+   ),
+  );
+ }
  NavigationItem _button(String title,IconData icon,int index)=>NavigationItem(
   key:ValueKey(index),style:const ButtonStyle.muted(density:ButtonDensity.icon),
   selectedStyle:const ButtonStyle.fixed(density:ButtonDensity.icon),
@@ -367,39 +386,16 @@ class _ShellScreenState extends State<ShellScreen>{
    return SafeArea(child:Scaffold(child:ProfileScreen(account:_account)));
   }
   final page=(selected as ValueKey<int>?)?.value??0;
-  return Scaffold(
-   footers:[
-    if(kIsWeb || defaultTargetPlatform!=TargetPlatform.iOS) ...[
-     MiniPlayerBar(player:_player,library:_library),
-     const Divider(),
-     SafeArea(
-      top:false,
-      child:NavigationBar(
-       alignment:NavigationBarAlignment.spaceAround,
-       labelType:NavigationLabelType.none,
-       expanded:true,
-       onSelected:(key)=>_selectTab((key as ValueKey<int>).value),
-       selectedKey:selected,
-       children:[
-        _button('Home',BootstrapIcons.house,0),
-        _button('Explore',BootstrapIcons.compass,1),
-        _button('Library',BootstrapIcons.musicNoteList,2),
-       ],
-      ),
-     ),
-    ],
-   ],
-   // iOS uses a floating overlay so content paints behind the dock.
-   child:Stack(children:[
-    Column(
-    children:[
-     Expanded(child:NotificationListener<ScrollNotification>(
-      onNotification:_onContentScroll,
-      child:IndexedStack(
-    index:page.clamp(0,2),
-    children:[
+  final desktop=!kIsWeb && defaultTargetPlatform!=TargetPlatform.iOS
+    && defaultTargetPlatform!=TargetPlatform.android
+    && MediaQuery.sizeOf(context).width>=850;
+  final browsing=NotificationListener<ScrollNotification>(
+    onNotification:_onContentScroll,
+    child:IndexedStack(
+      index:page.clamp(0,2),
+      children:[
      OrchidHomeScreen(
-      header:_topBar(context),
+      header:desktop ? _desktopGreeting() : _topBar(context),
       player:_player,addonService:_addonService,addons:_addons,account:_account,
       openExplore:()=>_selectTab(1),
       openProfile:_openProfile,
@@ -448,10 +444,10 @@ class _ShellScreenState extends State<ShellScreen>{
       library:_library,
      ),
      if(_initializedTabs.contains(1))
-      SearchScreen(header:_topBar(context),addonService:_addonService,player:_player,addons:_addons,library:_library,account:_account)
+      SearchScreen(header:desktop ? const SizedBox.shrink() : _topBar(context),addonService:_addonService,player:_player,addons:_addons,library:_library,account:_account)
      else const SizedBox.shrink(),
      if(_initializedTabs.contains(2)) LibraryScreen(
-      header:_topBar(context),
+      header:desktop ? const SizedBox.shrink() : _topBar(context),
       library:_library,
       account:_account,
       player:_player,
@@ -459,11 +455,65 @@ class _ShellScreenState extends State<ShellScreen>{
       addons:_addons,
       openExplore:()=>_selectTab(1),
      ) else const SizedBox.shrink(),
+
+      ],
+    ),
+  );
+
+  if(desktop){
+    return Scaffold(
+      child:Column(children:[
+        Expanded(child:Row(children:[
+          DesktopSidebar(
+            selectedTab:page,
+            library:_library,
+            accountName:_account.username ?? _account.email ?? 'Account',
+            onHome:()=>_selectTab(0),
+            onSearch:()=>_selectTab(1),
+            onLibrary:()=>_selectTab(2),
+            onReplay:()=>_openFeatureSheet('Replay',ReplayScreen(account:_account)),
+            onRadio:()=>_openFeatureSheet('Radio',
+              RadioScreen(account:_account,player:_player,addons:_addons)),
+            onAiDj:()=>_openFeatureSheet('AI DJ',AiDjScreen(account:_account)),
+            onSettings:_openSettings,
+            onProfile:_openProfile,
+          ),
+          Expanded(child:ColoredBox(
+            color:const Color(0xFF17101F),
+            child:browsing,
+          )),
+        ])),
+        DesktopPlayerBar(player:_player,library:_library),
+      ]),
+    );
+  }
+
+  return Scaffold(
+   footers:[
+    if(kIsWeb || defaultTargetPlatform!=TargetPlatform.iOS) ...[
+     MiniPlayerBar(player:_player,library:_library),
+     const Divider(),
+     SafeArea(
+      top:false,
+      child:NavigationBar(
+       alignment:NavigationBarAlignment.spaceAround,
+       labelType:NavigationLabelType.none,
+       expanded:true,
+       onSelected:(key)=>_selectTab((key as ValueKey<int>).value),
+       selectedKey:selected,
+       children:[
+        _button('Home',BootstrapIcons.house,0),
+        _button('Explore',BootstrapIcons.compass,1),
+        _button('Library',BootstrapIcons.musicNoteList,2),
+       ],
+      ),
+     ),
     ],
-     ))),
-    ],
+   ],
+   child:Stack(children:[
+    browsing,
     if(!kIsWeb && defaultTargetPlatform==TargetPlatform.iOS)
-     _iosFloatingDock(page),
+      _iosFloatingDock(page),
    ]),
   );
  }
