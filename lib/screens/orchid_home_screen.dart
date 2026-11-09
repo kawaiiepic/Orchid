@@ -610,7 +610,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
             ? Map<String, dynamic>.from(_history!['stats'] as Map)
             : <String, dynamic>{};
         return ListView(
-          padding: EdgeInsets.all(OrchidStyle.compact(context,20)),
+          padding: EdgeInsets.fromLTRB(OrchidStyle.compact(context,20),OrchidStyle.compact(context,20),OrchidStyle.compact(context,20),OrchidStyle.compact(context,20)+OrchidStyle.iosDockClearance(context)),
           children: [
             _pinnedPlaylists(),
             OrchidHero(
