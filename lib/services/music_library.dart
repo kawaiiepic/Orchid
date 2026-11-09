@@ -181,7 +181,9 @@ class MusicLibrary extends ChangeNotifier {
     recentlyPlayed.removeWhere((s) => s.key == song.key);
     recentlyPlayed.insert(0, song);
     if (recentlyPlayed.length > 120) recentlyPlayed.removeRange(120, recentlyPlayed.length);
-    await _save();
+    // Listening history is persisted through /orchid/history by PlayerService.
+    // A playback event should never overwrite the account's library snapshot.
+    notifyListeners();
   }
 
   /// Daily mixes use known listening history, without inventing recommendations.
