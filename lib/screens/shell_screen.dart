@@ -33,6 +33,7 @@ class _ShellScreenState extends State<ShellScreen>{
  final _account=OrchidAccount();
  final _library=MusicLibrary();
  String? _libraryUser;
+ String? _addonsUser;
  late final PlayerService _player;
  StreamSubscription<Duration>? _positionSubscription;
  Key? selected=const ValueKey(0);
@@ -74,18 +75,19 @@ class _ShellScreenState extends State<ShellScreen>{
  int _maxPositionSeconds=0;
  @override void initState(){
   super.initState();
+  _library.configure(_account);
+  _addonService.configure(_account);
   _player=PlayerService(addonService:_addonService);
   _player.addListener(_trackChanged);
   _positionSubscription=_player.player.positionStream.listen(_positionChanged);
   LyricsAppearance.instance.load();
   _account.addListener(_accountChanged);
   _account.restore();
-  _loadAddons();
  }
  Future<void> _loadAddons() async{
   try{
    final list=await _addonService.load();
-   if(!mounted)return;
+   if(!mounted || !_account.signedIn)return;
    setState(()=>_addons=list);_player.setAddons(list);
   }catch(e){debugPrint('Error loading addons: $e');}
  }
@@ -94,6 +96,16 @@ class _ShellScreenState extends State<ShellScreen>{
   if(user!=_libraryUser){
    _libraryUser=user;
    _library.setAccount(user);
+  }
+  if(user!=_addonsUser){
+   _addonsUser=user;
+   _addonService.reset();
+   if(user==null){
+    _addons=[];
+    _player.setAddons([]);
+   } else {
+    _loadAddons();
+   }
   }
   if(mounted)setState((){});
  }
