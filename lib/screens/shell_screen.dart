@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:cupertino_ui/cupertino_ui.dart' as ios;
+import 'package:cupertino_native_better/cupertino_native.dart' as native;
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../models/addon.dart';
@@ -345,37 +345,27 @@ class _ShellScreenState extends State<ShellScreen>{
      )),
      if(!kIsWeb && defaultTargetPlatform==TargetPlatform.iOS) ...[
       MiniPlayerBar(player:_player,library:_library),
-      ColoredBox(
-            color:const Color(0xFF17141D),
-            child:SafeArea(
-             top:false,
-             left:false,
-             right:false,
-             child:ios.CupertinoTabBar(
-              currentIndex:page.clamp(0,2),
-              onTap:_selectTab,
-              activeColor:OrchidStyle.violet,
-              inactiveColor:const Color(0xFF99909F),
-              backgroundColor:const Color(0xFF17141D),
-              border:const Border(top:BorderSide(color:Color(0xFF343042),width:0.5)),
-              items:const [
-               ios.BottomNavigationBarItem(
-                icon:Icon(ios.CupertinoIcons.house),
-                activeIcon:Icon(ios.CupertinoIcons.house_fill),
-                label:'Home',
-               ),
-               ios.BottomNavigationBarItem(
-                icon:Icon(ios.CupertinoIcons.search),
-                label:'Explore',
-               ),
-               ios.BottomNavigationBarItem(
-                icon:Icon(ios.CupertinoIcons.music_note_list),
-                label:'Library',
-               ),
-              ],
-             ),
-            ),
-           ),
+      native.CNTabBar(
+       items:const [
+        native.CNTabBarItem(
+         label:'Home',
+         icon:native.CNSymbol('house'),
+         activeIcon:native.CNSymbol('house.fill'),
+        ),
+        native.CNTabBarItem(
+         label:'Explore',
+         icon:native.CNSymbol('safari'),
+         activeIcon:native.CNSymbol('safari.fill'),
+        ),
+        native.CNTabBarItem(
+         label:'Library',
+         icon:native.CNSymbol('music.note.list'),
+        ),
+       ],
+       currentIndex:page.clamp(0,2),
+       onTap:_selectTab,
+       iconSize:23,
+      ),
      ],
     ],
    ),
