@@ -192,8 +192,87 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     IconData? badge,
     double? width,
     double? height,
+    bool desktopLandscape = false,
+    bool desktopCircle = false,
   }) {
     final desktop = _desktop;
+    if (desktop && desktopLandscape) {
+      final wideWidth = width ?? 294.0;
+      final wideHeight = height ?? 174.0;
+      return _clickable(
+        onTap: onTap,
+        child: SizedBox(
+          width: wideWidth, height: wideHeight,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(15),
+            child: Stack(fit: StackFit.expand, children: [
+              if (artwork != null)
+                FittedBox(
+                  fit: BoxFit.cover,
+                  child: SizedBox(width: wideWidth, height: wideWidth,
+                    child: artwork),
+                )
+              else
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: colors ?? const [
+                        Color(0xFF77459B),
+                        Color(0xFF372847),
+                        Color(0xFF171421),
+                      ],
+                    ),
+                  ),
+                  child: Center(child: Icon(
+                    icon ?? LucideIcons.music2,
+                    size: 70,
+                    color: const Color(0x88F6E5FF),
+                  )),
+                ),
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0x00000000),
+                      Color(0x30000000),
+                      Color(0xEB090612),
+                    ],
+                  ),
+                ),
+              ),
+              if (badge != null)
+                Positioned(top: 12,right: 12,
+                  child: Icon(badge, size: 18,
+                    color: const Color(0xFFE6DBF4))),
+              Positioned(
+                left: 16, right: 16, bottom: 15,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFFFFFFFF),
+                        fontSize: 19, fontWeight: FontWeight.w700,
+                      )),
+                    const SizedBox(height: 4),
+                    Text(subtitle, maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFFE6DEED), fontSize: 12)),
+                  ],
+                ),
+              ),
+            ]),
+          ),
+        ),
+      );
+    }
     final cardWidth = width ?? (desktop ? 186.0 : OrchidStyle.compact(context, 186));
     final cardHeight = height ?? (desktop ? 226.0 : OrchidStyle.compact(context, 216));
     if (desktop) {
@@ -210,11 +289,29 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                   borderRadius: BorderRadius.circular(12),
                   child: Stack(fit: StackFit.expand, children: [
                     if (artwork != null)
-                      FittedBox(
-                        fit: BoxFit.cover,
-                        child: SizedBox(
-                          width: cardWidth, height: cardWidth, child: artwork),
-                      )
+                      desktopCircle
+                        ? Center(
+                            child: ClipOval(
+                              child: SizedBox(
+                                width: cardWidth * .90,
+                                height: cardWidth * .90,
+                                child: FittedBox(
+                                  fit: BoxFit.cover,
+                                  child: SizedBox(
+                                    width: cardWidth, height: cardWidth,
+                                    child: artwork,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                        : FittedBox(
+                            fit: BoxFit.cover,
+                            child: SizedBox(
+                              width: cardWidth, height: cardWidth,
+                              child: artwork,
+                            ),
+                          )
                     else
                       DecoratedBox(
                         decoration: BoxDecoration(
@@ -532,6 +629,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                 title: titles[i],
                 subtitle: subtitles[i],
                 badge: LucideIcons.sparkles,
+                desktopLandscape: true,
                 colors: const [
                   Color(0xFF7131A6),
                   Color(0xFF33274E),
@@ -567,6 +665,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
       Color(0xFF20142E),
     ],
     onTap: widget.openReplay,
+    desktopLandscape: true,
   );
 
   Widget _personalCard(
@@ -581,6 +680,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     icon: icon,
     colors: colors,
     onTap: onTap,
+    desktopLandscape: true,
   );
 
   String _count(dynamic value) {
@@ -706,6 +806,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
       title: title,
       subtitle: isAlbum ? artist : '${_count(item['plays'])} plays',
       width: size,
+      desktopCircle: !isAlbum,
       height: OrchidStyle.compact(context, 216),
       artwork: isAlbum
           ? AppleCover(
