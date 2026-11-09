@@ -269,3 +269,151 @@ class IOSMiniPlayer extends StatelessWidget {
     );
   }
 }
+
+
+/// Full-width desktop player with transport and volume controls.
+class DesktopPlayerBar extends StatelessWidget {
+  final PlayerService player;
+  final MusicLibrary library;
+  const DesktopPlayerBar({super.key, required this.player, required this.library});
+
+  void _openFull(BuildContext context) {
+    if (player.current == null) return;
+    showContentDrawer(context, preferredWidth: 950,
+      builder: (_) => FullPlayerScreen(player: player, library: library));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: player,
+      builder: (context, _) {
+        final track = player.current;
+        final playing = player.player.playing;
+        return Container(
+          height: 82,
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+          decoration: const BoxDecoration(
+            color: Color(0xFF151632),
+            border: Border(top: BorderSide(color: Color(0xFF3A3056), width: .8)),
+          ),
+          child: Row(children: [
+            SizedBox(
+              width: 270,
+              child: track == null
+                ? const Align(alignment: Alignment.centerLeft,
+                    child: Text('Nothing playing', style: TextStyle(
+                      color: Color(0xFFAAA1BA), fontSize: 12)))
+                : GestureDetector(
+                    onTap: () => _openFull(context),
+                    behavior: HitTestBehavior.opaque,
+                    child: Row(children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: track.artworkUrl == null
+                          ? const SizedBox(width: 53, height: 53,
+                              child: ColoredBox(color: OrchidStyle.panel,
+                                child: Icon(LucideIcons.music2, size: 21)))
+                          : CachedNetworkImage(
+                              imageUrl: track.artworkUrl!,
+                              width: 53, height: 53, fit: BoxFit.cover,
+                              errorWidget: (_, __, ___) =>
+                                const SizedBox(width: 53, height: 53,
+                                  child: Icon(LucideIcons.music2)),
+                            ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(track.title, maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Color(0xFFFAF5FF),
+                              fontSize: 13, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 3),
+                          Text(track.artist, maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Color(0xFFA9A1BB),
+                              fontSize: 11)),
+                        ],
+                      )),
+                    ]),
+                  ),
+            ),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton.ghost(
+                        onPressed: track == null ? null : player.playPrevious,
+                        icon: const Icon(LucideIcons.skipBack, size: 17),
+                      ),
+                      IconButton.ghost(
+                        onPressed: track == null ? null : player.togglePlayPause,
+                        icon: Icon(playing ? LucideIcons.pause : LucideIcons.play,
+                          color: const Color(0xFFF7EBFF), size: 21),
+                      ),
+                      IconButton.ghost(
+                        onPressed: track == null || !player.hasNext
+                          ? null : player.playNext,
+                        icon: const Icon(LucideIcons.skipForward, size: 17),
+                      ),
+                      IconButton.ghost(
+                        onPressed: track == null
+                          ? null : () => showQueueSheet(context, player),
+                        icon: const Icon(LucideIcons.listMusic, size: 17),
+                      ),
+                    ],
+                  ),
+                  SizedBox(
+                    width: 420,
+                    child: StreamBuilder<Duration>(
+                      stream: player.player.positionStream,
+                      builder: (context, snapshot) {
+                        final duration = player.player.duration ?? Duration.zero;
+                        final total = duration.inMilliseconds;
+                        final value = snapshot.data?.inMilliseconds ?? 0;
+                        return Slider(
+                          value: SliderValue.single(
+                            total > 0 ? (value / total).clamp(0.0, 1.0) : 0),
+                          min: 0,
+                          max: 1,
+                          onChanged: track == null || total <= 0
+                            ? null
+                            : (v) => player.seek(Duration(
+                                milliseconds: (v.value * total).round())),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(
+              width: 230,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  const Icon(LucideIcons.volume2, size: 16,
+                    color: Color(0xFFBEB0D0)),
+                  const SizedBox(width: 10),
+                  SizedBox(width: 122,
+                    child: Slider(
+                      value: SliderValue.single(player.volume),
+                      min: 0,
+                      max: 1,
+                      onChanged: (v) => player.setVolume(v.value),
+                    )),
+                ],
+              ),
+            ),
+          ]),
+        );
+      },
+    );
+  }
+}
