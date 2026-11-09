@@ -47,8 +47,13 @@ for entry in base_entries:
 # A foreground image is required to *accurately* remove the baked-in
 # background. Never try to erase pixels based on an assumed background color.
 variants = []
-if foreground.exists():
-    layer = Image.open(foreground).convert("RGBA")
+# If the existing branding PNG already has real transparency, it can act as
+# the foreground directly. Otherwise a separate cutout must be provided.
+foreground_source = foreground if foreground.exists() else source
+candidate = Image.open(foreground_source).convert("RGBA")
+has_transparency = candidate.getchannel("A").getextrema()[0] < 255
+if foreground.exists() or has_transparency:
+    layer = candidate
     layer = layer.resize(size, Image.Resampling.LANCZOS)
     alpha = layer.getchannel("A")
     if alpha.getextrema()[0] == 255:
