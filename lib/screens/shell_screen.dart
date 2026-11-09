@@ -461,10 +461,33 @@ class _ShellScreenState extends State<ShellScreen>{
   );
 
   if(desktop){
+    const sidebarWidth=236.0;
+    const gutter=16.0;
+    const leftContent=sidebarWidth+gutter*2;
     return Scaffold(
-      child:Column(children:[
-        Expanded(child:Row(children:[
-          DesktopSidebar(
+      child:Container(
+        decoration:const BoxDecoration(
+          gradient:LinearGradient(
+            begin:Alignment.topLeft,
+            end:Alignment.bottomRight,
+            colors:[
+              Color(0xFF2D1B36),
+              Color(0xFF24152D),
+              Color(0xFF130F1A),
+              Color(0xFF0D0D15),
+            ],
+            stops:[0,0.32,0.72,1],
+          ),
+        ),
+        child:Stack(children:[
+          Positioned.fill(
+            left:leftContent,
+            bottom:100,
+            child:browsing,
+          ),
+          Positioned(
+            left:gutter,top:gutter,bottom:gutter,
+            child:DesktopSidebar(
             selectedTab:page,
             library:_library,
             accountName:_account.username ?? _account.email ?? 'Account',
@@ -478,29 +501,16 @@ class _ShellScreenState extends State<ShellScreen>{
             onSettings:_openSettings,
             onProfile:_openProfile,
           ),
-          Expanded(child:Container(
-            decoration:const BoxDecoration(
-              gradient:LinearGradient(
-                begin:Alignment.topLeft,
-                end:Alignment.bottomRight,
-                colors:[
-                  Color(0xFF2D1B36),
-                  Color(0xFF24152D),
-                  Color(0xFF130F1A),
-                  Color(0xFF0D0D15),
-                ],
-                stops:[0,0.32,0.72,1],
-              ),
+          ),
+          Positioned(
+            left:leftContent+12,right:gutter,bottom:gutter,
+            child:ClipRRect(
+              borderRadius:BorderRadius.circular(17),
+              child:DesktopPlayerBar(player:_player,library:_library),
             ),
-            child:browsing,
-          )),
-        ])),
-        Row(children:[
-          const SizedBox(width:236,child:ColoredBox(
-            color:Color(0xFF12142D),child:SizedBox(height:82))),
-          Expanded(child:DesktopPlayerBar(player:_player,library:_library)),
+          ),
         ]),
-      ]),
+      ),
     );
   }
 
