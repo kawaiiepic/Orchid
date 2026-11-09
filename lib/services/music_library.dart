@@ -1,6 +1,6 @@
-import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'orchid_account.dart';
 
 /// Library entries are source-independent so saved songs survive addon changes.
 class SavedSong {
@@ -50,41 +50,50 @@ class MusicLibrary extends ChangeNotifier {
   final List<SavedSong> favorites = [];
   final List<MusicPlaylist> playlists = [];
   final List<SavedSong> recentlyPlayed = [];
+  OrchidAccount? _client;
   String? _account;
   bool loaded = false;
   int _counter = 0;
-  String _storageKey(String account) => 'orchid_library_v1_${Uri.encodeComponent(account)}';
+  int _revision = 0;
+  int _loadGeneration = 0;
+  Future<void> _pendingSave = Future<void>.value();
+
+  void configure(OrchidAccount account) => _client = account;
 
   Future<void> setAccount(String? account) async {
     if (_account == account && loaded) return;
     _account = account;
+    final generation = ++_loadGeneration;
     favorites.clear();
     playlists.clear();
     recentlyPlayed.clear();
+    _revision = 0;
     loaded = false;
     notifyListeners();
     if (account == null) return;
-    final requested = account;
+    final api = _client;
+    if (api == null) {
+      debugPrint('[Orchid Library] Missing account service');
+      return;
+    }
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_storageKey(requested));
-      if (_account != requested) return;
-      if (raw != null) {
-        final data = jsonDecode(raw) as Map<String, dynamic>;
+      final response = await api.loadLibrary();
+      if (_account != account || generation != _loadGeneration) return;
+      final raw = response['library'];
+      if (raw is Map) {
+        final data = Map<String, dynamic>.from(raw);
         favorites.addAll((data['favorites'] as List? ?? [])
             .whereType<Map>()
-            .map((v) => SavedSong.fromJson(Map<String, dynamic>.from(v))));
+            .map((s) => SavedSong.fromJson(Map<String, dynamic>.from(s))));
         playlists.addAll((data['playlists'] as List? ?? [])
             .whereType<Map>()
-            .map((v) => MusicPlaylist.fromJson(Map<String, dynamic>.from(v))));
-        recentlyPlayed.addAll((data['recent'] as List? ?? [])
-            .whereType<Map>()
-            .map((v) => SavedSong.fromJson(Map<String, dynamic>.from(v))));
+            .map((p) => MusicPlaylist.fromJson(Map<String, dynamic>.from(p))));
       }
-    } catch (e) {
-      debugPrint('[Orchid Library] Failed to restore: $e');
+      _revision = (response['revision'] as num?)?.toInt() ?? 0;
+    } catch (error) {
+      debugPrint('[Orchid Library] Cloud library unavailable: $error');
     } finally {
-      if (_account == requested) {
+      if (_account == account && generation == _loadGeneration) {
         loaded = true;
         notifyListeners();
       }
@@ -93,15 +102,30 @@ class MusicLibrary extends ChangeNotifier {
 
   Future<void> _save() async {
     final account = _account;
-    if (account == null) return;
+    final api = _client;
     notifyListeners();
-    final snapshot = jsonEncode({
+    if (account == null || api == null || !loaded) return;
+    final snapshot = <String, dynamic>{
       'favorites': favorites.map((v) => v.toJson()).toList(),
       'playlists': playlists.map((v) => v.toJson()).toList(),
-      'recent': recentlyPlayed.map((v) => v.toJson()).toList(),
-    });
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_storageKey(account), snapshot);
+    };
+    final generation = _loadGeneration;
+    final previous = _pendingSave;
+    final done = Completer<void>();
+    _pendingSave = done.future;
+    try {
+      await previous.catchError((Object _) {});
+      if (_account != account || generation != _loadGeneration) return;
+      final result = await api.saveLibrary(snapshot, _revision);
+      if (_account == account && generation == _loadGeneration) {
+        _revision = (result['revision'] as num?)?.toInt() ?? _revision + 1;
+      }
+    } catch (error) {
+      debugPrint('[Orchid Library] Could not sync account library: $error');
+      rethrow;
+    } finally {
+      done.complete();
+    }
   }
 
   bool isFavorite(SavedSong song) => favorites.any((s) => s.key == song.key);
