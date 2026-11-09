@@ -1,6 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import 'package:flutter/cupertino.dart' as ios;
+import 'package:cupertino_ui/cupertino_ui.dart' as ios;
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
 import '../screens/full_player_screen.dart';
