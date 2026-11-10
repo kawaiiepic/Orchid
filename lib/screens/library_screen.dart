@@ -21,6 +21,8 @@ class LibraryScreen extends StatefulWidget {
   final List<InstalledAddon> addons;
   final VoidCallback openExplore;
   final bool playlistsOnly;
+  final String? selectedPlaylistId;
+  final ValueChanged<String?>? onPlaylistSelected;
   const LibraryScreen({
     super.key,
     required this.header,
@@ -31,6 +33,8 @@ class LibraryScreen extends StatefulWidget {
     required this.addons,
     required this.openExplore,
     this.playlistsOnly = false,
+    this.selectedPlaylistId,
+    this.onPlaylistSelected,
   });
   @override
   State<LibraryScreen> createState() => _LibraryScreenState();
@@ -220,91 +224,208 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
 
+  TrackResult _track(SavedSong song) => TrackResult(
+    id: song.key, title: song.title, artist: song.artist,
+    album: song.album, artworkUrl: song.artwork,
+    sourceId: 'orchid-library', sourceName: 'Library',
+  );
+
+  Widget _songRow(SavedSong song, {MusicPlaylist? playlist}) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: SongContextMenu(
+      track: _track(song), player: widget.player, library: widget.library,
+      child: Row(children: [
+        Expanded(child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            widget.player.setAddons(widget.addons);
+            widget.player.playTrack(_track(song)).catchError((Object e) {
+              debugPrint('[Orchid Library] Playback failed: $e');
+            });
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(children: [
+              AppleCover(artist: song.artist, name: song.title,
+                album: song.album, fallbackUrl: song.artwork,
+                size: 46, radius: 7),
+              const SizedBox(width: 12),
+              Expanded(child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(song.title, maxLines: 1,
+                    overflow: TextOverflow.ellipsis).semiBold(),
+                  Text(song.artist, maxLines: 1,
+                    overflow: TextOverflow.ellipsis).small().muted(),
+                ],
+              )),
+            ]),
+          ),
+        )),
+        IconButton.ghost(
+          onPressed: () => _openSong(song),
+          icon: const Icon(LucideIcons.info, size: 17),
+        ),
+        if (playlist != null)
+          IconButton.ghost(
+            onPressed: () => widget.library.removeFromPlaylist(playlist, song),
+            icon: const Icon(LucideIcons.x, size: 17),
+          ),
+      ]),
+    ),
+  );
+
+  Widget _playlistButton(String name, List<SavedSong> songs,
+      VoidCallback action, {bool favorite = false}) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: action,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(9),
+          child: ColoredBox(
+            color: const Color(0x293B244A),
+            child: SizedBox(height: 62,
+              child: Row(children: [
+                if (songs.isNotEmpty)
+                  AppleCover(
+                    artist: songs.first.artist,
+                    name: songs.first.title,
+                    fallbackUrl: songs.first.artwork,
+                    size: 62, radius: 0,
+                  )
+                else
+                  SizedBox(width: 62, height: 62,
+                    child: ColoredBox(color: const Color(0x444B2F62),
+                      child: Icon(favorite ? LucideIcons.heart
+                        : LucideIcons.listMusic, color: OrchidStyle.lilac))),
+                const SizedBox(width: 12),
+                Expanded(child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name, maxLines: 1,
+                      overflow: TextOverflow.ellipsis).semiBold(),
+                    Text('${songs.length} songs').small().muted(),
+                  ],
+                )),
+                const Icon(LucideIcons.chevronRight,
+                  color: OrchidStyle.lilac, size: 17),
+                const SizedBox(width: 12),
+              ]),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: widget.library,
-    builder: (context, _) => ListView(
-      padding: EdgeInsets.fromLTRB(20,20,20,
-        20+OrchidStyle.iosDockClearance(context)+
-        (MediaQuery.sizeOf(context).width >= 850 ? 110 : 0)),
-      children: [
-        widget.header,
-        if (widget.playlistsOnly) ...[
-          const OrchidHero(
-            eyebrow: 'Your collection',
-            title: 'Playlists',
-            description: 'Your handpicked collections, saved and synced.',
-            icon: LucideIcons.listMusic,
-          ),
-          const SizedBox(height: 26),
-          _collectionTile(
-            'Favorites', '${widget.library.favorites.length} songs',
-            () => _openCollection('Favorites', () => widget.library.favorites),
-            icon: LucideIcons.heart,
-          ),
-          const SizedBox(height: 18),
-          const OrchidSectionHeader(title: 'Your playlists'),
-          const SizedBox(height: 8),
-          if (widget.library.visiblePlaylists.isEmpty)
-            const Text('Right-click a song and choose Create new playlist to get started.').muted()
-          else
-            ...widget.library.visiblePlaylists.map((p) => _collectionTile(
-              p.name, '${p.songs.length} songs',
-              () => _openCollection(p.name, () => p.songs, playlist: p),
-            )),
-        ] else ...[
-          const OrchidHero(
-            eyebrow: 'Your collection',
-            title: 'Your Library',
-            description: 'Every song you saved, favorited or added to a playlist.',
-            icon: LucideIcons.library,
-          ),
-          const SizedBox(height: 22),
-          _collectionTile(
-            'Saved songs', '${widget.library.librarySongs.length} songs',
-            () => _openCollection('Your Library',
-              () => widget.library.librarySongs),
-            icon: LucideIcons.library,
-          ),
-          const SizedBox(height: 12),
-          if (widget.library.librarySongs.isEmpty)
-            const Text('Favorite a song or add one to a playlist to build your Library.').muted()
-          else ...[
-            const OrchidSectionHeader(title: 'Recently added'),
-            const SizedBox(height: 10),
-            ...widget.library.librarySongs.take(30).map(
-              (song) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: SongContextMenu(
-                  track: TrackResult(
-                    id: song.key, title: song.title, artist: song.artist,
-                    album: song.album, artworkUrl: song.artwork,
-                    sourceId: 'orchid-library', sourceName: 'Library',
-                  ),
-                  player: widget.player, library: widget.library,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => _openSong(song),
-                    child: Row(children: [
-                      AppleCover(artist: song.artist, name: song.title,
-                        album: song.album, fallbackUrl: song.artwork,
-                        size: 44, radius: 8),
-                      const SizedBox(width: 12),
-                      Expanded(child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(song.title).semiBold(),
-                          Text(song.artist).small().muted(),
-                        ],
-                      )),
-                    ]),
-                  ),
+    builder: (context, _) {
+      final playlists = widget.library.visiblePlaylists;
+      final id = widget.selectedPlaylistId;
+      MusicPlaylist? activePlaylist;
+      if (id != null && id != 'favorites') {
+        for (final playlist in playlists) {
+          if (playlist.id == id) {
+            activePlaylist = playlist;
+            break;
+          }
+        }
+      }
+      final selected = id == 'favorites' || activePlaylist != null;
+      final selectedSongs = id == 'favorites'
+        ? widget.library.favorites
+        : activePlaylist?.songs ?? <SavedSong>[];
+      final selectedTitle = id == 'favorites'
+        ? 'Favorites' : activePlaylist?.name ?? 'Playlists';
+      return ListView(
+        padding: EdgeInsets.fromLTRB(24, 24, 30,
+          28 + OrchidStyle.iosDockClearance(context) +
+          (MediaQuery.sizeOf(context).width >= 850 ? 104 : 0)),
+        children: [
+          widget.header,
+          if (!widget.playlistsOnly) ...[
+            const Text('Library').x2Large().semiBold(),
+            const SizedBox(height: 8),
+            Text('${widget.library.librarySongs.length} saved songs').small().muted(),
+            const SizedBox(height: 20),
+            if (widget.library.librarySongs.isEmpty)
+              const Text('Your saved songs will appear here.').muted()
+            else
+              ...widget.library.librarySongs.map(_songRow),
+          ] else if (selected) ...[
+            if (widget.onPlaylistSelected != null)
+              Align(alignment: Alignment.centerLeft,
+                child: IconButton.ghost(
+                  onPressed: () => widget.onPlaylistSelected!(null),
+                  icon: const Icon(LucideIcons.arrowLeft))),
+            Text(selectedTitle).x2Large().semiBold(),
+            const SizedBox(height: 6),
+            Text('${selectedSongs.length} songs').small().muted(),
+            const SizedBox(height: 16),
+            if (selectedSongs.isNotEmpty)
+              Align(alignment: Alignment.centerLeft,
+                child: OrchidAdaptiveControls.button(
+                  prominent: true,
+                  onPressed: () => _playCollection(selectedSongs),
+                  child: const Text('Play all'),
+                )),
+            if (activePlaylist != null) ...[
+              const SizedBox(height: 10),
+              Wrap(spacing: 8, children: [
+                OrchidAdaptiveControls.button(
+                  onPressed: () => widget.library.setPlaylistPinned(
+                    activePlaylist!, !activePlaylist!.pinned),
+                  child: Text(activePlaylist.pinned
+                    ? 'Unpin from Home' : 'Pin to Home'),
                 ),
-              ),
-            ),
+                OrchidAdaptiveControls.button(
+                  onPressed: () async {
+                    await widget.library.deletePlaylist(activePlaylist!);
+                    widget.onPlaylistSelected?.call(null);
+                  },
+                  child: const Text('Delete playlist'),
+                ),
+              ]),
+            ],
+            const SizedBox(height: 18),
+            if (selectedSongs.isEmpty)
+              const Text('This playlist is empty.').muted()
+            else
+              ...selectedSongs.map((song) =>
+                _songRow(song, playlist: activePlaylist)),
+          ] else ...[
+            const Text('Playlists').x2Large().semiBold(),
+            const SizedBox(height: 20),
+            LayoutBuilder(builder: (context, bounds) {
+              final desktop = bounds.maxWidth >= 600;
+              const gap = 12.0;
+              final width = desktop
+                ? (bounds.maxWidth - gap) / 2
+                : bounds.maxWidth;
+              return Wrap(
+                spacing: gap, runSpacing: gap,
+                children: [
+                  SizedBox(width: width,
+                    child: _playlistButton('Favorites',
+                      widget.library.favorites,
+                      () => widget.onPlaylistSelected?.call('favorites'),
+                      favorite: true)),
+                  for (final playlist in playlists)
+                    SizedBox(width: width,
+                      child: _playlistButton(
+                        playlist.name, playlist.songs,
+                        () => widget.onPlaylistSelected?.call(playlist.id))),
+                ],
+              );
+            }),
           ],
         ],
-      ],
-    ),
+      );
+    },
   );
 }
