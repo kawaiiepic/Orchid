@@ -522,7 +522,7 @@ class _ShellScreenState extends State<ShellScreen>{
             left:leftContent+12,right:gutter,bottom:gutter,
             child:ClipRRect(
               borderRadius:BorderRadius.circular(17),
-              child:DesktopPlayerBar(player:_player,library:_library),
+              child:DesktopPlayerBar(player:_player,library:_library,addons:_addons),
             ),
           ),
         ]),
