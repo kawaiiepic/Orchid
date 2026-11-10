@@ -21,13 +21,28 @@ class _BorderlessPlayerGlass extends StatelessWidget {
   const _BorderlessPlayerGlass({required this.radius, required this.child});
 
   @override
-  Widget build(BuildContext context) => glass.GlassContainer(
-    useOwnLayer: true,
-    quality: glass.GlassQuality.premium,
-    shape: glass.LiquidRoundedSuperellipse(borderRadius: radius),
-    settings: OrchidStyle.glassSettings,
-    clipBehavior: Clip.antiAlias,
-    child: child,
+  Widget build(BuildContext context) => ClipRRect(
+    borderRadius: BorderRadius.circular(radius),
+    child: Stack(
+      children: [
+        // Crop the shader's illuminated rim instead of drawing a white
+        // perimeter around the desktop mini-player.
+        Positioned.fill(
+          left: -8, top: -8, right: -8, bottom: -8,
+          child: IgnorePointer(
+            child: glass.GlassContainer(
+              useOwnLayer: true,
+              quality: glass.GlassQuality.premium,
+              shape: glass.LiquidRoundedSuperellipse(
+                borderRadius: radius + 8),
+              settings: OrchidStyle.glassSettings,
+              child: const SizedBox.expand(),
+            ),
+          ),
+        ),
+        child,
+      ],
+    ),
   );
 }
 
