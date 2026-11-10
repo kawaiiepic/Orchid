@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, Tar
 import 'package:flutter/services.dart';
 import '../services/orchid_connect.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:miniaudio_player/miniaudio_player.dart' as mini;
 
 import '../services/player_service.dart';
 import 'content_drawer.dart';
@@ -35,6 +36,33 @@ class _AudioConnectSheetState extends State<_AudioConnectSheet> {
   String _jamCode = '';
   bool _networkExpanded = false;
   bool _refreshing = false;
+  List<mini.AudioDevice> _audioOutputs=[];
+  bool _outputsLoading=false;
+  String? _outputError;
+  @override
+  void initState(){
+    super.initState();
+    _loadOutputs();
+  }
+  Future<void> _loadOutputs() async{
+    if(kIsWeb)return;
+    setState(()=>_outputsLoading=true);
+    try{
+      final outputs=await widget.player.player.getAudioDevices();
+      if(mounted)setState((){
+        _audioOutputs=outputs;
+        _outputError=null;
+      });
+    }catch(e){
+      if(mounted)setState(()=>_outputError='Audio output discovery unavailable: $e');
+    }finally{
+      if(mounted)setState(()=>_outputsLoading=false);
+    }
+  }
+  Future<void> _selectOutput(mini.AudioDevice device) async{
+    await _run(()=>widget.player.player.setAudioDevice(device));
+    if(mounted)setState(()=>_networkExpanded=false);
+  }
 
   Future<void> _refreshDevices() async {
     final connect=OrchidConnect.active;
@@ -356,21 +384,27 @@ class _AudioConnectSheetState extends State<_AudioConnectSheet> {
             trailing: const Icon(LucideIcons.chevronRight,
               color: Color(0xFF99999F))),
         _section('Network Speakers'),
-        _tile(LucideIcons.speaker,'Network speakers',
-          kIsWeb?'Not supported in the web player':
+        _tile(LucideIcons.speaker,'Audio outputs',
+          kIsWeb?'Select audio in your browser or operating system':
           defaultTargetPlatform==TargetPlatform.iOS
-            ? 'Use Speaker & TV for compatible AirPlay speakers'
-            : 'Select a system-connected network audio output',
+            ? 'AirPlay and Bluetooth use the native Speaker & TV picker'
+            : 'Choose a connected speaker, DAC or audio output',
           onTap:()=>setState(()=>_networkExpanded=!_networkExpanded),
           trailing:Icon(_networkExpanded?LucideIcons.chevronDown:
             LucideIcons.chevronRight,color:const Color(0xFF99999F))),
         if(_networkExpanded)Padding(
-          padding:const EdgeInsets.fromLTRB(22,0,22,14),
-          child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-            const Text('Chromecast and DLNA playback are not yet supported. System-connected AirPlay and Bluetooth outputs are supported where available.',
-              style:TextStyle(fontSize:12,color:Color(0xFFAAAAAF))),
-            if(!kIsWeb&&defaultTargetPlatform!=TargetPlatform.iOS)
-              _action('Open audio settings',_openSystemAudioSettings),
+          padding:const EdgeInsets.fromLTRB(20,0,20,14),
+          child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+            if(_outputsLoading)const Text('Searching system audio outputs…'),
+            if(_outputError!=null)
+              Text(_outputError!,style:const TextStyle(fontSize:12)),
+            for(final output in _audioOutputs)
+              _action(output.name,
+                ()=>_run(()=>_selectOutput(output))),
+            if(_audioOutputs.isEmpty&&!_outputsLoading)
+              const Text('No selectable native outputs found. AirPlay/Bluetooth routes may be managed by your operating system.',
+                style:TextStyle(fontSize:12,color:Color(0xFFAAAAAF))),
+            _action('Refresh audio outputs',_loadOutputs),
           ]),
         ),
         const Divider(),
