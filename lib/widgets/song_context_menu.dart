@@ -12,6 +12,7 @@ class SongContextMenu extends StatefulWidget {
   final TrackResult track;
   final PlayerService player;
   final MusicLibrary library;
+  final MusicPlaylist? playlist;
   final bool openOnTap;
   final bool showMenuButton;
 
@@ -21,6 +22,7 @@ class SongContextMenu extends StatefulWidget {
     required this.track,
     required this.player,
     required this.library,
+    this.playlist,
     this.openOnTap = false,
     this.showMenuButton = true,
   });
@@ -61,6 +63,7 @@ class _SongContextMenuState extends State<SongContextMenu> {
           track: widget.track,
           player: widget.player,
           library: widget.library,
+          playlist: widget.playlist,
           dismiss: _close,
         ),
       ),
@@ -121,12 +124,14 @@ class _SongActionPanel extends StatefulWidget {
   final TrackResult track;
   final PlayerService player;
   final MusicLibrary library;
+  final MusicPlaylist? playlist;
   final VoidCallback dismiss;
 
   const _SongActionPanel({
     required this.track,
     required this.player,
     required this.library,
+    this.playlist,
     required this.dismiss,
   });
 
@@ -215,6 +220,11 @@ class _SongActionPanelState extends State<_SongActionPanel> {
                 widget.library.toggleFavorite(_saved);
                 widget.dismiss();
               }),
+          if (widget.playlist != null)
+            _action('Remove from this playlist', LucideIcons.x, () {
+              widget.library.removeFromPlaylist(widget.playlist!, _saved);
+              widget.dismiss();
+            }),
           const Divider(),
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 5, 14, 5),
