@@ -3,6 +3,8 @@ import '../widgets/orchid_adaptive_controls.dart';
 
 import '../services/orchid_account.dart';
 import '../widgets/orchid_style.dart';
+import '../widgets/apple_cover.dart';
+import '../widgets/artist_artwork.dart';
 
 /// Replay is based on Orchid's own recorded listens, not Last.fm totals.
 class ReplayScreen extends StatefulWidget {
@@ -111,31 +113,99 @@ class _ReplayScreenState extends State<ReplayScreen> {
     );
   }
 
-  Widget _ranking(String title,List<Map<String,dynamic>> items,{bool artists=false}){
-    return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+  Widget _ranking(String title, List<Map<String, dynamic>> items,
+      {bool artists = false, bool albums = false, bool genres = false}) {
+    if (items.isEmpty) return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title).large().semiBold(),
+        const SizedBox(height: 8),
+        const Text('No listening data for this period.').muted(),
+        const SizedBox(height: 24),
+      ],
+    );
+    Widget artwork(Map<String, dynamic> item, double size) {
+      final name = (item['name'] ?? 'Unknown').toString();
+      final artist = (item['artist'] ?? name).toString();
+      if (artists) {
+        return ClipOval(child: ArtistArtwork(
+          artist: name, size: size, radius: size / 2));
+      }
+      if (genres) {
+        return SizedBox(width: size, height: size,
+          child: ColoredBox(color: const Color(0x3C674D88),
+            child: Icon(LucideIcons.audioLines, color: OrchidStyle.lilac,
+              size: size * .4)));
+      }
+      return AppleCover(
+        artist: artist,
+        name: name,
+        isAlbum: albums,
+        fallbackUrl: item['image']?.toString(),
+        size: size,
+        radius: albums ? 10 : 7,
+      );
+    }
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(title).large().semiBold(),
-      const SizedBox(height:10),
-      if(items.isEmpty)const Text('No listening data for this period.').muted()
-      else OrchidGlassPanel(
-        radius:16,
-        child:Column(children:[
-          for(var i=0;i<items.length;i++)Padding(
-            padding:const EdgeInsets.symmetric(horizontal:14,vertical:11),
-            child:Row(children:[
-              SizedBox(width:31,child:Text('${i+1}').semiBold()),
-              Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                Text((items[i]['name']??'Unknown').toString(),
-                  maxLines:1,overflow:TextOverflow.ellipsis).semiBold(),
-                if(!artists)Text((items[i]['artist']??'').toString(),
-                  maxLines:1,overflow:TextOverflow.ellipsis).small().muted(),
-              ])),
-              const SizedBox(width:8),
-              Text('${_format(_number(items[i]['plays']))} plays').small().muted(),
-            ]),
-          ),
+      const SizedBox(height: 12),
+      if (artists || albums)
+        SizedBox(height: 190, child: ListView(
+          scrollDirection: Axis.horizontal,
+          children: [
+            for (var i = 0; i < items.length; i++)
+              SizedBox(width: 146, child: Padding(
+                padding: const EdgeInsets.only(right: 14),
+                child: Column(
+                  crossAxisAlignment: artists
+                    ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+                  children: [
+                    artwork(items[i], 118),
+                    const SizedBox(height: 7),
+                    Text(items[i]['name']?.toString() ?? 'Unknown',
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                      textAlign: artists ? TextAlign.center : TextAlign.start)
+                      .semiBold(),
+                    if (albums)
+                      Text((items[i]['artist'] ?? '').toString(),
+                        maxLines: 1, overflow: TextOverflow.ellipsis)
+                        .small().muted(),
+                    Text('${_format(_number(items[i]['plays']))} plays',
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                      textAlign: artists ? TextAlign.center : TextAlign.start)
+                      .xSmall().muted(),
+                  ],
+                ),
+              )),
+          ],
+        ))
+      else
+        Column(children: [
+          for (var i = 0; i < items.length; i++)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              child: Row(children: [
+                SizedBox(width: 28, child: Text('${i+1}').small().muted()),
+                artwork(items[i], 42),
+                const SizedBox(width: 12),
+                Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text((items[i]['name'] ?? 'Unknown').toString(),
+                      maxLines: 1, overflow: TextOverflow.ellipsis).semiBold(),
+                    if (!genres)
+                      Text((items[i]['artist'] ?? '').toString(),
+                        maxLines: 1, overflow: TextOverflow.ellipsis)
+                        .small().muted(),
+                  ],
+                )),
+                const SizedBox(width: 8),
+                Text('${_format(_number(items[i]['plays']))} plays')
+                  .small().muted(),
+              ]),
+            ),
         ]),
-      ),
-      const SizedBox(height:24),
+      const SizedBox(height: 24),
     ]);
   }
 
@@ -222,12 +292,12 @@ class _ReplayScreenState extends State<ReplayScreen> {
         ],
         _ranking('Top songs',_items('topSongs')),
         _ranking('Top artists',_items('topArtists'),artists:true),
-        _ranking('Top albums',_items('topAlbums')),
+        _ranking('Top albums',_items('topAlbums'),albums:true),
         if(_items('topGenres').isEmpty)...[
           const Text('Top genres').large().semiBold(),
           const SizedBox(height:8),
           const Text('No genre metadata matched the tracks in this period yet.').muted(),
-        ]else _ranking('Top genres',_items('topGenres'),artists:true),
+        ]else _ranking('Top genres',_items('topGenres'),genres:true),
         const SizedBox(height:25),
       ],
     ]);
