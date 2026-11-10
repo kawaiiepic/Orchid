@@ -238,6 +238,13 @@ class _ShellScreenState extends State<ShellScreen>{
    shape:const liquid.LiquidGlassShape.circle(),
    style:liquid.LiquidGlassStyle.regular,
    fallback:liquid.LiquidGlassFallback.frosted,
+   fallbackBlurSigma:20,
+   brightness:liquid.LiquidGlassBrightness.dark,
+   tintColor:const Color(0xFF7954AB),
+   tintOpacity:0.24,
+   opacity:0.88,
+   rimColor:const Color(0x00000000),
+   rimWidth:0,
    child:GestureDetector(
     onTap:()=>_selectTab(index),
     behavior:HitTestBehavior.opaque,
