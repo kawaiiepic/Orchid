@@ -47,6 +47,37 @@ class MusicPlaylist {
 }
 
 class MusicLibrary extends ChangeNotifier {
+  static const libraryPlaylistId = '__orchid_saved_library__';
+
+  MusicPlaylist get _savedLibrary {
+    final existing = playlists.where((p) => p.id == libraryPlaylistId);
+    if (existing.isNotEmpty) return existing.first;
+    final created = MusicPlaylist(id: libraryPlaylistId, name: 'Library');
+    playlists.insert(0, created);
+    return created;
+  }
+
+  List<SavedSong> get librarySongs => _savedLibrary.songs;
+  List<MusicPlaylist> get visiblePlaylists =>
+      playlists.where((p) => p.id != libraryPlaylistId).toList();
+  bool isInLibrary(SavedSong song) =>
+      librarySongs.any((s) => s.key == song.key);
+
+  bool _includeInLibrary(SavedSong song) {
+    final songs = librarySongs;
+    if (songs.any((s) => s.key == song.key)) return false;
+    songs.add(song);
+    return true;
+  }
+
+  Future<void> addToLibrary(SavedSong song) async {
+    if (_includeInLibrary(song)) await _save();
+  }
+
+  Future<void> removeFromLibrary(SavedSong song) async {
+    librarySongs.removeWhere((s) => s.key == song.key);
+    await _save();
+  }
   final List<SavedSong> favorites = [];
   final List<MusicPlaylist> playlists = [];
   final List<SavedSong> recentlyPlayed = [];
@@ -88,6 +119,12 @@ class MusicLibrary extends ChangeNotifier {
         playlists.addAll((data['playlists'] as List? ?? [])
             .whereType<Map>()
             .map((p) => MusicPlaylist.fromJson(Map<String, dynamic>.from(p))));
+        // One-time and ongoing reconciliation of already saved songs.
+        // Keep the collection hidden from user-created playlists.
+        for (final song in [...favorites,
+          for (final playlist in visiblePlaylists) ...playlist.songs]) {
+          _includeInLibrary(song);
+        }
       }
       _revision = (response['revision'] as num?)?.toInt() ?? 0;
     } catch (error) {
@@ -135,6 +172,7 @@ class MusicLibrary extends ChangeNotifier {
       favorites.removeAt(index);
     } else {
       favorites.insert(0, song);
+      _includeInLibrary(song);
     }
     await _save();
   }
@@ -150,16 +188,19 @@ class MusicLibrary extends ChangeNotifier {
   }
 
   Future<void> renamePlaylist(MusicPlaylist list, String name) async {
+    if (list.id == libraryPlaylistId) return;
     list.name = name.trim();
     await _save();
   }
 
   Future<void> setPlaylistPinned(MusicPlaylist list, bool pinned) async {
+    if (list.id == libraryPlaylistId) return;
     list.pinned = pinned;
     await _save();
   }
 
   Future<void> deletePlaylist(MusicPlaylist list) async {
+    if (list.id == libraryPlaylistId) return;
     playlists.removeWhere((p) => p.id == list.id);
     await _save();
   }
@@ -168,7 +209,12 @@ class MusicLibrary extends ChangeNotifier {
       list.songs.any((s) => s.key == song.key);
 
   Future<void> addToPlaylist(MusicPlaylist list, SavedSong song) async {
+    if (list.id == libraryPlaylistId) {
+      await addToLibrary(song);
+      return;
+    }
     if (!contains(list, song)) list.songs.add(song);
+    _includeInLibrary(song);
     await _save();
   }
 
