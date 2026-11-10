@@ -219,9 +219,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ] else ...[
           if (!desktop) ...[
             Row(children: [
-              IconButton.ghost(
+              OrchidBackButton(
                 onPressed: () => setState(() => _section = -1),
-                icon: const Icon(LucideIcons.arrowLeft),
               ),
               const SizedBox(width: 12),
               Text(const [
