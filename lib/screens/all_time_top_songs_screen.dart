@@ -52,11 +52,15 @@ class _AllTimeTopSongsScreenState extends State<AllTimeTopSongsScreen>{
         PrimaryButton(onPressed:()=>_play(0),child:const Text('Play your top songs')),
         const SizedBox(height:16),
         for(var i=0;i<songs.length;i++)
-          GestureDetector(onTap:()=>_play(i),child:Container(
-            margin:const EdgeInsets.only(bottom:8),
-            padding:const EdgeInsets.all(12),
-            decoration:OrchidStyle.panelDecoration(radius:13),
-            child:Row(children:[
+          Padding(
+            padding:const EdgeInsets.only(bottom:8),
+            child:GestureDetector(
+              onTap:()=>_play(i),
+              child:OrchidGlassPanel(
+                radius:13,
+                child:Padding(
+                  padding:const EdgeInsets.all(12),
+                  child:Row(children:[
               SizedBox(width:35,child:Text('${i+1}').semiBold()),
               Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                 Text((songs[i]['title']??'').toString(),
@@ -66,8 +70,11 @@ class _AllTimeTopSongsScreenState extends State<AllTimeTopSongsScreen>{
               ])),
               Text('${songs[i]['plays']} plays').small().muted(),
               const SizedBox(width:8),const Icon(LucideIcons.play,size:16),
-            ]),
-          )),
+                  ]),
+                ),
+              ),
+            ),
+          ),
       ],
     ]);
 }
