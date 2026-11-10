@@ -139,7 +139,8 @@ class _SongActionPanelState extends State<_SongActionPanel> {
   bool _creating = false;
 
   SavedSong get _saved => SavedSong(widget.track.title, widget.track.artist,
-    album: widget.track.album, artwork: widget.track.artworkUrl);
+    album: widget.track.album, artwork: widget.track.artworkUrl,
+    duration: widget.track.duration);
 
   @override
   void dispose() {
