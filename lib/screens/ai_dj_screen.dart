@@ -103,8 +103,8 @@ class _AiDjScreenState extends State<AiDjScreen> {
       const SizedBox(height:12),
       const Text('Preview mode: the DJ currently replies with “...”.').small().muted(),
       const SizedBox(height:14),
-      Expanded(child:Container(
-        decoration:OrchidStyle.panelDecoration(radius:18),
+      Expanded(child:OrchidGlassPanel(
+        radius:18,
         child:_messages.isEmpty
           ?Center(child:Padding(
             padding:const EdgeInsets.all(24),
