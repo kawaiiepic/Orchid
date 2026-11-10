@@ -1,4 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import '../widgets/orchid_adaptive_controls.dart';
 
 import '../models/addon.dart';
 import '../services/addon_service.dart';
@@ -99,7 +100,7 @@ Widget _catalogActions({
 }) {
   if(tracks.isEmpty)return const SizedBox.shrink();
   return Wrap(spacing:10,runSpacing:10,children:[
-    PrimaryButton(
+    OrchidAdaptiveControls.button(prominent: true, 
       onPressed:(){
         player.setAddons(addons);
         player.playTrack(tracks.first,fromQueue:tracks).catchError((Object e){
@@ -112,7 +113,7 @@ Widget _catalogActions({
         Text('Play all'),
       ]),
     ),
-    OutlineButton(
+    OrchidAdaptiveControls.button(
       onPressed:(){
         for (final track in tracks) {
           player.addToQueue(track);
@@ -259,7 +260,7 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
               Column(children: [
                 Text('Could not load artist: ${snapshot.error}').muted(),
                 const SizedBox(height: 12),
-                OutlineButton(onPressed: () => setState(() {
+                OrchidAdaptiveControls.button(onPressed: () => setState(() {
                   _catalog = widget.account == null
                       ? MusicCatalogService.instance.artist(widget.artist,
                           refresh:true)
@@ -389,7 +390,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
             else if (snapshot.hasError) ...[
               Text('Could not load album: ${snapshot.error}').muted(),
               const SizedBox(height: 12),
-              OutlineButton(
+              OrchidAdaptiveControls.button(
                 onPressed: () => setState(() {
                   _tracks = MusicCatalogService.instance.album(
                     widget.artist, widget.album,
