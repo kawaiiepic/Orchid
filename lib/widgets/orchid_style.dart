@@ -17,8 +17,13 @@ abstract final class OrchidStyle {
   // The iOS dock is an overlay, not a footer. Let content scroll behind it
   // while leaving room to reach the last card at the bottom of the list.
   static double iosDockClearance(BuildContext context) {
-    if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return 0;
-    // The dock floats over content; do not reserve a large blank footer.
+    // Compact desktop windows now use the same floating dock as mobile.
+    // Reserve room for scrolling past the overlay on Linux/Windows/web,
+    // while retaining the existing compact iOS/Android behavior.
+    final width = MediaQuery.sizeOf(context).width;
+    if (width >= 850) return 0;
+    if (kIsWeb || (defaultTargetPlatform != TargetPlatform.iOS &&
+        defaultTargetPlatform != TargetPlatform.android)) return 96;
     return 12;
   }
 
