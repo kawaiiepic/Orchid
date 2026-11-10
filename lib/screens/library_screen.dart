@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/widgets.dart' as fw;
+import 'package:flutter/services.dart' show TextEditingValue;
 import '../services/spotify_service.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../widgets/orchid_hover_zoom.dart';
@@ -364,7 +365,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 size: 18, color: Color(0xFFCDBAE2)),
               const SizedBox(width: 12),
               Expanded(
-                child: ValueListenableBuilder<fw.TextEditingValue>(
+                child: ValueListenableBuilder<TextEditingValue>(
                   valueListenable: _queryController,
                   builder: (context, value, _) => Stack(
                     alignment: Alignment.centerLeft,
@@ -397,7 +398,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   ),
                 ),
               ),
-              ValueListenableBuilder<fw.TextEditingValue>(
+              ValueListenableBuilder<TextEditingValue>(
                 valueListenable: _queryController,
                 builder: (context, value, _) => value.text.isEmpty
                   ? const SizedBox.shrink()
