@@ -1,4 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import '../widgets/orchid_adaptive_controls.dart';
 
 import '../services/orchid_account.dart';
 import '../widgets/orchid_style.dart';
@@ -136,17 +137,17 @@ class _ReplayScreenState extends State<ReplayScreen> {
       const SizedBox(height:8),
       Wrap(spacing:8,runSpacing:8,children:[
         for(final y in sortedYears)
-          if(y==year)PrimaryButton(onPressed:()=>_select(y,month),child:Text('$y'))
-          else OutlineButton(onPressed:()=>_select(y,month),child:Text('$y')),
+          if(y==year)OrchidAdaptiveControls.button(prominent: true, onPressed:()=>_select(y,month),child:Text('$y'))
+          else OrchidAdaptiveControls.button(onPressed:()=>_select(y,month),child:Text('$y')),
       ]),
       const SizedBox(height:16),
       const Text('Choose a period').small().muted(),
       const SizedBox(height:8),
       Wrap(spacing:7,runSpacing:8,children:[
         for(var m=0;m<months.length;m++)
-          if(m==month)PrimaryButton(
+          if(m==month)OrchidAdaptiveControls.button(prominent: true, 
             onPressed:()=>_select(year,m),child:Text(m==0?'Full year':months[m]))
-          else OutlineButton(
+          else OrchidAdaptiveControls.button(
             onPressed:()=>_select(year,m),child:Text(m==0?'Full year':months[m])),
       ]),
       const SizedBox(height:24),
@@ -158,7 +159,7 @@ class _ReplayScreenState extends State<ReplayScreen> {
       else if(error!=null)...[
         Text(error!).small(),
         const SizedBox(height:10),
-        OutlineButton(onPressed:_load,child:const Text('Try again')),
+        OrchidAdaptiveControls.button(onPressed:_load,child:const Text('Try again')),
       ]else...[
         Wrap(spacing:10,runSpacing:10,children:[
           _metric('Total plays',_format(_number(stats['plays'])),LucideIcons.play),
