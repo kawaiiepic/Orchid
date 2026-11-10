@@ -1,4 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:flutter/material.dart' as material;
 
 import '../models/addon.dart';
 import '../services/addon_service.dart';
@@ -51,6 +52,10 @@ class _SongContextMenuState extends State<SongContextMenu> {
   }
 
   void _open(Offset position) {
+    if (MediaQuery.sizeOf(context).width < 850) {
+      _openMobileSheet();
+      return;
+    }
     _close();
     final overlay = Overlay.of(context);
     final overlayBox = overlay.context.findRenderObject() as RenderBox;
@@ -90,6 +95,51 @@ class _SongContextMenuState extends State<SongContextMenu> {
       ),
     ]));
     overlay.insert(_entry!);
+  }
+
+  void _openMobileSheet() {
+    material.showModalBottomSheet<void>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      backgroundColor: const Color(0x00000000),
+      barrierColor: const Color(0x99000000),
+      builder: (sheetContext) => material.SafeArea(
+        top: false,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 8),
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(sheetContext).height * .82),
+          decoration: const BoxDecoration(
+            color: Color(0xFF2E2239),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+          ),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const SizedBox(height: 12),
+            Container(width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFF806F90),
+                borderRadius: BorderRadius.circular(4))),
+            const SizedBox(height: 12),
+            Flexible(child: SingleChildScrollView(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.viewInsetsOf(sheetContext).bottom + 16),
+              child: _SongActionPanel(
+                track: widget.track,
+                player: widget.player,
+                library: widget.library,
+                addonService: widget.addonService,
+                addons: widget.addons,
+                showViewSong: widget.showViewSong,
+                playlist: widget.playlist,
+                mobileSheet: true,
+                dismiss: () => Navigator.of(sheetContext).pop(),
+              ),
+            )),
+          ]),
+        ),
+      ),
+    );
   }
 
   @override
@@ -162,6 +212,7 @@ class _SongActionPanel extends StatefulWidget {
   final MusicPlaylist? playlist;
   final bool showViewSong;
   final VoidCallback dismiss;
+  final bool mobileSheet;
 
   const _SongActionPanel({
     required this.track,
@@ -172,6 +223,7 @@ class _SongActionPanel extends StatefulWidget {
     this.showViewSong = true,
     this.playlist,
     required this.dismiss,
+    this.mobileSheet = false,
   });
 
   @override
@@ -182,6 +234,7 @@ class _SongActionPanelState extends State<_SongActionPanel> {
   final _name = TextEditingController();
   bool _creating = false;
   bool _saving = false;
+  bool _showMobilePlaylists = false;
   String? _error;
   OverlayEntry? _playlistSubmenu;
 
@@ -234,6 +287,10 @@ class _SongActionPanelState extends State<_SongActionPanel> {
   }
 
   void _openPlaylistSubmenu() {
+    if (widget.mobileSheet) {
+      setState(() => _showMobilePlaylists = true);
+      return;
+    }
     _closePlaylistSubmenu();
     final box = context.findRenderObject();
     if (box is! RenderBox) return;
@@ -297,10 +354,15 @@ class _SongActionPanelState extends State<_SongActionPanel> {
   }
 
   @override
-  Widget build(BuildContext context) => OrchidGlassPanel(
-    radius: 17,
-    transparentOnDesktop: false,
-    child: Padding(
+  Widget build(BuildContext context) => widget.mobileSheet
+      ? _panelBody()
+      : OrchidGlassPanel(
+          radius: 17,
+          transparentOnDesktop: false,
+          child: _panelBody(),
+        );
+
+  Widget _panelBody() => Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: ListenableBuilder(
       listenable: widget.library,
@@ -362,8 +424,22 @@ class _SongActionPanelState extends State<_SongActionPanel> {
               widget.dismiss();
             }),
           const Divider(),
-          _action('Add to playlist', LucideIcons.listPlus,
-            _openPlaylistSubmenu),
+          if (_showMobilePlaylists) ...[
+            _action('Back to actions', LucideIcons.arrowLeft,
+              () => setState(() => _showMobilePlaylists = false)),
+            for (final playlist in widget.library.visiblePlaylists)
+              _action(playlist.name,
+                widget.library.contains(playlist, _saved)
+                  ? LucideIcons.check : LucideIcons.plus,
+                () => _addTo(playlist)),
+            _action('New playlist', LucideIcons.plus, () =>
+              setState(() {
+                _showMobilePlaylists = false;
+                _creating = true;
+              })),
+          ] else
+            _action('Add to playlist', LucideIcons.listPlus,
+              _openPlaylistSubmenu),
           if (_error != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -390,6 +466,5 @@ class _SongActionPanelState extends State<_SongActionPanel> {
         ],
         ),
       ),
-    ),
   );
 }
