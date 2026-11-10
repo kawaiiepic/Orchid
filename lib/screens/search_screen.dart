@@ -235,15 +235,15 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _tile({required Widget artwork, required String title,
     required String subtitle, required VoidCallback onTap, Widget? trailing}) =>
-    Padding(padding:const EdgeInsets.symmetric(vertical:5),child:
+    Padding(padding:const EdgeInsets.symmetric(vertical:2),child:
       GestureDetector(behavior:HitTestBehavior.opaque,onTap:onTap,
         child:OrchidGlassPanel(
-          radius:15,
+          radius:10,
           child:Padding(
-            padding:const EdgeInsets.symmetric(horizontal:14,vertical:10),
+            padding:const EdgeInsets.symmetric(horizontal:10,vertical:4),
             child:Row(children:[
             artwork,
-            const SizedBox(width:12),
+            const SizedBox(width:10),
             Expanded(child:Column(
               crossAxisAlignment:CrossAxisAlignment.start,
               children:[
@@ -270,7 +270,8 @@ class _SearchScreenState extends State<SearchScreen> {
         // Tracks returned by the Apple Music playlist API already include
         // canonical artwork. Do not replace it with an iTunes search guess.
         preferredUrl:t.sourceId == 'apple-music' ? t.artworkUrl : null,
-        size:50,
+        size:38,
+        radius:7,
       ),
       title:t.title,
       subtitle:[t.artist, if(t.album?.trim().isNotEmpty==true) t.album!].join('\n'),
@@ -278,7 +279,7 @@ class _SearchScreenState extends State<SearchScreen> {
       trailing:Row(mainAxisSize:MainAxisSize.min,children:[
         if(trackDurationLabel(t.duration)!=null)...[
           Text(trackDurationLabel(t.duration)!).xSmall().muted(),
-          const SizedBox(width:8),
+          const SizedBox(width:4),
         ],
         IconButton.ghost(
           onPressed:()=>_songDetails(t),
@@ -309,11 +310,11 @@ class _SearchScreenState extends State<SearchScreen> {
               isAlbum:true,
               fallbackUrl:album.artwork,
               size:constraints.maxWidth,
-              radius:13,
+              radius:10,
             ),
           ),
         ),
-        const SizedBox(height:8),
+        const SizedBox(height:6),
         Text(album.title,maxLines:1,overflow:TextOverflow.ellipsis).semiBold(),
         Text(album.artist,maxLines:1,overflow:TextOverflow.ellipsis).small().muted(),
       ],
@@ -329,15 +330,15 @@ class _SearchScreenState extends State<SearchScreen> {
     child:OrchidGlassPanel(
       radius:18,
       child:Padding(
-        padding:const EdgeInsets.all(16),
+        padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),
         child:Row(children:[
-        ArtistArtwork(artist:artist,size:112,radius:18),
-        const SizedBox(width:18),
+        ClipOval(child:ArtistArtwork(artist:artist,size:84,radius:42)),
+        const SizedBox(width:14),
         Expanded(child:Column(
           crossAxisAlignment:CrossAxisAlignment.start,
           children:[
             const Text('TOP ARTIST').xSmall().muted(),
-            const SizedBox(height:9),
+            const SizedBox(height:5),
             Text(artist,maxLines:2,overflow:TextOverflow.ellipsis).xLarge().semiBold(),
           ],
         )),
@@ -349,7 +350,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _playlistCover(String? url) => LayoutBuilder(
     builder:(context, constraints) => ClipRRect(
-      borderRadius:BorderRadius.circular(13),
+      borderRadius:BorderRadius.circular(10),
       child:SizedBox(
         width:constraints.maxWidth,
         height:constraints.maxWidth,
@@ -365,8 +366,8 @@ class _SearchScreenState extends State<SearchScreen> {
   );
 
   Widget _emptyPlaylistCover() => const OrchidGlassPanel(
-    radius:13,
-    child:Center(child:Icon(LucideIcons.listMusic,size:38)),
+    radius:10,
+    child:Center(child:Icon(LucideIcons.listMusic,size:30)),
   );
 
   Widget _playlistCard({
@@ -384,7 +385,7 @@ class _SearchScreenState extends State<SearchScreen> {
           aspectRatio:1,
           child:_playlistCover(image),
         ),
-        const SizedBox(height:8),
+        const SizedBox(height:6),
         Text(title,maxLines:1,overflow:TextOverflow.ellipsis).semiBold(),
         Text(subtitle,maxLines:1,overflow:TextOverflow.ellipsis).small().muted(),
       ],
@@ -476,9 +477,9 @@ class _SearchScreenState extends State<SearchScreen> {
         itemCount:items.length,
         gridDelegate:SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount:columns,
-          crossAxisSpacing:12,
-          mainAxisSpacing:16,
-          childAspectRatio:0.72,
+          crossAxisSpacing:10,
+          mainAxisSpacing:12,
+          childAspectRatio:0.78,
         ),
         itemBuilder:(context,index)=>items[index],
       );
