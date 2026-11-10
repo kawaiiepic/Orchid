@@ -514,7 +514,6 @@ class _ShellScreenState extends State<ShellScreen>{
             onLibrary:()=>_selectTab(2),
             onReplay:()=>_selectTab(5),
             onRadio:()=>_selectTab(6),
-            onAiDj:()=>_selectTab(7),
             onSettings:_openSettings,
             onProfile:_openProfile,
           ),
