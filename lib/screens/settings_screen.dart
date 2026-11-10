@@ -159,10 +159,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final a = _appearance;
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    return LayoutBuilder(builder: (context, bounds) {
+      final desktop = bounds.maxWidth >= 850;
+      final currentSection = desktop && _section == -1 ? 0 : _section;
+      final content = ListView(
+      padding: EdgeInsets.fromLTRB(desktop ? 24 : 16, 16, desktop ? 30 : 16, 110),
       children: [
-        if (_section == -1) ...[
+        if (!desktop && _section == -1) ...[
           const Text('Settings').x2Large().semiBold(),
           const SizedBox(height: 8),
           const Text('Manage your Orchid experience.').muted(),
@@ -212,23 +215,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
         ] else ...[
           Row(children: [
-            IconButton.ghost(
-              onPressed: () => setState(() => _section = -1),
-              icon: const Icon(LucideIcons.arrowLeft),
-            ),
-            const SizedBox(width: 12),
+            if (!desktop) ...[
+              IconButton.ghost(
+                onPressed: () => setState(() => _section = -1),
+                icon: const Icon(LucideIcons.arrowLeft),
+              ),
+              const SizedBox(width: 12),
+            ],
             Text(const [
               'Account', 'Connections', 'Lyrics', 'Sources',
-            ][_section]).large().semiBold(),
+            ][currentSection]).large().semiBold(),
           ]),
           const SizedBox(height: 22),
-        if (_section == 0)
+        if (currentSection == 0)
           ProfileScreen(account: widget.account,
             embedded: true, section: 'account'),
-        if (_section == 1)
+        if (currentSection == 1)
           ProfileScreen(account: widget.account,
             embedded: true, section: 'connections'),
-        if (_section == 2) ...[
+        if (currentSection == 2) ...[
         const Text('Lyrics appearance').large().semiBold(),
         const SizedBox(height: 8),
         const Text(
@@ -350,7 +355,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
         ],
-        if (_section == 3) ...[
+        if (currentSection == 3) ...[
         const Text('Sources').large().semiBold(),
         const SizedBox(height: 8),
         const Text(
@@ -456,7 +461,100 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
         ],
       ],
-    );
+      );
+      if (!desktop) return content;
+      const categories = ['Account', 'Connections', 'Lyrics', 'Sources'];
+      const descriptions = [
+        'Your Petal account', 'Connected services',
+        'Lyrics appearance', 'Playback sources and addons',
+      ];
+      const icons = [
+        LucideIcons.user, LucideIcons.link,
+        LucideIcons.music2, LucideIcons.radio,
+      ];
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(28, 28, 30, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Settings').x2Large().semiBold(),
+            const SizedBox(height: 28),
+            Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 198,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.fromLTRB(12, 0, 0, 12),
+                          child: Text('PREFERENCES', style: TextStyle(
+                            color: Color(0xFFA9A0BE),
+                            fontSize: 10, letterSpacing: 2,
+                            fontWeight: FontWeight.w700,
+                          )),
+                        ),
+                        for (var i = 0; i < categories.length; i++)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () => setState(() => _section = i),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 180),
+                                  curve: Curves.easeOutCubic,
+                                  height: 42,
+                                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                                  decoration: BoxDecoration(
+                                    color: currentSection == i
+                                      ? OrchidStyle.violet.withValues(alpha: 0.16)
+                                      : const Color(0x00000000),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(children: [
+                                    Icon(icons[i], size: 17,
+                                      color: currentSection == i
+                                        ? OrchidStyle.pink
+                                        : const Color(0xFFB1A5C3)),
+                                    const SizedBox(width: 11),
+                                    Expanded(child: Text(categories[i],
+                                      style: TextStyle(
+                                        color: currentSection == i
+                                          ? OrchidStyle.pink
+                                          : const Color(0xFFDED4EA),
+                                        fontSize: 13,
+                                        fontWeight: currentSection == i
+                                          ? FontWeight.w600 : FontWeight.w400,
+                                      ))),
+                                  ]),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 26),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 860),
+                        child: content,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    });
   }
 
   Widget _builtInRow(String title, String subtitle) {
