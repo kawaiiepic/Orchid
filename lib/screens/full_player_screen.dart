@@ -198,7 +198,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
         if(track==null)return const SizedBox.shrink();
         final saved=SavedSong(
           track.title,track.artist,
-          album:track.album,artwork:track.artworkUrl,
+          album:track.album,artwork:track.artworkUrl,duration:track.duration,
         );
         final liked=library.isFavorite(saved);
         return Padding(
