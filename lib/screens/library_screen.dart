@@ -511,23 +511,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   Widget _savedArtistsGrid() {
     final query = _queryController.text.trim().toLowerCase();
-    // A library artist can come from a saved song or an explicitly followed artist.
-    // Deduplicate names case-insensitively while preserving their display casing.
-    final artistNames = <String, String>{};
-    for (final song in widget.library.librarySongs) {
-      final name = song.artist.trim();
-      if (name.isNotEmpty) artistNames.putIfAbsent(name.toLowerCase(), () => name);
-    }
-    for (final name in widget.library.savedArtists.keys) {
-      final trimmed = name.trim();
-      if (trimmed.isNotEmpty) {
-        artistNames.putIfAbsent(trimmed.toLowerCase(), () => trimmed);
-      }
-    }
-    final artists = artistNames.values
+    // Only explicitly followed artists belong in this category.
+    final artists = widget.library.savedArtists.keys
         .where((name) => name.toLowerCase().contains(query)).toList()
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-    if (artists.isEmpty) return const Text('No artists in your library yet.').muted();
+    if (artists.isEmpty) return const Text('No followed artists found.').muted();
     return LayoutBuilder(builder: (context, bounds) {
       final columns = (bounds.maxWidth / 165).floor().clamp(2, 7).toInt();
       return GridView.builder(
@@ -597,10 +585,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       final activeAlbumSongs = albums[_selectedAlbumKey];
       final selectedArtist = _selectedArtist;
       final activeArtist = selectedArtist != null &&
-          (widget.library.isArtistSaved(selectedArtist) ||
-           widget.library.librarySongs.any((song) =>
-             song.artist.trim().toLowerCase() ==
-                 selectedArtist.trim().toLowerCase()))
+          widget.library.isArtistSaved(selectedArtist)
           ? selectedArtist : null;
       final artistSongs = activeArtist == null ? <SavedSong>[] :
           widget.library.librarySongs.where((song) =>
