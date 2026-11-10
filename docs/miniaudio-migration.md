@@ -30,12 +30,15 @@ declarations (`NSObjCRuntime.h`, `NSString`). Orchid carries a narrowly
 version-checked, idempotent hotfix in
 `scripts/patch_miniaudio_ios.py` until the package is fixed upstream.
 
-After `flutter pub get`, run the patch **before any local iOS build**:
+Use Orchid's wrapper for a local unsigned iOS release build:
 
 ```sh
-python3 scripts/patch_miniaudio_ios.py
-flutter build ios --release --no-codesign
+bash scripts/build_ios.sh --release --no-codesign
 ```
+
+The wrapper runs `flutter pub get`, applies the patch and invokes
+`flutter build ios`. If invoking Flutter directly, run
+`python3 scripts/patch_miniaudio_ios.py` after `flutter pub get` first.
 
 The script patches only the resolved package's `rust/build.rs` (not Apple's
 SDK), passing `-x objective-c` to the `cc` builder on iOS and linking
