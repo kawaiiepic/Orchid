@@ -7,6 +7,7 @@ import '../services/addon_service.dart';
 import '../services/lyrics_appearance.dart';
 import '../services/orchid_account.dart';
 import 'profile_screen.dart';
+import '../widgets/orchid_adaptive_controls.dart';
 
 class SettingsScreen extends StatefulWidget {
   final OrchidAccount account;
@@ -29,6 +30,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _urlController = TextEditingController();
   bool _adding = false;
+  int _section = 0;
   String? _status;
   final _appearance = LyricsAppearance.instance;
 
@@ -170,10 +172,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        ProfileScreen(account:widget.account,embedded:true),
-        const SizedBox(height:28),
-        const Divider(),
-        const SizedBox(height:22),
+        Wrap(
+          spacing: 8, runSpacing: 8,
+          children: [
+            for (var i = 0; i < 4; i++)
+              OrchidAdaptiveControls.button(
+                onPressed: () => setState(() => _section = i),
+                prominent: _section == i,
+                child: Text(const [
+                  'Account', 'Connections', 'Lyrics', 'Sources',
+                ][i]),
+              ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        if (_section == 0)
+          ProfileScreen(account: widget.account,
+            embedded: true, section: 'account'),
+        if (_section == 1)
+          ProfileScreen(account: widget.account,
+            embedded: true, section: 'connections'),
+        if (_section == 2) ...[
         const Text('Lyrics appearance').large().semiBold(),
         const SizedBox(height: 8),
         const Text(
@@ -294,7 +313,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 24),
+        ],
+        if (_section == 3) ...[
         const Text('Sources').large().semiBold(),
         const SizedBox(height: 8),
         const Text(
@@ -397,6 +417,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             );
           }),
+        ],
       ],
     );
   }
