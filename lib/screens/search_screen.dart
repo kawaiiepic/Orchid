@@ -263,7 +263,7 @@ class _SearchScreenState extends State<SearchScreen> {
     );
 
   Widget _trackTile(TrackResult t) => SongContextMenu(
-    track:t, player:widget.player, library:widget.library, addonService: widget.addonService, addons: widget.addonsy,
+    track:t, player:widget.player, library:widget.library, addonService: widget.addonService, addons: widget.addons,
     child:_tile(
       artwork:AppleCover(
         artist:t.artist,
