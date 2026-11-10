@@ -1,4 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import '../widgets/orchid_adaptive_controls.dart';
 
 import '../models/addon.dart';
 import '../services/addon_service.dart';
@@ -86,20 +87,20 @@ class _LibraryScreenState extends State<LibraryScreen> {
               Text('${songs.length} tracks').muted(),
               const SizedBox(height: 14),
               if (songs.isNotEmpty)
-                PrimaryButton(
+                OrchidAdaptiveControls.button(prominent: true, 
                   onPressed: () => _playCollection(songs),
                   child: const Text('Play all'),
                 ),
               const SizedBox(height: 10),
               if (playlist != null) ...[
-                OutlineButton(
+                OrchidAdaptiveControls.button(
                   onPressed: () => widget.library.setPlaylistPinned(
                     playlist, !playlist.pinned),
                   child: Text(playlist.pinned
                     ? 'Unpin from Home' : 'Pin to Home'),
                 ),
                 const SizedBox(height: 8),
-                OutlineButton(
+                OrchidAdaptiveControls.button(
                   onPressed: () async {
                     await widget.library.deletePlaylist(playlist);
                     if (context.mounted) Navigator.of(context).pop();
