@@ -1,3 +1,4 @@
+import 'dart:ui' show ImageFilter;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart' as glass;
 import 'package:sizer/sizer.dart';
@@ -163,14 +164,17 @@ class OrchidGlassPanel extends StatelessWidget {
     final desktop = MediaQuery.sizeOf(context).width >= 850;
     if (transparentOnDesktop && desktop) return child;
     if (desktop) {
-      // On desktop the Linux/Windows lightweight shader blurs and
-      // downsamples whatever sits behind the panel. Use a crisp, tinted
-      // surface so the navigation text and background remain legible.
+      // Blur only the backdrop, not this panel's text or controls.
+      // A clipped Flutter BackdropFilter avoids the low-resolution
+      // refraction artifacts from the Linux glass shader.
       return ClipRRect(
         borderRadius: BorderRadius.circular(radius),
-        child: ColoredBox(
-          color: const Color(0xC044345A),
-          child: child,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+          child: ColoredBox(
+            color: const Color(0xA044345A),
+            child: child,
+          ),
         ),
       );
     }
