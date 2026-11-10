@@ -488,9 +488,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
     const secondary = Color(0xD9F0E7EE);
     return Scaffold(
       child: ClipRRect(
-        borderRadius: const BorderRadius.vertical(
-          bottom: Radius.circular(26),
-        ),
+        borderRadius: BorderRadius.zero,
         child: Stack(fit: StackFit.expand, children: [
           LiquidArtworkBackground(
             imageUrl: track?.artworkUrl,
