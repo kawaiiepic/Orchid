@@ -5,7 +5,10 @@ import 'package:shadcn_flutter_cupertino/shadcn_flutter_cupertino.dart';
 import 'screens/shell_screen.dart';
 
 class OrchidApp extends StatelessWidget {
-  const OrchidApp({super.key});
+  /// Allows headless widget tests to exercise the app shell without starting
+  /// native audio, network sessions, or the real playback screen.
+  final Widget? homeOverride;
+  const OrchidApp({super.key, this.homeOverride});
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +17,7 @@ class OrchidApp extends StatelessWidget {
     return Sizer(
       maxMobileWidth: 599,
       maxTabletWidth: 1024,
-      builder: (context, orientation, screenType) => const CupertinoShadcnApp(
+      builder: (context, orientation, screenType) => CupertinoShadcnApp(
       title: 'Orchid',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -24,8 +27,8 @@ class OrchidApp extends StatelessWidget {
       // Keep a shared overlay ancestor for all popup sheets.
       home: DrawerOverlay(
         child: ColoredBox(
-          color: Color(0xFF101018),
-          child: ShellScreen(),
+          color: const Color(0xFF101018),
+          child: homeOverride ?? const ShellScreen(),
         ),
       ),
       ),
