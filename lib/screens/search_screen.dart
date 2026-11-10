@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:liquid_design/liquid_design.dart' as liquid;
 import '../widgets/orchid_adaptive_controls.dart';
 
 import '../models/addon.dart';
@@ -515,9 +516,9 @@ class _SearchScreenState extends State<SearchScreen> {
       Padding(
         padding:const EdgeInsets.fromLTRB(20,8,20,10),
         child:Row(children:[
-          Expanded(child:TextField(
+          Expanded(child:liquid.LiquidGlassSearchBar(
             controller:_controller,
-            placeholder:const Text('Search music…'),
+            hintText:'Search music…',
             onChanged:_onQueryChanged,
             onSubmitted:(_)=>_search(),
           )),
