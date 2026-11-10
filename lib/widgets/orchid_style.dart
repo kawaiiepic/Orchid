@@ -189,15 +189,23 @@ class OrchidGlassPanel extends StatelessWidget {
   final Widget child;
   final double radius;
   final double blur;
+  final bool transparentOnDesktop;
   const OrchidGlassPanel({
     super.key,
     required this.child,
     this.radius = 16,
     this.blur = 16,
+    this.transparentOnDesktop = true,
   });
 
   @override
-  Widget build(BuildContext context) => ClipRRect(
+  Widget build(BuildContext context) {
+    // Desktop pages share one uninterrupted background. Keep their content
+    // and hit areas, but do not paint individual opaque or frosted panels.
+    if (transparentOnDesktop && MediaQuery.sizeOf(context).width >= 850) {
+      return child;
+    }
+    return ClipRRect(
     borderRadius: BorderRadius.circular(radius),
     child: Stack(children: [
       Positioned.fill(
@@ -222,5 +230,6 @@ class OrchidGlassPanel extends StatelessWidget {
       ),
       child,
     ]),
-  );
+    );
+  }
 }
