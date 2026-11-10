@@ -379,7 +379,9 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
       scrollDirection: Axis.horizontal,
       child: Row(children: [
       for (final video in videos)
-        SizedBox(
+        Padding(
+          padding: const EdgeInsets.only(right: 20),
+          child: SizedBox(
           width: 220,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
@@ -415,8 +417,8 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
               ],
             ),
           ),
+          ),
         ),
-        const SizedBox(width: 14),
       ]),
     );
   }
