@@ -313,7 +313,7 @@ class _ShellScreenState extends State<ShellScreen>{
         child:SafeArea(
          bottom:false,
          child:Padding(
-          padding:EdgeInsets.fromLTRB(OrchidStyle.compact(context,20),OrchidStyle.compact(context,12),OrchidStyle.compact(context,20),OrchidStyle.compact(context,6)),
+          padding:EdgeInsets.fromLTRB(0,OrchidStyle.compact(context,12),0,OrchidStyle.compact(context,6)),
           child:Row(children:[
          Icon(LucideIcons.music2, size:OrchidStyle.compact(context,20), color:OrchidStyle.violet),
          SizedBox(width:OrchidStyle.compact(context,9)),
