@@ -120,7 +120,7 @@ class _RadioScreenState extends State<RadioScreen>{
           ),
       ]),
       const SizedBox(height:20),
-      if(loading)const Center(child:CircularProgressIndicator()),
+      if(loading)const Center(child:Text('Loading…')),
       if(error!=null)...[
         Text(error!).small(),
         const SizedBox(height:12),
