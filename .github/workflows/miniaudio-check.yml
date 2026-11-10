@@ -6,6 +6,8 @@ on:
       - 'lib/**'
       - 'pubspec.yaml'
       - 'pubspec.lock'
+      - 'scripts/patch_miniaudio_ios.py'
+      - 'docs/miniaudio-migration.md'
       - 'android/**'
       - 'ios/**'
       - 'linux/**'
