@@ -93,7 +93,10 @@ class _AiDjScreenState extends State<AiDjScreen> {
 
   @override
   Widget build(BuildContext context)=>Padding(
-    padding:const EdgeInsets.all(20),
+    padding:EdgeInsets.fromLTRB(20,
+      20 + MediaQuery.paddingOf(context).top, 20,
+      20 + (MediaQuery.viewInsetsOf(context).bottom > 0
+        ? 0 : OrchidStyle.iosDockClearance(context))),
     child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
       const OrchidHero(
         eyebrow:'Made for You',
