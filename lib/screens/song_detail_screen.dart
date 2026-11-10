@@ -109,7 +109,8 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
  }
 
  SavedSong get savedSong => SavedSong(widget.title,widget.artist,
-    album:widget.album,artwork:widget.artworkUrl);
+    album:widget.album,artwork:widget.artworkUrl,
+    duration:widget.track?.duration);
 
  Widget _libraryActions() {
   final library=widget.library;
