@@ -354,6 +354,29 @@ class MusicLibrary extends ChangeNotifier {
     await _save();
   }
 
+  Future<MusicPlaylist> importPlaylist(
+    String name, List<SavedSong> songs,
+    {String creator = 'You', String? folderId},
+  ) async {
+    final unique = <String, SavedSong>{};
+    for (final song in songs) {
+      if (song.title.trim().isEmpty || song.artist.trim().isEmpty) continue;
+      unique.putIfAbsent(song.key, () => song);
+    }
+    if (unique.isEmpty) throw const FormatException('No valid tracks to import');
+    final playlist = MusicPlaylist(
+      id: '${DateTime.now().microsecondsSinceEpoch}_${_counter++}',
+      name: name.trim(), creator: creator, folderId: folderId,
+      songs: unique.values.toList(),
+    );
+    playlists.add(playlist);
+    for (final song in unique.values) {
+      _includeInLibrary(song);
+    }
+    await _save();
+    return playlist;
+  }
+
   Future<MusicPlaylist> createPlaylist(String name) async {
     final playlist = MusicPlaylist(
       id: '${DateTime.now().microsecondsSinceEpoch}_${_counter++}',
