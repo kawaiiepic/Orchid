@@ -127,7 +127,12 @@ if(NOT CMAKE_BUILD_TYPE MATCHES "Debug")
     COMPONENT Runtime)
 endif()
 
-find_package(mimalloc REQUIRED)
-
-# Link against the mimalloc target
-target_link_libraries(${BINARY_NAME} PRIVATE mimalloc)
+# mimalloc is an optional system allocator optimization. Stock Flutter and
+# miniaudio playback do not require it. Keep Linux distributions that do not
+# package its CMake config buildable by using the system allocator instead.
+find_package(mimalloc CONFIG QUIET)
+if(TARGET mimalloc)
+  target_link_libraries(${BINARY_NAME} PRIVATE mimalloc)
+elseif(TARGET mimalloc-static)
+  target_link_libraries(${BINARY_NAME} PRIVATE mimalloc-static)
+endif()
