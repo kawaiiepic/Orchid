@@ -7,6 +7,7 @@ import '../services/music_library.dart';
 import '../services/addon_service.dart';
 import '../models/addon.dart';
 import 'music_detail_pages.dart';
+import '../widgets/orchid_hover_zoom.dart';
 import '../widgets/orchid_style.dart';
 import '../widgets/artist_artwork.dart';
 import '../widgets/apple_cover.dart';
@@ -917,7 +918,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
             ],
           ),
           if (index + 2 < visible.length)
-            const Divider(color: Color(0x293C3546)),
+            const SizedBox(height: 4),
         ],
       ],
     );
@@ -957,8 +958,9 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
               debugPrint('[Orchid] Song playback failed: $error');
             });
           },
-          child: Container(
-            height: 54,
+          child: OrchidHoverSurface(
+            child: Container(
+              height: 54,
             padding: const EdgeInsets.fromLTRB(5, 0, 45, 0),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
@@ -998,7 +1000,8 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                   style: const TextStyle(
                     fontSize: 11, color: Color(0xFFB2A9BC))),
               ),
-            ]),
+              ]),
+            ),
           ),
         ),
       ),
