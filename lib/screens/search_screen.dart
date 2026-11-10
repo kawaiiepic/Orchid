@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import '../widgets/orchid_adaptive_controls.dart';
 
 import '../models/addon.dart';
 import '../services/addon_service.dart';
@@ -434,7 +435,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 else if(songs.isEmpty)
                   const Text('No playable song metadata found.').muted()
                 else ...[
-                  PrimaryButton(
+                  OrchidAdaptiveControls.button(prominent: true, 
                     onPressed:(){
                       widget.player.setAddons(widget.addons);
                       widget.player.playTrack(songs.first,fromQueue:songs).catchError(
@@ -484,7 +485,7 @@ class _SearchScreenState extends State<SearchScreen> {
     required VoidCallback onPressed,
   }) => Padding(
     padding:const EdgeInsets.symmetric(vertical:10),
-    child:OutlineButton(
+    child:OrchidAdaptiveControls.button(
       onPressed:onPressed,
       child:Text(expanded ? 'Show Less' : 'Show More'),
     ),
@@ -521,7 +522,7 @@ class _SearchScreenState extends State<SearchScreen> {
             onSubmitted:(_)=>_search(),
           )),
           const SizedBox(width:8),
-          PrimaryButton(onPressed:_searching?null:_search,
+          OrchidAdaptiveControls.button(prominent: true, onPressed:_searching?null:_search,
             child:Text(_searching?'…':'Search')),
         ]),
       ),
@@ -532,11 +533,11 @@ class _SearchScreenState extends State<SearchScreen> {
           for(final category in SearchCategory.values)
             Padding(padding:const EdgeInsets.only(right:8),
               child:category==_category
-                ? PrimaryButton(
+                ? OrchidAdaptiveControls.button(prominent: true, 
                     onPressed:()=>_choose(category),
                     child:Text(category.name == 'all'?'All':
                       '${category.name[0].toUpperCase()}${category.name.substring(1)}'))
-                : OutlineButton(
+                : OrchidAdaptiveControls.button(
                     onPressed:()=>_choose(category),
                     child:Text(category.name == 'all'?'All':
                       '${category.name[0].toUpperCase()}${category.name.substring(1)}')),
