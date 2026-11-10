@@ -435,10 +435,6 @@ class _ShellScreenState extends State<ShellScreen>{
   );
   }
 
- NavigationItem _button(String title,IconData icon,int index)=>NavigationItem(
-  key:ValueKey(index),style:const ButtonStyle.muted(density:ButtonDensity.icon),
-  selectedStyle:const ButtonStyle.fixed(density:ButtonDensity.icon),
-  label:Text(title),child:Icon(icon));
  @override Widget build(BuildContext context){
   if(_account.loading){
    return const SafeArea(child:Scaffold(child:Center(child:Text('Checking your Petal session…'))));
@@ -475,9 +471,9 @@ class _ShellScreenState extends State<ShellScreen>{
   final desktop=(kIsWeb || (defaultTargetPlatform!=TargetPlatform.iOS
     && defaultTargetPlatform!=TargetPlatform.android))
     && MediaQuery.sizeOf(context).width>=850;
-  final mobileDock = !kIsWeb && (
-    defaultTargetPlatform == TargetPlatform.iOS ||
-    defaultTargetPlatform == TargetPlatform.android);
+  // The floating dock belongs to the compact layout, regardless of OS.
+  // This also covers narrow Linux/Windows/web windows and tablets.
+  final mobileDock = !desktop;
 
   final browsing = Navigator(
     key: orchidContentNavigatorKey,
@@ -548,28 +544,6 @@ class _ShellScreenState extends State<ShellScreen>{
   }
 
   return Scaffold(
-   footers:[
-    if(!mobileDock) ...[
-     MiniPlayerBar(player:_player,library:_library),
-     const Divider(),
-     SafeArea(
-      top:false,
-      child:NavigationBar(
-       alignment:NavigationBarAlignment.spaceAround,
-       labelType:NavigationLabelType.none,
-       expanded:true,
-       onSelected:(key)=>_selectTab((key as ValueKey<int>).value),
-       selectedKey:selected,
-       children:[
-        _button('Home',BootstrapIcons.house,0),
-        _button('Discover',BootstrapIcons.compass,3),
-        _button('Library',BootstrapIcons.musicNoteList,2),
-        _button('Search',BootstrapIcons.search,1),
-       ],
-      ),
-     ),
-    ],
-   ],
    child:Container(
     decoration:const BoxDecoration(
      gradient:LinearGradient(
@@ -586,7 +560,7 @@ class _ShellScreenState extends State<ShellScreen>{
     ),
     child:Stack(children:[
      browsing,
-     if(mobileDock) _iosFloatingDock(page),
+     _iosFloatingDock(page),
     ]),
    ),
   );
