@@ -784,7 +784,8 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
             ]),
             if (i < _recentSearches.length - 1)
-              const Divider(height: 1, color: Color(0x335F496D)),
+              const SizedBox(height: 1,
+                child: ColoredBox(color: Color(0x335F496D))),
           ],
         ]),
       ),
