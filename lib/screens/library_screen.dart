@@ -49,6 +49,7 @@ class LibraryScreen extends StatefulWidget {
 
 class _LibraryScreenState extends State<LibraryScreen> {
   final _queryController = TextEditingController();
+  final _librarySearchFocus = fw.FocusNode();
   String _view = 'Songs';
   String? _selectedAlbumKey;
   String? _selectedArtist;
@@ -193,6 +194,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   @override
   void dispose() {
     _queryController.dispose();
+    _librarySearchFocus.dispose();
     super.dispose();
   }
 
@@ -350,10 +352,71 @@ class _LibraryScreenState extends State<LibraryScreen> {
   Widget _libraryTools() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      TextField(
-        controller: _queryController,
-        placeholder: const Text('Search your library…'),
-        onChanged: (_) => setState(() {}),
+      OrchidGlassPanel(
+        radius: 14,
+        transparentOnDesktop: false,
+        child: SizedBox(
+          height: 46,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(children: [
+              const Icon(LucideIcons.search,
+                size: 18, color: Color(0xFFCDBAE2)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ValueListenableBuilder<fw.TextEditingValue>(
+                  valueListenable: _queryController,
+                  builder: (context, value, _) => Stack(
+                    alignment: Alignment.centerLeft,
+                    children: [
+                      if (value.text.isEmpty)
+                        const IgnorePointer(
+                          child: Text('Search your library…',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFFB8A9C6),
+                            ),
+                          ),
+                        ),
+                      fw.EditableText(
+                        controller: _queryController,
+                        focusNode: _librarySearchFocus,
+                        style: const TextStyle(
+                          color: Color(0xFFF7F0FF),
+                          fontSize: 14,
+                          height: 1.25,
+                        ),
+                        cursorColor: OrchidStyle.lilac,
+                        backgroundCursorColor: OrchidStyle.lilac,
+                        selectionColor: const Color(0x665F4391),
+                        maxLines: 1,
+                        keyboardType: fw.TextInputType.text,
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              ValueListenableBuilder<fw.TextEditingValue>(
+                valueListenable: _queryController,
+                builder: (context, value, _) => value.text.isEmpty
+                  ? const SizedBox.shrink()
+                  : GestureDetector(
+                      onTap: () {
+                        _queryController.clear();
+                        setState(() {});
+                        _librarySearchFocus.requestFocus();
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.all(6),
+                        child: Icon(LucideIcons.x,
+                          size: 16, color: Color(0xFFBEACC9)),
+                      ),
+                    ),
+              ),
+            ]),
+          ),
+        ),
       ),
       const SizedBox(height: 14),
       Wrap(spacing: 8, runSpacing: 8, children: [
