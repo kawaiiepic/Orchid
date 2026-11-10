@@ -1,7 +1,1 @@
 #include "Generated.xcconfig"
-
-// miniaudio's CoreAudio C bridge includes Objective-C declarations.
-// Ensure Cargo cc compiles its C source as Objective-C for Apple iOS targets.
-CFLAGS_aarch64_apple_ios = -x objective-c
-CFLAGS_aarch64_apple_ios_sim = -x objective-c
-CFLAGS_x86_64_apple_ios = -x objective-c
