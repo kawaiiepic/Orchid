@@ -109,6 +109,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                   ),
                   player: widget.player,
                   library: widget.library,
+                  addonService: widget.addonService,
+                  addons: widget.addons,
                   showMenuButton: true,
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
