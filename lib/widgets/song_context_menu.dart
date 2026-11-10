@@ -142,6 +142,8 @@ class _SongActionPanel extends StatefulWidget {
 class _SongActionPanelState extends State<_SongActionPanel> {
   final _name = TextEditingController();
   bool _creating = false;
+  bool _saving = false;
+  String? _error;
   OverlayEntry? _playlistSubmenu;
 
   SavedSong get _saved => SavedSong(widget.track.title, widget.track.artist,
@@ -157,10 +159,33 @@ class _SongActionPanelState extends State<_SongActionPanel> {
 
   Future<void> _create() async {
     final name = _name.text.trim();
-    if (name.isEmpty) return;
-    final playlist = await widget.library.createPlaylist(name);
-    await widget.library.addToPlaylist(playlist, _saved);
-    if (mounted) widget.dismiss();
+    if (name.isEmpty || _saving) return;
+    setState(() { _saving = true; _error = null; });
+    try {
+      await widget.library.createPlaylistWithSong(name, _saved);
+      if (mounted) widget.dismiss();
+    } catch (error) {
+      if (mounted) setState(() => _error = error.toString());
+      debugPrint('[Orchid] Create playlist failed: $error');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _addTo(MusicPlaylist playlist) async {
+    if (_saving) return;
+    setState(() { _saving = true; _error = null; });
+    try {
+      await widget.library.addToPlaylist(playlist, _saved);
+      _closePlaylistSubmenu();
+      if (mounted) widget.dismiss();
+    } catch (error) {
+      if (mounted) setState(() => _error = error.toString());
+      debugPrint('[Orchid] Add to playlist failed: $error');
+      _closePlaylistSubmenu();
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   void _closePlaylistSubmenu() {
@@ -181,7 +206,12 @@ class _SongActionPanelState extends State<_SongActionPanel> {
         : (origin.dx - width - 4).clamp(8.0, screen.width - width - 8.0);
     final top = origin.dy.clamp(
       8.0, (screen.height - 290).clamp(8.0, double.infinity));
-    _playlistSubmenu = OverlayEntry(builder: (_) => Positioned(
+    _playlistSubmenu = OverlayEntry(builder: (_) => Stack(children: [
+      Positioned.fill(child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _closePlaylistSubmenu,
+      )),
+      Positioned(
       left: left.toDouble(), top: top.toDouble(), width: width,
       child: OrchidGlassPanel(
         radius: 14, transparentOnDesktop: false,
@@ -196,11 +226,7 @@ class _SongActionPanelState extends State<_SongActionPanel> {
                     playlist.name,
                     widget.library.contains(playlist, _saved)
                       ? LucideIcons.check : LucideIcons.plus,
-                    () {
-                      widget.library.addToPlaylist(playlist, _saved);
-                      _closePlaylistSubmenu();
-                      widget.dismiss();
-                    },
+                    () => _addTo(playlist),
                   ),
                 _action('New playlist', LucideIcons.plus, () {
                   _closePlaylistSubmenu();
@@ -211,7 +237,8 @@ class _SongActionPanelState extends State<_SongActionPanel> {
           ),
         ),
       ),
-    ));
+      ),
+    ]));
     Overlay.of(context).insert(_playlistSubmenu!);
   }
 
@@ -283,6 +310,12 @@ class _SongActionPanelState extends State<_SongActionPanel> {
           const Divider(),
           _action('Add to playlist', LucideIcons.listPlus,
             _openPlaylistSubmenu),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              child: Text(_error!, maxLines: 3,
+                overflow: TextOverflow.ellipsis).small(),
+            ),
           if (_creating)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10),
