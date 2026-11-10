@@ -31,7 +31,6 @@ class _CanvasVideoState extends State<CanvasVideo> {
   late final VideoController _controller;
   StreamSubscription<String>? _errorSubscription;
   StreamSubscription<Duration>? _positionSubscription;
-  StreamSubscription<bool>? _completedSubscription;
   Timer? _stallWatchdog;
   DateTime _lastProgress = DateTime.now();
   Duration _lastPosition = Duration.zero;
@@ -69,12 +68,8 @@ class _CanvasVideoState extends State<CanvasVideo> {
       }
       _lastPosition = position;
     });
-    _completedSubscription = _video.stream.completed.listen((completed) {
-      if (completed && _ready && !_recovering) {
-        debugPrint('[Orchid Artwork] Loop reached EOF; restarting canvas');
-        unawaited(_recoverPlayback());
-      }
-    });
+    // Single-file looping should handle normal EOF itself. Do not restart on
+    // completed events: some HLS streams emit one at every normal loop.
     // HLS can silently freeze without emitting an mpv error or completion.
     // Inspect only this standalone silent artwork player, never music audio.
     _stallWatchdog = Timer.periodic(const Duration(seconds: 3), (_) {
@@ -195,7 +190,6 @@ class _CanvasVideoState extends State<CanvasVideo> {
     ++_generation;
     _stallWatchdog?.cancel();
     _positionSubscription?.cancel();
-    _completedSubscription?.cancel();
     _errorSubscription?.cancel();
     unawaited(_video.dispose());
     super.dispose();
