@@ -30,6 +30,13 @@ class _CanvasVideoState extends State<CanvasVideo> {
   late final mk.Player _video;
   late final VideoController _controller;
   StreamSubscription<String>? _errorSubscription;
+  StreamSubscription<Duration>? _positionSubscription;
+  StreamSubscription<bool>? _completedSubscription;
+  Timer? _stallWatchdog;
+  DateTime _lastProgress = DateTime.now();
+  Duration _lastPosition = Duration.zero;
+  bool _recovering = false;
+  int _recoveries = 0;
   bool _ready = false;
   bool _failed = false;
   int _generation = 0;
@@ -53,21 +60,68 @@ class _CanvasVideoState extends State<CanvasVideo> {
         enableHardwareAcceleration: true,
       ),
     );
+    _positionSubscription = _video.stream.position.listen((position) {
+      // Ignore repeat-loop position resets, but count actual forward motion.
+      if (position > _lastPosition + const Duration(milliseconds: 150) ||
+          position < _lastPosition - const Duration(milliseconds: 500)) {
+        _lastProgress = DateTime.now();
+      }
+      _lastPosition = position;
+    });
+    _completedSubscription = _video.stream.completed.listen((completed) {
+      if (completed && _ready && !_recovering) {
+        debugPrint('[Orchid Artwork] Loop reached EOF; restarting canvas');
+        unawaited(_recoverPlayback());
+      }
+    });
+    // HLS can silently freeze without emitting an mpv error or completion.
+    // Inspect only this standalone silent artwork player, never music audio.
+    _stallWatchdog = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (!mounted || !_ready || _failed || _recovering) return;
+      final stalledFor = DateTime.now().difference(_lastProgress);
+      if (stalledFor >= const Duration(seconds: 9)) {
+        debugPrint('[Orchid Artwork] Canvas stalled for '
+            '${stalledFor.inSeconds}s; recovering playback');
+        unawaited(_recoverPlayback());
+      }
+    });
     _errorSubscription = _video.stream.error.listen((message) {
       debugPrint('[Orchid Artwork] MPV error: $message');
-      if (!mounted || _failed) return;
-      setState(() {
-        _failed = true;
-        _ready = false;
-      });
-      _reportFailure();
-      unawaited(_video.stop());
+      if (!mounted || _failed || _recovering) return;
+      // Transient HLS failures should retry before disabling animation.
+      unawaited(_recoverPlayback());
     });
     _start();
   }
 
+  Future<void> _recoverPlayback() async {
+    if (_recovering || !mounted || _failed) return;
+    _recovering = true;
+    try {
+      if (++_recoveries > 3) {
+        debugPrint('[Orchid Artwork] Repeated stalls; using still cover');
+        if (mounted) setState(() { _failed = true; _ready = false; });
+        _reportFailure();
+        return;
+      }
+      await _video.stop();
+      if (!mounted) return;
+      await _start();
+    } catch (e) {
+      debugPrint('[Orchid Artwork] Recovery failed: $e');
+      if (_recoveries >= 3 && mounted) {
+        setState(() { _failed = true; _ready = false; });
+        _reportFailure();
+      }
+    } finally {
+      _recovering = false;
+    }
+  }
+
   Future<void> _start() async {
     final generation = ++_generation;
+    _lastProgress = DateTime.now();
+    _lastPosition = Duration.zero;
     _failureReported = false;
     if (mounted) {
       setState(() {
@@ -78,7 +132,7 @@ class _CanvasVideoState extends State<CanvasVideo> {
     try {
       await _video.setVolume(0);
       if (generation != _generation) return;
-      await _video.setPlaylistMode(mk.PlaylistMode.loop);
+      await _video.setPlaylistMode(mk.PlaylistMode.single);
       if (generation != _generation) return;
       final playableUrl = await HlsVariantService.instance.preferredUrl(
         widget.url, efficient: widget.efficient);
@@ -94,6 +148,7 @@ class _CanvasVideoState extends State<CanvasVideo> {
           .timeout(const Duration(seconds: 15));
       if (!mounted || generation != _generation || _failed) return;
       setState(() => _ready = true);
+      _lastProgress = DateTime.now();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && generation == _generation && !_failed) {
           widget.onReady?.call();
@@ -116,13 +171,22 @@ class _CanvasVideoState extends State<CanvasVideo> {
     super.didUpdateWidget(oldWidget);
     if (widget.url != oldWidget.url ||
         widget.efficient != oldWidget.efficient) {
-      unawaited(_video.stop().then((_) => _start()));
+      // Invalidate any earlier asynchronous HLS load before replacing media.
+      ++_generation;
+      _recoveries = 0;
+      _recovering = false;
+      unawaited(_video.stop().then((_) {
+        if (mounted) return _start();
+      }));
     }
   }
 
   @override
   void dispose() {
     ++_generation;
+    _stallWatchdog?.cancel();
+    _positionSubscription?.cancel();
+    _completedSubscription?.cancel();
     _errorSubscription?.cancel();
     unawaited(_video.dispose());
     super.dispose();
