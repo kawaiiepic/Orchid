@@ -314,7 +314,11 @@ class _ShellScreenState extends State<ShellScreen>{
           child:Row(children:[
          Icon(LucideIcons.music2, size:OrchidStyle.compact(context,20), color:OrchidStyle.violet),
          SizedBox(width:OrchidStyle.compact(context,9)),
-         const Text('Orchid').large().semiBold(),
+         const Text('Orchid', style: TextStyle(
+           fontSize: 16,
+           fontWeight: FontWeight.w600,
+           color: Color(0xFFF7EDFF),
+         )),
          const Spacer(),
          MouseRegion(
           cursor:SystemMouseCursors.click,
@@ -349,8 +353,10 @@ class _ShellScreenState extends State<ShellScreen>{
       color:Color(0xFF9D90AF),fontSize:12)),
      const SizedBox(height:5),
      Text(_account.username ?? 'Your music',
-      style:const TextStyle(fontSize:27,fontWeight:FontWeight.w700,
-       color:Color(0xFFF7EDFF))),
+      style:TextStyle(
+        fontSize:_isDesktopLayout(context) ? 27 : 22,
+        fontWeight:FontWeight.w700,
+        color:const Color(0xFFF7EDFF))),
     ],
    ),
   );
