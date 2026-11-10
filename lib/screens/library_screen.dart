@@ -890,10 +890,29 @@ class _LibraryScreenState extends State<LibraryScreen> {
             onPressed: () => setState(() => _playlistFolderId = null),
             child: const Text('All')),
           for (final folder in folders)
-            OrchidAdaptiveControls.button(
-              prominent: _playlistFolderId == folder.id,
-              onPressed: () => setState(() => _playlistFolderId = folder.id),
-              child: Text(folder.name)),
+            OrchidHoverMenu(
+              showHoverButton: false,
+              actions: [
+                OrchidHoverAction('Rename folder', LucideIcons.pencil,
+                  () async {
+                    final name = await _askName('Rename ${folder.name}');
+                    if (name != null) {
+                      await widget.library.renamePlaylistFolder(folder, name);
+                    }
+                  }),
+                OrchidHoverAction('Delete folder', LucideIcons.trash2,
+                  () {
+                    if (_playlistFolderId == folder.id) {
+                      setState(() => _playlistFolderId = null);
+                    }
+                    widget.library.deletePlaylistFolder(folder);
+                  }),
+              ],
+              child: OrchidAdaptiveControls.button(
+                prominent: _playlistFolderId == folder.id,
+                onPressed: () => setState(() => _playlistFolderId = folder.id),
+                child: Text(folder.name)),
+            ),
         ]),
       ],
     ]);
