@@ -1,4 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import '../widgets/orchid_adaptive_controls.dart';
 import '../models/addon.dart';
 import '../services/orchid_account.dart';
 import '../services/player_service.dart';
@@ -85,10 +86,10 @@ class _RadioScreenState extends State<RadioScreen>{
       const SizedBox(height:12),
       Wrap(spacing:8,runSpacing:8,children:[
         for(final label in choices.keys)
-          if(type==label)PrimaryButton(
+          if(type==label)OrchidAdaptiveControls.button(prominent: true, 
             onPressed:()=>setState(() {type=label;choice=null;error=null;}),
             child:Text(label))
-          else OutlineButton(
+          else OrchidAdaptiveControls.button(
             onPressed:()=>setState(() {type=label;choice=null;error=null;}),
             child:Text(label)),
       ]),
@@ -123,14 +124,14 @@ class _RadioScreenState extends State<RadioScreen>{
       if(error!=null)...[
         Text(error!).small(),
         const SizedBox(height:12),
-        OutlineButton(onPressed:()=>choice==null?null:_start(choice!),
+        OrchidAdaptiveControls.button(onPressed:()=>choice==null?null:_start(choice!),
           child:const Text('Try again')),
       ],
       if(widget.player.radioNextBatch!=null)...[
         const SizedBox(height:12),
         Text('Radio is playing${choice==null?'':': $choice'}').semiBold(),
         const SizedBox(height:8),
-        OutlineButton(onPressed:(){widget.player.stopRadio();setState((){});},
+        OrchidAdaptiveControls.button(onPressed:(){widget.player.stopRadio();setState((){});},
           child:const Text('Stop Radio')),
         const SizedBox(height:6),
         const Text('Station recommendations require the Apple Music catalog and a working playback addon. Tracks are generated in batches as the queue runs low.').small().muted(),
