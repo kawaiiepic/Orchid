@@ -222,8 +222,7 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    child: FutureBuilder<ArtistCatalog>(
+  Widget build(BuildContext context) => FutureBuilder<ArtistCatalog>(
       future: _catalog,
       builder: (context, snapshot) {
         final catalog = snapshot.data;
@@ -239,7 +238,7 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
                 ? 'Explore the discography'
                 : '${catalog.albums.length} releases · ${catalog.songs.length} catalog tracks',
               artwork:Center(child: ArtistArtwork(
-                artist:widget.artist,size:190,radius:95)),
+                artist:widget.artist,size:148,radius:74)),
               actions:Column(
                 crossAxisAlignment:CrossAxisAlignment.start,
                 children:[
@@ -322,8 +321,7 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
           ],
         );
       },
-    ),
-  );
+    );
 }
 
 class AlbumDetailPage extends StatefulWidget {
@@ -354,8 +352,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    child: FutureBuilder<List<TrackResult>>(
+  Widget build(BuildContext context) => FutureBuilder<List<TrackResult>>(
       future: _tracks,
       builder: (context, snapshot) {
         final tracks = snapshot.data ?? [];
@@ -371,7 +368,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
                 '${_catalogDuration(tracks).isNotEmpty ? ' · ${_catalogDuration(tracks)}' : ''}',
               artwork:_cover(context,
                 widget.artwork ?? (tracks.isNotEmpty ? tracks.first.artworkUrl:null),
-                size:194),
+                size:148),
               actions:Column(
                 crossAxisAlignment:CrossAxisAlignment.start,
                 children:[
@@ -416,6 +413,5 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
           ],
         );
       },
-    ),
-  );
+    );
 }
