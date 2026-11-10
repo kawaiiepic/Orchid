@@ -66,7 +66,7 @@ class MusicLibrary extends ChangeNotifier {
   bool _includeInLibrary(SavedSong song) {
     final songs = librarySongs;
     if (songs.any((s) => s.key == song.key)) return false;
-    songs.add(song);
+    songs.insert(0, song);
     return true;
   }
 
@@ -84,6 +84,7 @@ class MusicLibrary extends ChangeNotifier {
   OrchidAccount? _client;
   String? _account;
   bool loaded = false;
+  bool _needsLibraryMigration = false;
   int _counter = 0;
   int _revision = 0;
   int _loadGeneration = 0;
@@ -100,6 +101,7 @@ class MusicLibrary extends ChangeNotifier {
     recentlyPlayed.clear();
     _revision = 0;
     loaded = false;
+    _needsLibraryMigration = false;
     notifyListeners();
     if (account == null) return;
     final api = _client;
@@ -119,12 +121,17 @@ class MusicLibrary extends ChangeNotifier {
         playlists.addAll((data['playlists'] as List? ?? [])
             .whereType<Map>()
             .map((p) => MusicPlaylist.fromJson(Map<String, dynamic>.from(p))));
-        // One-time and ongoing reconciliation of already saved songs.
-        // Keep the collection hidden from user-created playlists.
-        for (final song in [...favorites,
-          for (final playlist in visiblePlaylists) ...playlist.songs]) {
-          _includeInLibrary(song);
+        // Upgrade existing accounts once. After that, Library membership
+        // is independent: removing a saved song must stay removed.
+        final hadLibrary = playlists.any(
+          (playlist) => playlist.id == libraryPlaylistId);
+        if (!hadLibrary) {
+          for (final song in [...favorites,
+            for (final playlist in visiblePlaylists) ...playlist.songs]) {
+            _includeInLibrary(song);
+          }
         }
+        _needsLibraryMigration = !hadLibrary && librarySongs.isNotEmpty;
       }
       _revision = (response['revision'] as num?)?.toInt() ?? 0;
     } catch (error) {
@@ -133,6 +140,13 @@ class MusicLibrary extends ChangeNotifier {
       if (_account == account && generation == _loadGeneration) {
         loaded = true;
         notifyListeners();
+        if (_needsLibraryMigration) {
+          _needsLibraryMigration = false;
+          // Persist the reserved playlist through the existing revisioned API.
+          unawaited(_save().catchError((Object e) {
+            debugPrint('[Orchid Library] Migration sync failed: $e');
+          }));
+        }
       }
     }
   }
