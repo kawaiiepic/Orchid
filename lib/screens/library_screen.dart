@@ -54,10 +54,132 @@ class _LibraryScreenState extends State<LibraryScreen> {
   String _view = 'Songs';
   String? _mobileSection;
   String? _mobilePlaylistId;
+  bool _mobileSelecting = false;
+  final Set<String> _mobileSelected = {};
+
+  String _songSelectionKey(SavedSong song) =>
+      '${song.artist.trim().toLowerCase()}|${song.title.trim().toLowerCase()}|${song.album?.trim().toLowerCase() ?? ''}';
+
+  void _toggleMobileSelection(String key) => setState(() {
+    if (!_mobileSelected.add(key)) _mobileSelected.remove(key);
+  });
+
+  void _leaveMobileSelection() => setState(() {
+    _mobileSelecting = false;
+    _mobileSelected.clear();
+  });
+
+  void _mobileBack() {
+    if (_mobileSelecting) {
+      _leaveMobileSelection();
+    } else if (_selectedAlbumKey != null) {
+      setState(() => _selectedAlbumKey = null);
+    } else if (_selectedArtist != null) {
+      setState(() => _selectedArtist = null);
+    } else if (_mobilePlaylistId != null) {
+      _selectMobilePlaylist(null);
+    } else if (_playlistFolderId != null) {
+      setState(() => _playlistFolderId = null);
+    } else {
+      setState(() => _mobileSection = null);
+    }
+  }
+
+  void _applyMobileSelection(Map<String, List<SavedSong>> albums) {
+    if (_mobileSelected.isEmpty) return;
+    if (_mobileSection == 'Artists') {
+      final artists = _mobileSelected.toList();
+      for (final artist in artists) {
+        if (!widget.library.isArtistSaved(artist)) {
+          widget.library.toggleArtistSaved(artist);
+        }
+      }
+    } else {
+      final songs = _mobileSection == 'Albums'
+          ? <SavedSong>[
+              for (final key in _mobileSelected) ...?albums[key],
+            ]
+          : widget.library.librarySongs
+              .where((song) => _mobileSelected.contains(_songSelectionKey(song)))
+              .toList();
+      for (final song in songs) {
+        widget.player.addToQueue(_track(song));
+      }
+    }
+    _leaveMobileSelection();
+  }
+
+  Widget _mobileTopButton({
+    required Widget child,
+    required VoidCallback onTap,
+  }) => GestureDetector(
+    onTap: onTap,
+    behavior: HitTestBehavior.opaque,
+    child: Container(
+      height: 46,
+      constraints: const BoxConstraints(minWidth: 46),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: const Color(0x554A365D),
+        borderRadius: BorderRadius.circular(23),
+        border: Border.all(color: const Color(0x225D4F69)),
+      ),
+      child: child,
+    ),
+  );
+
+  Widget _mobilePageHeader(String title, {
+    VoidCallback? action,
+    Widget? actionChild,
+  }) => SizedBox(
+    height: 62,
+    child: Row(children: [
+      _mobileTopButton(
+        onTap: _mobileBack,
+        child: const Icon(LucideIcons.chevronLeft, size: 24,
+          color: Color(0xFFF5EDFF)),
+      ),
+      Expanded(child: Text(title,
+        textAlign: TextAlign.center,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: Color(0xFFF8F1FF),
+          fontSize: 19, fontWeight: FontWeight.w700,
+        ))),
+      _mobileTopButton(
+        onTap: action ?? () {},
+        child: actionChild ?? const SizedBox.shrink(),
+      ),
+    ]),
+  );
+
+  Widget _mobileSelectionBar(Map<String, List<SavedSong>> albums) {
+    if (!_mobileSelecting) return const SizedBox.shrink();
+    final count = _mobileSelected.length;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Row(children: [
+        Expanded(child: Text('$count selected',
+          style: const TextStyle(color: Color(0xFFB8A9C6),
+            fontSize: 13))),
+        OrchidAdaptiveControls.button(
+          onPressed: count == 0 ? null : () => _applyMobileSelection(albums),
+          prominent: true,
+          child: Text(_mobileSection == 'Artists'
+              ? 'Follow selected' : 'Add to queue'),
+        ),
+      ]),
+    );
+  }
+
 
   void _openMobileSection(String section) => setState(() {
     _mobileSection = section;
     _mobilePlaylistId = null;
+    _mobileSelecting = false;
+    _mobileSelected.clear();
     _selectedAlbumKey = null;
     _selectedArtist = null;
     _view = section == 'Playlists' ? 'Songs' : section;
