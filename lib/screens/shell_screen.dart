@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:liquid_design/liquid_design.dart' as liquid;
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart' as glass;
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../models/addon.dart';
@@ -184,27 +184,20 @@ class _ShellScreenState extends State<ShellScreen>{
 
  void _openSettings()=>_selectTab(9);
 
- Widget _glassDockAction(IconData icon,int index,int page) {
-  return liquid.LiquidGlass(
-   shape:const liquid.LiquidGlassShape.circle(),
-   style:liquid.LiquidGlassStyle.regular,
-   fallback:liquid.LiquidGlassFallback.frosted,
-   fallbackBlurSigma:20,
-   brightness:liquid.LiquidGlassBrightness.dark,
-   tintColor:const Color(0xFF7954AB),
-   tintOpacity:0.24,
-   opacity:0.88,
-   rimColor:const Color(0x00000000),
-   rimWidth:0,
-   child:GestureDetector(
-    onTap:()=>_selectTab(index),
-    behavior:HitTestBehavior.opaque,
-    child:SizedBox(
-     width:58,height:58,
-     child:Icon(icon,size:24,
-      color:page==index?OrchidStyle.pink:const Color(0xFFF8F6FC)),
-    ),
-   ),
+ Widget _glassDockAction(IconData icon, int index, int page) {
+  return glass.GlassButton(
+    icon: Icon(icon, size: 24,
+      color: page == index
+        ? OrchidStyle.pink
+        : const Color(0xFFF8F6FC)),
+    onTap: () => _selectTab(index),
+    width: 58,
+    height: 58,
+    useOwnLayer: true,
+    quality: glass.GlassQuality.standard,
+    shape: const glass.LiquidOval(),
+    style: glass.GlassButtonStyle.filled,
+    stretch: 0.15,
   );
  }
 
@@ -267,29 +260,24 @@ class _ShellScreenState extends State<ShellScreen>{
            ),
            const SizedBox(height:6),
           ],
-          liquid.LiquidGlassNavigationBar(
-           settings:const liquid.LiquidGlassSettings(
-            brightness:liquid.LiquidGlassBrightness.dark,
-            tintColor:Color(0xFF7954AB),
-            tintOpacity:0.24,
-            opacity:0.88,
-            fallback:liquid.LiquidGlassFallback.frosted,
-            fallbackBlurSigma:20,
-           ),
-           currentIndex:dockIndex,
-           onTap:(index)=>_selectTab([0,3,2,1][index]),
-           onReselect:(index)=>_selectTab([0,3,2,1][index]),
-           activeColor:const Color(0xFFF8E4FF),
-           inactiveColor:const Color(0xFFCEBEDA),
-           items:const [
-            liquid.LiquidGlassNavItem(
-             icon:Icon(LucideIcons.house),label:'Home'),
-            liquid.LiquidGlassNavItem(
-             icon:Icon(LucideIcons.compass),label:'Discover'),
-            liquid.LiquidGlassNavItem(
-             icon:Icon(LucideIcons.library),label:'Library'),
-            liquid.LiquidGlassNavItem(
-             icon:Icon(LucideIcons.search),label:'Search'),
+          glass.GlassTabBar.bottom(
+           selectedIndex: dockIndex,
+           onTabSelected: (index) => _selectTab([0, 3, 2, 1][index]),
+           horizontalPadding: 0,
+           verticalPadding: 0,
+           barHeight: 60,
+           selectedIconColor: const Color(0xFFF8E4FF),
+           unselectedIconColor: const Color(0xFFCEBEDA),
+           selectedLabelColor: const Color(0xFFF8E4FF),
+           unselectedLabelColor: const Color(0xFFCEBEDA),
+           indicatorColor: const Color(0x807954AB),
+           quality: glass.GlassQuality.standard,
+           backgroundQuality: glass.GlassQuality.standard,
+           tabs: const [
+             glass.GlassTab(icon: Icon(LucideIcons.house), label: 'Home'),
+             glass.GlassTab(icon: Icon(LucideIcons.compass), label: 'Discover'),
+             glass.GlassTab(icon: Icon(LucideIcons.library), label: 'Library'),
+             glass.GlassTab(icon: Icon(LucideIcons.search), label: 'Search'),
            ],
           ),
          ],
