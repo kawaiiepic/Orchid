@@ -7,6 +7,8 @@ import '../services/music_library.dart';
 import '../services/orchid_account.dart';
 import '../services/player_service.dart';
 import '../widgets/apple_cover.dart';
+import '../widgets/artist_artwork.dart';
+import 'music_detail_pages.dart';
 import 'song_detail_screen.dart';
 import '../widgets/orchid_style.dart';
 import '../widgets/song_context_menu.dart';
@@ -128,8 +130,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
             child: Row(children: [
-              SizedBox(width: 30,
-                child: Text('$number', textAlign: TextAlign.center).small().muted()),
+              SizedBox(width: 30, child: _HoverPlayNumber(number: number)),
               const SizedBox(width: 10),
               AppleCover(artist: song.artist, name: song.title,
                 album: song.album, fallbackUrl: song.artwork,
@@ -201,7 +202,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       ),
       const SizedBox(height: 14),
       Wrap(spacing: 8, runSpacing: 8, children: [
-        for (final view in const ['Songs', 'Albums', 'Artists'])
+        for (final view in const ['Songs', 'Albums', 'Artists', 'Playlists'])
           OrchidAdaptiveControls.button(
             prominent: _view == view,
             onPressed: () => setState(() => _view = view),
@@ -212,7 +213,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   );
 
   Widget _playlistArtwork(List<SavedSong> songs, {bool favorite = false}) {
-    final covers = songs.take(4).toList();
+    final covers = songs.reversed.take(4).toList();
     if (covers.isEmpty) {
       return ColoredBox(
         color: const Color(0x4D4D3664),
@@ -251,6 +252,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
       actions: [
         OrchidHoverAction('Open playlist', LucideIcons.listMusic, action),
         if (playlist != null)
+          OrchidHoverAction(widget.library.isPlaylistSaved(playlist)
+            ? 'Remove from Library' : 'Add to Library',
+            LucideIcons.library, () => widget.library.togglePlaylistSaved(playlist)),
+        if (playlist != null)
           OrchidHoverAction(playlist.pinned ? 'Unpin from Home' : 'Pin to Home',
             LucideIcons.pin, () => widget.library.setPlaylistPinned(
               playlist, !playlist.pinned)),
@@ -276,13 +281,49 @@ class _LibraryScreenState extends State<LibraryScreen> {
     ),
   );
 
+  Widget _savedArtistsGrid() {
+    final query = _queryController.text.trim().toLowerCase();
+    final artists = widget.library.savedArtists.keys
+        .where((name) => name.contains(query)).toList()..sort();
+    if (artists.isEmpty) return const Text('No saved artists found.').muted();
+    return LayoutBuilder(builder: (context, bounds) {
+      final columns = (bounds.maxWidth / 165).floor().clamp(2, 7).toInt();
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: artists.length,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: columns, crossAxisSpacing: 12,
+          mainAxisSpacing: 18, childAspectRatio: .82),
+        itemBuilder: (context, index) {
+          final artist = artists[index];
+          return OrchidHoverMenu(
+            actions: [OrchidHoverAction('Remove from Library',
+              LucideIcons.library, () => widget.library.toggleArtistSaved(artist))],
+            child: GestureDetector(
+              onTap: () => openArtistPage(context, artist: artist,
+                account: widget.account, player: widget.player,
+                addonService: widget.addonService, addons: widget.addons,
+                library: widget.library),
+              child: Column(children: [
+                Expanded(child: LayoutBuilder(builder: (context, size) =>
+                  ArtistArtwork(artist: artist, size: size.maxWidth,
+                    radius: size.maxWidth / 2))),
+                const SizedBox(height: 8),
+                Text(artist, maxLines: 1, overflow: TextOverflow.ellipsis).semiBold(),
+              ]),
+            ),
+          );
+        },
+      );
+    });
+  }
+
   Widget _playlistsGrid(List<MusicPlaylist> playlists) =>
     LayoutBuilder(builder: (context, bounds) {
       const gap = 12.0;
       final columns = (bounds.maxWidth / 165).floor().clamp(2, 7).toInt();
       final entries = <Widget>[
-        _playlistButton('Favorites', widget.library.favorites,
-          () => widget.onPlaylistSelected?.call('favorites'), favorite: true),
         for (final playlist in playlists)
           _playlistButton(playlist.name, playlist.songs,
             () => widget.onPlaylistSelected?.call(playlist.id),
@@ -336,42 +377,76 @@ class _LibraryScreenState extends State<LibraryScreen> {
             const SizedBox(height: 18),
             _libraryTools(),
             const SizedBox(height: 18),
-            _songList(widget.library.librarySongs),
+            if (_view == 'Artists')
+              _savedArtistsGrid()
+            else if (_view == 'Playlists')
+              _playlistsGrid(widget.library.savedPlaylists.where((playlist) =>
+                playlist.name.toLowerCase().contains(
+                  _queryController.text.trim().toLowerCase())).toList())
+            else
+              _songList(widget.library.librarySongs),
           ] else if (selected) ...[
             if (widget.onPlaylistSelected != null)
               Align(alignment: Alignment.centerLeft,
                 child: IconButton.ghost(
                   onPressed: () => widget.onPlaylistSelected!(null),
                   icon: const Icon(LucideIcons.arrowLeft))),
-            Text(selectedTitle).x2Large().semiBold(),
-            const SizedBox(height: 6),
-            Text('${selectedSongs.length} songs').small().muted(),
-            const SizedBox(height: 16),
-            if (selectedSongs.isNotEmpty)
-              Align(alignment: Alignment.centerLeft,
-                child: OrchidAdaptiveControls.button(
-                  prominent: true,
-                  onPressed: () => _playCollection(selectedSongs),
-                  child: const Text('Play all'),
-                )),
-            if (activePlaylist != null) ...[
-              const SizedBox(height: 10),
-              Wrap(spacing: 8, children: [
-                OrchidAdaptiveControls.button(
-                  onPressed: () => widget.library.setPlaylistPinned(
-                    activePlaylist!, !activePlaylist!.pinned),
-                  child: Text(activePlaylist.pinned
-                    ? 'Unpin from Home' : 'Pin to Home'),
-                ),
-                OrchidAdaptiveControls.button(
-                  onPressed: () async {
-                    await widget.library.deletePlaylist(activePlaylist!);
-                    widget.onPlaylistSelected?.call(null);
-                  },
-                  child: const Text('Delete playlist'),
-                ),
-              ]),
-            ],
+            LayoutBuilder(builder: (context, bounds) {
+              final narrow = bounds.maxWidth < 540;
+              final cover = SizedBox(width: 148, height: 148,
+                child: ClipRRect(borderRadius: BorderRadius.circular(12),
+                  child: _playlistArtwork(selectedSongs,
+                    favorite: id == 'favorites')));
+              final details = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Playlist').small().muted(),
+                  const SizedBox(height: 5),
+                  Text(selectedTitle).x2Large().semiBold(),
+                  const SizedBox(height: 6),
+                  Text('${selectedSongs.length} songs').small().muted(),
+                  const SizedBox(height: 14),
+                  Wrap(spacing: 8, runSpacing: 8, children: [
+                    OrchidAdaptiveControls.button(
+                      prominent: true,
+                      onPressed: selectedSongs.isEmpty ? null :
+                        () => _playCollection(selectedSongs),
+                      child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(LucideIcons.play, size: 17),
+                        SizedBox(width: 7), Text('Play all')]),
+                    ),
+                    if (activePlaylist != null)
+                      OrchidHoverMenu(
+                        actions: [
+                          OrchidHoverAction(
+                            widget.library.isPlaylistSaved(activePlaylist)
+                              ? 'Remove from Library' : 'Add to Library',
+                            LucideIcons.library,
+                            () => widget.library.togglePlaylistSaved(activePlaylist!)),
+                          OrchidHoverAction(
+                            activePlaylist.pinned ? 'Unpin from Home' : 'Pin to Home',
+                            LucideIcons.pin,
+                            () => widget.library.setPlaylistPinned(
+                              activePlaylist!, !activePlaylist!.pinned)),
+                          OrchidHoverAction('Delete playlist', LucideIcons.trash2,
+                            () async {
+                              await widget.library.deletePlaylist(activePlaylist!);
+                              widget.onPlaylistSelected?.call(null);
+                            }),
+                        ],
+                        child: const SizedBox(width: 42, height: 42,
+                          child: Center(child: Icon(LucideIcons.ellipsis))),
+                      ),
+                  ]),
+                ],
+              );
+              return narrow
+                ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    cover, const SizedBox(height: 16), details])
+                : Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                    cover, const SizedBox(width: 20),
+                    Expanded(child: details)]);
+            }),
             const SizedBox(height: 18),
             _songList(selectedSongs, playlist: activePlaylist),
           ] else ...[
@@ -384,4 +459,23 @@ class _LibraryScreenState extends State<LibraryScreen> {
     },
   );
 
+}
+
+class _HoverPlayNumber extends StatefulWidget {
+  final int number;
+  const _HoverPlayNumber({required this.number});
+  @override
+  State<_HoverPlayNumber> createState() => _HoverPlayNumberState();
+}
+
+class _HoverPlayNumberState extends State<_HoverPlayNumber> {
+  bool hovered = false;
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+    onEnter: (_) => setState(() => hovered = true),
+    onExit: (_) => setState(() => hovered = false),
+    child: Center(child: hovered
+      ? const Icon(LucideIcons.play, size: 16)
+      : Text('${widget.number}').small().muted()),
+  );
 }
