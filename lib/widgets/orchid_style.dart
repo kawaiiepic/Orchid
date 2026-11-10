@@ -4,22 +4,27 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart' as glass;
 import 'package:sizer/sizer.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
-/// Plain chevron navigation for compact pages. The hit target stays large
-/// without painting a circle, border, or background around the arrow.
+/// Compact iOS-style glass navigation button with a true circular shape.
 class OrchidBackButton extends StatelessWidget {
   final VoidCallback onPressed;
 
   const OrchidBackButton({super.key, required this.onPressed});
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-    behavior: HitTestBehavior.opaque,
-    onTap: onPressed,
-    child: const SizedBox(
+  Widget build(BuildContext context) => SizedBox.square(
+    dimension: 48,
+    child: glass.GlassButton(
+      icon: const Icon(LucideIcons.chevronLeft,
+        size: 25, color: Color(0xFFF7EDFF)),
+      onTap: onPressed,
       width: 48,
       height: 48,
-      child: Center(child: Icon(LucideIcons.chevronLeft,
-        size: 27, color: Color(0xFFF7EDFF))),
+      useOwnLayer: true,
+      quality: glass.GlassQuality.premium,
+      settings: OrchidStyle.glassSettings,
+      shape: const glass.LiquidOval(),
+      style: glass.GlassButtonStyle.filled,
+      stretch: 0.1,
     ),
   );
 }
