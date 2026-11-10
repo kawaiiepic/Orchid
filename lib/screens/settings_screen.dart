@@ -8,6 +8,7 @@ import '../services/lyrics_appearance.dart';
 import '../services/orchid_account.dart';
 import 'profile_screen.dart';
 import '../widgets/orchid_adaptive_controls.dart';
+import '../widgets/orchid_style.dart';
 
 class SettingsScreen extends StatefulWidget {
   final OrchidAccount account;
@@ -199,7 +200,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           'Matches Sweet Lyrics style options: simple mode, size, glow, blur, alignment.',
         ).small().muted(),
         const SizedBox(height: 12),
-        Card(
+        OrchidGlassPanel(
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Column(
@@ -321,7 +322,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           'Built-in search uses iTunes. Add Eclipse-compatible addons for full streams.',
         ).small().muted(),
         const SizedBox(height: 16),
-        Card(
+        OrchidGlassPanel(
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Column(
@@ -391,7 +392,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ].join(', ');
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: Card(
+              child: OrchidGlassPanel(
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Row(
