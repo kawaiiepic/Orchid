@@ -359,9 +359,9 @@ class _SearchScreenState extends State<SearchScreen> {
     ),
   );
 
-  Widget _emptyPlaylistCover() => Container(
-    decoration:OrchidStyle.panelDecoration(radius:13),
-    child:const Center(child:Icon(LucideIcons.listMusic,size:38)),
+  Widget _emptyPlaylistCover() => const OrchidGlassPanel(
+    radius:13,
+    child:Center(child:Icon(LucideIcons.listMusic,size:38)),
   );
 
   Widget _playlistCard({
