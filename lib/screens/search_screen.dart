@@ -232,10 +232,11 @@ class _SearchScreenState extends State<SearchScreen> {
     required String subtitle, required VoidCallback onTap, Widget? trailing}) =>
     Padding(padding:const EdgeInsets.symmetric(vertical:5),child:
       GestureDetector(behavior:HitTestBehavior.opaque,onTap:onTap,
-        child:Container(
-          decoration:OrchidStyle.panelDecoration(radius:15),
-          padding:const EdgeInsets.symmetric(horizontal:14,vertical:10),
-          child:Row(children:[
+        child:OrchidGlassPanel(
+          radius:15,
+          child:Padding(
+            padding:const EdgeInsets.symmetric(horizontal:14,vertical:10),
+            child:Row(children:[
             artwork,
             const SizedBox(width:12),
             Expanded(child:Column(
@@ -246,7 +247,8 @@ class _SearchScreenState extends State<SearchScreen> {
               ],
             )),
             trailing ?? const Icon(LucideIcons.chevronRight,size:18),
-          ]),
+            ]),
+          ),
         ),
       ),
     );
@@ -318,10 +320,11 @@ class _SearchScreenState extends State<SearchScreen> {
       account:_usingAppleCatalog ? widget.account : null,
       player:widget.player,addonService:widget.addonService,
       addons:widget.addons,library:widget.library),
-    child:Container(
-      padding:const EdgeInsets.all(16),
-      decoration:OrchidStyle.panelDecoration(radius:18),
-      child:Row(children:[
+    child:OrchidGlassPanel(
+      radius:18,
+      child:Padding(
+        padding:const EdgeInsets.all(16),
+        child:Row(children:[
         ArtistArtwork(artist:artist,size:112,radius:18),
         const SizedBox(width:18),
         Expanded(child:Column(
@@ -333,7 +336,8 @@ class _SearchScreenState extends State<SearchScreen> {
           ],
         )),
         const Icon(LucideIcons.chevronRight),
-      ]),
+        ]),
+      ),
     ),
   );
 
