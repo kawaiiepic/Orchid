@@ -541,14 +541,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.0.55"
-  shadcn_flutter_material:
-    dependency: "direct main"
-    description:
-      name: shadcn_flutter_material
-      sha256: "026ea46aab1c04b5d631fc91eb29369041d709c0a671c46e0f3c79861544a6c5"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.0.54"
   shared_preferences:
     dependency: "direct main"
     description:
