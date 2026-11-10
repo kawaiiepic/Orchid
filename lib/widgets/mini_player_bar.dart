@@ -375,7 +375,7 @@ class _ThinPlayerSlider extends StatelessWidget {
                   )),
                 ),
               Positioned(
-                left: (trackWidth - 12).clamp(0.0, double.infinity) * progress,
+                left: (trackWidth - 12).clamp(0.0, double.infinity).toDouble() * progress,
                 top: 4, width: 12, height: 12,
                 child: DecoratedBox(decoration: BoxDecoration(
                   color: const Color(0xFFF0E1FF),
