@@ -457,7 +457,7 @@ class AddonService {
   Future<StreamInfo> _streamFromAddon(String baseUrl, String id) async {
     final uri = Uri.parse('$baseUrl/stream/${Uri.encodeComponent(id)}');
     _log('  GET $uri');
-    final res = await _client.get(uri).timeout(const Duration(seconds: 12));
+    final res = await _getWithRetry(uri);
     _log('  stream HTTP ${res.statusCode}');
     if (res.statusCode != 200) {
       final snippet =
