@@ -1,4 +1,6 @@
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
+import 'services/orchid_audio_handler.dart';
 import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart' as glass;
@@ -45,6 +47,10 @@ Future<void> main() async {
   await glass.LiquidGlassWidgets.initialize();
   MediaKit.ensureInitialized();
   JustAudioMediaKit.ensureInitialized();
+  if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.android)) {
+    await OrchidBackgroundAudio.initialize();
+  }
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Color(0x00000000),
