@@ -19,6 +19,7 @@ class SongContextMenu extends StatefulWidget {
   final MusicPlaylist? playlist;
   final bool openOnTap;
   final bool showMenuButton;
+  final bool showViewSong;
 
   const SongContextMenu({
     super.key,
@@ -31,6 +32,7 @@ class SongContextMenu extends StatefulWidget {
     this.playlist,
     this.openOnTap = false,
     this.showMenuButton = true,
+    this.showViewSong = true,
   });
 
   @override
@@ -71,6 +73,7 @@ class _SongContextMenuState extends State<SongContextMenu> {
           library: widget.library,
           addonService: widget.addonService,
           addons: widget.addons,
+          showViewSong: widget.showViewSong,
           playlist: widget.playlist,
           dismiss: _close,
         ),
@@ -135,6 +138,7 @@ class _SongActionPanel extends StatefulWidget {
   final AddonService? addonService;
   final List<InstalledAddon> addons;
   final MusicPlaylist? playlist;
+  final bool showViewSong;
   final VoidCallback dismiss;
 
   const _SongActionPanel({
@@ -143,6 +147,7 @@ class _SongActionPanel extends StatefulWidget {
     required this.library,
     this.addonService,
     this.addons = const [],
+    this.showViewSong = true,
     this.playlist,
     required this.dismiss,
   });
@@ -286,6 +291,7 @@ class _SongActionPanelState extends State<_SongActionPanel> {
             child: Text(widget.track.title, maxLines: 1,
               overflow: TextOverflow.ellipsis).semiBold(),
           ),
+          if (widget.showViewSong)
           _action('View Song', LucideIcons.info, () {
             showSongDetailDrawer(context,
               player: widget.player,
