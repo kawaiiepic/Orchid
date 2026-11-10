@@ -5,6 +5,7 @@ import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart' as ja;
 
+import '../models/addon.dart';
 import 'player_service.dart';
 
 /// Bridges Orchid's existing just_audio player to Android media controls,
@@ -17,34 +18,11 @@ class OrchidAudioHandler extends BaseAudioHandler {
   StreamSubscription<Duration>? _positionSubscription;
   StreamSubscription<Duration?>? _durationSubscription;
   StreamSubscription<Duration>? _bufferedSubscription;
-  StreamSubscription<AudioInterruptionEvent>? _interruptionSubscription;
-  StreamSubscription<void>? _noisySubscription;
-  bool _pausedForInterruption = false;
-
   Future<void> configureSession() async {
     _session = await AudioSession.instance;
-    await _session!.configure(const AudioSessionConfiguration.music());
-    _interruptionSubscription = _session!.interruptionEventStream.listen((event) {
-      final service = _service;
-      if (service == null) return;
-      if (event.begin) {
-        if (event.type == AudioInterruptionType.duck) return;
-        _pausedForInterruption = service.player.playing;
-        if (_pausedForInterruption) unawaited(service.player.pause());
-      } else if (event.type == AudioInterruptionType.pause &&
-                 _pausedForInterruption) {
-        _pausedForInterruption = false;
-        unawaited(service.player.play());
-      } else {
-        _pausedForInterruption = false;
-      }
-    });
-    _noisySubscription = _session!.becomingNoisyEventStream.listen((_) {
-      final service = _service;
-      if (service != null && service.player.playing) {
-        unawaited(service.player.pause());
-      }
-    });
+    // just_audio already handles interruptions and headphone disconnects.
+    // Configure the OS session once without installing duplicate listeners.
+    await _session!.configure(AudioSessionConfiguration.music());
   }
 
   void attach(PlayerService service) {
@@ -77,8 +55,8 @@ class OrchidAudioHandler extends BaseAudioHandler {
     ));
   }
 
-  MediaItem _itemFor(dynamic track, {Duration? actualDuration}) {
-    final artwork = Uri.tryParse(track.artworkUrl?.toString() ?? '');
+  MediaItem _itemFor(TrackResult track, {Duration? actualDuration}) {
+    final artwork = Uri.tryParse(track.artworkUrl ?? '');
     return MediaItem(
       id: '${track.sourceId}:${track.id}',
       title: track.title,
@@ -158,7 +136,9 @@ class OrchidAudioHandler extends BaseAudioHandler {
   }
 
   @override
-  Future<void> pause() async => _service?.player.pause();
+  Future<void> pause() async {
+    await _service?.player.pause();
+  }
 
   @override
   Future<void> seek(Duration position) async {
@@ -181,10 +161,8 @@ class OrchidAudioHandler extends BaseAudioHandler {
     _sync();
   }
 
-  Future<void> disposeHandler() async {
+  void disposeHandler() {
     detach();
-    await _interruptionSubscription?.cancel();
-    await _noisySubscription?.cancel();
   }
 }
 
