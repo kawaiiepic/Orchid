@@ -63,7 +63,7 @@ class OrchidAudioPlayer {
     _activeKey=key;
     _preloadedKey=null;
     await engine.action.open([
-      mini.EngineItem<String>(source:mini.UriAudioSource(url),data:key),
+      mini.EngineItem<String>(source:mini.AudioSource.uri(url),data:key),
     ]);
     _emitState();
   }
@@ -79,7 +79,7 @@ class OrchidAudioPlayer {
       _preloadedKey=null;
     }
     await engine.action.append([
-      mini.EngineItem<String>(source:mini.UriAudioSource(url),data:key),
+      mini.EngineItem<String>(source:mini.AudioSource.uri(url),data:key),
     ]);
     _preloadedKey=key;
   }
