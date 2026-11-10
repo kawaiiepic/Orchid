@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart' as material;
+import 'dart:async';
+import 'package:flutter/widgets.dart' as fw;
 import '../services/spotify_service.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../widgets/orchid_hover_zoom.dart';
@@ -58,32 +59,62 @@ class _LibraryScreenState extends State<LibraryScreen> {
   bool _reorderingPlaylists = false;
   bool _importingPlaylist = false;
 
-  Future<String?> _askName(String title, {String hint = 'Name'}) async {
-    final controller = material.TextEditingController();
-    try {
-      return await material.showDialog<String>(
-        context: context,
-        builder: (ctx) => material.AlertDialog(
-          title: material.Text(title),
-          content: material.TextField(
-            controller: controller,
-            autofocus: true,
-            decoration: material.InputDecoration(hintText: hint),
-            onSubmitted: (value) => material.Navigator.pop(
-              ctx, value.trim().isEmpty ? null : value.trim()),
-          ),
-          actions: [
-            material.TextButton(onPressed: () => material.Navigator.pop(ctx),
-              child: const material.Text('Cancel')),
-            material.TextButton(onPressed: () => material.Navigator.pop(ctx,
-              controller.text.trim().isEmpty ? null : controller.text.trim()),
-              child: const material.Text('Continue')),
-          ],
-        ),
-      );
-    } finally {
+  Future<String?> _askName(String title, {String hint = 'Name'}) {
+    final controller = TextEditingController();
+    final result = Completer<String?>();
+    late OverlayEntry entry;
+    void finish(String? name) {
+      if (result.isCompleted) return;
+      entry.remove();
+      entry.dispose();
       controller.dispose();
+      result.complete(name);
     }
+    entry = OverlayEntry(builder: (context) => Stack(children: [
+      Positioned.fill(child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => finish(null),
+        child: const ColoredBox(color: Color(0x99000000)),
+      )),
+      Center(child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: OrchidGlassPanel(
+          radius: 18, transparentOnDesktop: false,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title).large().semiBold(),
+              const SizedBox(height: 14),
+              TextField(
+                controller: controller,
+                placeholder: Text(hint),
+                onSubmitted: (value) => finish(value.trim().isEmpty
+                    ? null : value.trim()),
+              ),
+              const SizedBox(height: 16),
+              Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                OrchidAdaptiveControls.button(
+                  onPressed: () => finish(null),
+                  child: const Text('Cancel')),
+                const SizedBox(width: 8),
+                OrchidAdaptiveControls.button(
+                  prominent: true,
+                  onPressed: () => finish(controller.text.trim().isEmpty
+                    ? null : controller.text.trim()),
+                  child: const Text('Continue')),
+              ]),
+            ]),
+          ),
+        ),
+      )),
+    ]));
+    Overlay.of(context).insert(entry);
+    return result.future;
+  }
+
+  Future<void> _showPlaylistError(Object error) async {
+    await _askName('Spotify import failed: $error', hint: 'Dismiss');
   }
 
   Future<void> _newPlaylist() async {
@@ -118,18 +149,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       }
     } catch (error) {
       if (!mounted) return;
-      await material.showDialog<void>(
-        context: context,
-        builder: (ctx) => material.AlertDialog(
-          title: const material.Text('Spotify import unavailable'),
-          content: material.Text('$error'),
-          actions: [
-            material.TextButton(
-              onPressed: () => material.Navigator.pop(ctx),
-              child: const material.Text('OK')),
-          ],
-        ),
-      );
+      await _showPlaylistError(error);
     } finally {
       if (mounted) setState(() => _importingPlaylist = false);
     }
@@ -724,7 +744,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       const gap = 12.0;
       final columns = (bounds.maxWidth / maxExtent).floor().clamp(1, 9).toInt();
       if (_reorderingPlaylists && _playlistSort == 'Custom Order') {
-        return material.ReorderableListView.builder(
+        return fw.ReorderableList(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: filtered.length,
@@ -738,13 +758,24 @@ class _LibraryScreenState extends State<LibraryScreen> {
           },
           itemBuilder: (context, index) {
             final p = filtered[index];
-            return material.ListTile(
-              key: material.ValueKey(p.id),
-              leading: SizedBox(width: 48, height: 48,
-                child: _playlistArtwork(p.songs)),
-              title: material.Text(p.name),
-              subtitle: material.Text('${p.songs.length} songs'),
-              trailing: const Icon(LucideIcons.gripVertical),
+            return fw.ReorderableDragStartListener(
+              key: fw.ValueKey(p.id),
+              index: index,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(children: [
+                  SizedBox(width: 48, height: 48,
+                    child: _playlistArtwork(p.songs)),
+                  const SizedBox(width: 12),
+                  Expanded(child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(p.name).semiBold(),
+                      Text('${p.songs.length} songs').small().muted(),
+                    ])),
+                  const Icon(LucideIcons.gripVertical),
+                ]),
+              ),
             );
           },
         );
@@ -774,18 +805,18 @@ class _LibraryScreenState extends State<LibraryScreen> {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          material.PopupMenuButton<String>(
-            tooltip: 'Sort playlists',
-            onSelected: (value) => setState(() {
-              _playlistSort = value;
-              _reorderingPlaylists = false;
-            }),
-            itemBuilder: (_) => [
+          OrchidHoverMenu(
+            showHoverButton: false, openOnTap: true,
+            actions: [
               for (final sort in const [
                 'Recents', 'Recently Added', 'Alphabetical',
                 'Creator', 'Custom Order',
               ])
-                material.PopupMenuItem(value: sort, child: material.Text(sort)),
+                OrchidHoverAction(sort, LucideIcons.arrowDownUp,
+                  () => setState(() {
+                    _playlistSort = sort;
+                    _reorderingPlaylists = false;
+                  })),
             ],
             child: _playlistToolbarChip(LucideIcons.arrowDownUp, _playlistSort),
           ),
@@ -796,14 +827,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 _reorderingPlaylists = !_reorderingPlaylists),
               child: Text(_reorderingPlaylists ? 'Done' : 'Reorder'),
             ),
-          material.PopupMenuButton<String>(
-            tooltip: 'Playlist size',
-            onSelected: (value) => setState(() => _playlistSize = value),
-            itemBuilder: (_) => [
+          OrchidHoverMenu(
+            showHoverButton: false, openOnTap: true,
+            actions: [
               for (final size in const ['S', 'M', 'L', 'XL'])
-                material.PopupMenuItem(value: size, child: material.Text(size)),
+                OrchidHoverAction(size, LucideIcons.layoutGrid,
+                  () => setState(() => _playlistSize = size)),
             ],
-            child: _playlistToolbarChip(LucideIcons.layoutGrid, 'Size: $_playlistSize'),
+            child: _playlistToolbarChip(LucideIcons.layoutGrid,
+              'Size: $_playlistSize'),
           ),
           OrchidAdaptiveControls.button(
             onPressed: _importingPlaylist ? null : _spotifyImport,
