@@ -16,7 +16,6 @@ import 'ai_dj_screen.dart';
 import 'all_time_top_songs_screen.dart';
 import '../widgets/mini_player_bar.dart';
 import '../widgets/desktop_sidebar.dart';
-import '../widgets/profile_menu.dart';
 import '../widgets/orchid_style.dart';
 import '../widgets/content_drawer.dart';
 import 'orchid_home_screen.dart';
@@ -314,10 +313,21 @@ class _ShellScreenState extends State<ShellScreen>{
          SizedBox(width:OrchidStyle.compact(context,9)),
          const Text('Orchid').large().semiBold(),
          const Spacer(),
-         ProfileMenu(
-          account:_account,
-          onProfile:_openProfile,
-          onSettings:_openSettings,
+         MouseRegion(
+          cursor:SystemMouseCursors.click,
+          child:GestureDetector(
+           behavior:HitTestBehavior.opaque,
+           onTap:_openSettings,
+           child:ClipOval(child:SizedBox(width:36,height:36,
+            child:_account.avatarUrl==null
+             ? const ColoredBox(
+                color:Color(0xFF473259),
+                child:Icon(LucideIcons.user,color:OrchidStyle.lilac,size:20))
+             : Image.network(_account.avatarUrl!,fit:BoxFit.cover,
+               errorBuilder:(_,__,___)=>const Icon(
+                LucideIcons.user,color:OrchidStyle.lilac,size:20)),
+           )),
+          ),
          ),
           ]),
          ),
