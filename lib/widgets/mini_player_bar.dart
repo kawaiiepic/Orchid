@@ -23,9 +23,9 @@ class _BorderlessPlayerGlass extends StatelessWidget {
   @override
   Widget build(BuildContext context) => glass.GlassContainer(
     useOwnLayer: true,
-    quality: glass.GlassQuality.standard,
+    quality: glass.GlassQuality.premium,
     shape: glass.LiquidRoundedSuperellipse(borderRadius: radius),
-    color: const Color(0x30392447),
+    settings: OrchidStyle.glassSettings,
     clipBehavior: Clip.antiAlias,
     child: child,
   );
@@ -202,9 +202,9 @@ class IOSMiniPlayer extends StatelessWidget {
         final artwork = track.artworkUrl;
         return glass.GlassContainer(
           useOwnLayer: true,
-          quality: glass.GlassQuality.standard,
+          quality: glass.GlassQuality.premium,
           shape: const glass.LiquidRoundedSuperellipse(borderRadius: 29),
-          color: const Color(0x30392447),
+          settings: OrchidStyle.glassSettings,
           clipBehavior: Clip.antiAlias,
           child: Container(
               height: 58,
