@@ -78,6 +78,7 @@ class DesktopSidebar extends StatelessWidget {
     return OrchidGlassPanel(
       radius: 18,
       transparentOnDesktop: false,
+      desktopLiquidGlass: true,
       child: SizedBox(
         width: 236,
         child: Column(
