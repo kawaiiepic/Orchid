@@ -9,7 +9,6 @@ import '../services/orchid_account.dart';
 import '../services/player_service.dart';
 import '../services/music_library.dart';
 import 'library_screen.dart';
-import 'daily_mixes_screen.dart';
 import 'replay_screen.dart';
 import 'radio_screen.dart';
 import 'ai_dj_screen.dart';
@@ -408,7 +407,6 @@ class _ShellScreenState extends State<ShellScreen>{
       openTopSongs:()=>_selectTab(8),
       openReplay:()=>_selectTab(5),
       // Mix cards remain playable, but their old detail page is gone.
-      openDailyMixes:(index)=>_selectTab(3),
       library:_library,
      ),
      if(_initializedTabs.contains(1))
