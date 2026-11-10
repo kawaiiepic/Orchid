@@ -545,7 +545,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
         Text(_followingOnly ? 'No followed artists found.' :
           'No artists in your library yet.').muted()
       else
-    return LayoutBuilder(builder: (context, bounds) {
+        LayoutBuilder(builder: (context, bounds) {
       final columns = (bounds.maxWidth / 165).floor().clamp(2, 7).toInt();
       return GridView.builder(
         shrinkWrap: true,
