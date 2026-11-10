@@ -2,6 +2,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:cupertino_ui/cupertino_ui.dart' as ios;
+import 'package:liquid_design/liquid_design.dart' as liquid;
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
 import '../screens/full_player_screen.dart';
@@ -178,18 +179,15 @@ class IOSMiniPlayer extends StatelessWidget {
         final track = player.current;
         if (track == null) return const SizedBox.shrink();
         final artwork = track.artworkUrl;
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(32),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-            child: Container(
+        return liquid.LiquidGlass(
+          shape: const liquid.LiquidGlassShape.capsule(),
+          style: liquid.LiquidGlassStyle.regular,
+          tintColor: const Color(0xFF57406C),
+          tintOpacity: 0.22,
+          fallback: liquid.LiquidGlassFallback.frosted,
+          child: Container(
               height: 58,
               padding: const EdgeInsets.symmetric(horizontal: 9),
-              decoration: BoxDecoration(
-                color: const Color(0xFF3A393F).withValues(alpha: 0.78),
-                borderRadius: BorderRadius.circular(32),
-                border: Border.all(color: const Color(0x70FFFFFF), width: 0.7),
-              ),
               child: Row(
                 children: [
                   Expanded(
@@ -263,7 +261,6 @@ class IOSMiniPlayer extends StatelessWidget {
                 ],
               ),
             ),
-          ),
         );
       },
     );
