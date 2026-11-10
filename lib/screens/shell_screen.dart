@@ -30,6 +30,8 @@ class _ShellScreenState extends State<ShellScreen>{
  final _addonService=AddonService();
  final _account=OrchidAccount();
  final _library=MusicLibrary();
+ final _contentNavigatorKey=GlobalKey<NavigatorState>();
+ final _contentRevision=ValueNotifier<int>(0);
  String? _libraryUser;
  String? _addonsUser;
  late final PlayerService _player;
@@ -61,20 +63,24 @@ class _ShellScreenState extends State<ShellScreen>{
  }
  String? _selectedPlaylistId;
  void _selectPlaylist(String? id) {
+  _contentNavigatorKey.currentState?.popUntil((route) => route.isFirst);
   setState(() {
    _selectedPlaylistId = id;
    selected = const ValueKey(4);
    _initializedTabs.add(4);
    _verticalScrollAccum = 0;
   });
+  _contentRevision.value++;
  }
  void _selectTab(int index) {
+  _contentNavigatorKey.currentState?.popUntil((route) => route.isFirst);
   setState(() {
    selected=ValueKey(index);
    if (index == 4) _selectedPlaylistId = null;
    _initializedTabs.add(index);
    _verticalScrollAccum=0;
   });
+  _contentRevision.value++;
  }
  List<InstalledAddon> _addons=[];
  int _trackGeneration=0;
@@ -99,6 +105,7 @@ class _ShellScreenState extends State<ShellScreen>{
    final list=await _addonService.load();
    if(!mounted || !_account.signedIn || requestedUser!=_addonsUser)return;
    setState(()=>_addons=list);_player.setAddons(list);
+   _contentRevision.value++;
   }catch(e){debugPrint('Error loading addons: $e');}
  }
  void _accountChanged(){
@@ -114,7 +121,10 @@ class _ShellScreenState extends State<ShellScreen>{
    _player.setAddons([]);
    if(user!=null)_loadAddons();
   }
-  if(mounted)setState((){});
+  if(mounted) {
+   setState((){});
+   _contentRevision.value++;
+  }
  }
  void _trackChanged(){
   if(_trackGeneration==_player.lyricsGeneration)return;
@@ -167,6 +177,7 @@ class _ShellScreenState extends State<ShellScreen>{
  }
  @override void dispose(){
   _positionSubscription?.cancel();_player.removeListener(_trackChanged);
+  _contentRevision.dispose();
   _player.dispose();_library.dispose();_account.removeListener(_accountChanged);_account.dispose();super.dispose();
  }
  void _openProfile()=>_openSettings();
@@ -357,51 +368,9 @@ class _ShellScreenState extends State<ShellScreen>{
   ]);
  }
 
- NavigationItem _button(String title,IconData icon,int index)=>NavigationItem(
-  key:ValueKey(index),style:const ButtonStyle.muted(density:ButtonDensity.icon),
-  selectedStyle:const ButtonStyle.fixed(density:ButtonDensity.icon),
-  label:Text(title),child:Icon(icon));
- @override Widget build(BuildContext context){
-  if(_account.loading){
-   return const SafeArea(child:Scaffold(child:Center(child:Text('Checking your Petal session…'))));
-  }
-  if(!_account.signedIn){
-   if(_account.hasStoredSession){
-    return SafeArea(child:Scaffold(
-     child:Center(
-      child:ConstrainedBox(
-       constraints:const BoxConstraints(maxWidth:420),
-       child:Padding(
-        padding:const EdgeInsets.all(24),
-        child:Column(
-         mainAxisSize:MainAxisSize.min,
-         crossAxisAlignment:CrossAxisAlignment.stretch,
-         children:[
-          const Text('Session temporarily unavailable').large().semiBold(),
-          const SizedBox(height:10),
-          Text(_account.restoreError??'We could not verify your saved Petal login. Your session is still saved.').muted(),
-          const SizedBox(height:16),
-          PrimaryButton(onPressed:_account.retryRestore,child:const Text('Retry connection')),
-          const SizedBox(height:8),
-          OutlineButton(onPressed:_account.clearSavedSession,child:const Text('Sign in with another account')),
-         ],
-        ),
-       ),
-      ),
-     ),
-    ));
-   }
-   return SafeArea(child:Scaffold(child:ProfileScreen(account:_account)));
-  }
+  Widget _buildBrowsing(bool desktop) {
   final page=(selected as ValueKey<int>?)?.value??0;
-  final desktop=(kIsWeb || (defaultTargetPlatform!=TargetPlatform.iOS
-    && defaultTargetPlatform!=TargetPlatform.android))
-    && MediaQuery.sizeOf(context).width>=850;
-  final mobileDock = !kIsWeb && (
-    defaultTargetPlatform == TargetPlatform.iOS ||
-    defaultTargetPlatform == TargetPlatform.android);
-
-  final browsing=NotificationListener<ScrollNotification>(
+  return NotificationListener<ScrollNotification>(
     onNotification:_onContentScroll,
     child:IndexedStack(
       index:page.clamp(0,9),
@@ -463,12 +432,68 @@ class _ShellScreenState extends State<ShellScreen>{
        onAddonsChanged:(list) {
         if(!mounted)return;
         setState(()=>_addons=list);
+        _contentRevision.value++;
         _player.setAddons(list);
        },
       ),desktop)
      else const SizedBox.shrink(),
 
       ],
+    ),
+  );
+  }
+
+ NavigationItem _button(String title,IconData icon,int index)=>NavigationItem(
+  key:ValueKey(index),style:const ButtonStyle.muted(density:ButtonDensity.icon),
+  selectedStyle:const ButtonStyle.fixed(density:ButtonDensity.icon),
+  label:Text(title),child:Icon(icon));
+ @override Widget build(BuildContext context){
+  if(_account.loading){
+   return const SafeArea(child:Scaffold(child:Center(child:Text('Checking your Petal session…'))));
+  }
+  if(!_account.signedIn){
+   if(_account.hasStoredSession){
+    return SafeArea(child:Scaffold(
+     child:Center(
+      child:ConstrainedBox(
+       constraints:const BoxConstraints(maxWidth:420),
+       child:Padding(
+        padding:const EdgeInsets.all(24),
+        child:Column(
+         mainAxisSize:MainAxisSize.min,
+         crossAxisAlignment:CrossAxisAlignment.stretch,
+         children:[
+          const Text('Session temporarily unavailable').large().semiBold(),
+          const SizedBox(height:10),
+          Text(_account.restoreError??'We could not verify your saved Petal login. Your session is still saved.').muted(),
+          const SizedBox(height:16),
+          PrimaryButton(onPressed:_account.retryRestore,child:const Text('Retry connection')),
+          const SizedBox(height:8),
+          OutlineButton(onPressed:_account.clearSavedSession,child:const Text('Sign in with another account')),
+         ],
+        ),
+       ),
+      ),
+     ),
+    ));
+   }
+   return SafeArea(child:Scaffold(child:ProfileScreen(account:_account)));
+  }
+  final page=(selected as ValueKey<int>?)?.value??0;
+  final desktop=(kIsWeb || (defaultTargetPlatform!=TargetPlatform.iOS
+    && defaultTargetPlatform!=TargetPlatform.android))
+    && MediaQuery.sizeOf(context).width>=850;
+  final mobileDock = !kIsWeb && (
+    defaultTargetPlatform == TargetPlatform.iOS ||
+    defaultTargetPlatform == TargetPlatform.android);
+
+  final browsing = Navigator(
+    key: _contentNavigatorKey,
+    onGenerateRoute: (_) => ShadcnPageRoute<void>(
+      builder: (_) => ListenableBuilder(
+        listenable: _contentRevision,
+        builder: (_, __) => _buildBrowsing(desktop),
+      ),
     ),
   );
 
