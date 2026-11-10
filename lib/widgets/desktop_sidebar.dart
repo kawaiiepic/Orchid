@@ -122,14 +122,13 @@ class DesktopSidebar extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(18, 12, 18, 14),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: MouseRegion(
+            padding: const EdgeInsets.fromLTRB(18, 12, 12, 14),
+            child: Row(children: [
+              MouseRegion(
                 cursor: SystemMouseCursors.click,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: onSettings,
+                  onTap: onProfile,
                   child: Container(
                     width: 38, height: 38,
                     alignment: Alignment.center,
@@ -150,7 +149,13 @@ class DesktopSidebar extends StatelessWidget {
                   ),
                 ),
               ),
-            ),
+              const Spacer(),
+              IconButton.ghost(
+                onPressed: onSettings,
+                icon: const Icon(LucideIcons.settings, size: 19,
+                  color: Color(0xFFBFB3D0)),
+              ),
+            ]),
           ),
         ],
         ),
