@@ -248,7 +248,8 @@ class _SearchScreenState extends State<SearchScreen> {
               crossAxisAlignment:CrossAxisAlignment.start,
               children:[
                 Text(title,maxLines:1,overflow:TextOverflow.ellipsis).semiBold(),
-                Text(subtitle,maxLines:2,overflow:TextOverflow.ellipsis).small().muted(),
+                Text(subtitle.replaceAll('\n', ' · '),maxLines:1,
+                   overflow:TextOverflow.ellipsis).small().muted(),
               ],
             )),
             trailing ?? const Icon(LucideIcons.chevronRight,size:18),
@@ -281,7 +282,7 @@ class _SearchScreenState extends State<SearchScreen> {
         ],
         IconButton.ghost(
           onPressed:()=>_songDetails(t),
-          icon:const Icon(LucideIcons.info,size:18),
+          icon:const Icon(LucideIcons.info,size:16),
         ),
       ]),
     ),
@@ -468,7 +469,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _coverGrid(List<Widget> items) => LayoutBuilder(
     builder:(context,constraints) {
-      final columns=(constraints.maxWidth / 165).floor().clamp(2,6).toInt();
+      final columns=(constraints.maxWidth / 145).floor().clamp(2,9).toInt();
       return GridView.builder(
         shrinkWrap:true,
         physics:const NeverScrollableScrollPhysics(),
