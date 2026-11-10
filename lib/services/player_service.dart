@@ -268,6 +268,20 @@ class PlayerService extends ChangeNotifier {
   /// A human-readable playback provider label, never a raw stream URL.
   String get sourceLabel => playingVia ?? 'Now playing';
 
+  /// Friendly quality names from Eclipse/Tidal stream metadata.
+  String? get qualityLabel {
+    final raw = streamQuality?.trim();
+    if (raw == null || raw.isEmpty) return null;
+    final normalized = raw.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '');
+    if (normalized.contains('hires') && normalized.contains('lossless')) {
+      return 'Hi-Res Lossless';
+    }
+    if (normalized.contains('lossless')) return 'Lossless';
+    if (normalized == 'high') return 'High Quality';
+    if (normalized == 'low') return 'Low Quality';
+    return raw.replaceAll('_', ' ').replaceAll('-', ' ');
+  }
+
   String _sourceName(String? via, StreamInfo stream, TrackResult track) {
     final raw = (via ?? '').trim();
     if (raw.isEmpty) return track.sourceName.isNotEmpty ? track.sourceName : 'Stream';
