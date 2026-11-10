@@ -11,6 +11,7 @@ import 'song_detail_screen.dart';
 import '../widgets/orchid_style.dart';
 import '../widgets/song_context_menu.dart';
 import '../widgets/track_duration.dart';
+import '../widgets/orchid_hover_menu.dart';
 
 class LibraryScreen extends StatefulWidget {
   final Widget header;
@@ -245,8 +246,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Widget _playlistButton(String name, List<SavedSong> songs,
-      VoidCallback action, {bool favorite = false}) =>
-    MouseRegion(
+      VoidCallback action, {bool favorite = false, MusicPlaylist? playlist}) =>
+    OrchidHoverMenu(
+      actions: [
+        OrchidHoverAction('Open playlist', LucideIcons.listMusic, action),
+        if (playlist != null)
+          OrchidHoverAction(playlist.pinned ? 'Unpin from Home' : 'Pin to Home',
+            LucideIcons.pin, () => widget.library.setPlaylistPinned(
+              playlist, !playlist.pinned)),
+      ],
+      child: MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -264,7 +273,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
             overflow: TextOverflow.ellipsis).small().muted(),
         ]),
       ),
-    );
+    ),
+  );
 
   Widget _playlistsGrid(List<MusicPlaylist> playlists) =>
     LayoutBuilder(builder: (context, bounds) {
@@ -275,7 +285,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
           () => widget.onPlaylistSelected?.call('favorites'), favorite: true),
         for (final playlist in playlists)
           _playlistButton(playlist.name, playlist.songs,
-            () => widget.onPlaylistSelected?.call(playlist.id)),
+            () => widget.onPlaylistSelected?.call(playlist.id),
+            playlist: playlist),
       ];
       return GridView.builder(
         shrinkWrap: true,
