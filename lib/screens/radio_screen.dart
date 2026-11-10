@@ -99,17 +99,22 @@ class _RadioScreenState extends State<RadioScreen>{
         for(final label in choices[type]!)
           GestureDetector(
             onTap:loading?null:()=>_start(label),
-            child:Container(
-              width:148,height:108,padding:const EdgeInsets.all(14),
-              decoration:OrchidStyle.panelDecoration(radius:16),
-              child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            child:OrchidGlassPanel(
+              radius:16,
+              child:SizedBox(
+                width:148,height:108,
+                child:Padding(
+                  padding:const EdgeInsets.all(14),
+                  child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                 Icon(type=='Genre'?LucideIcons.music2:
                   type=='Mood'?LucideIcons.heart:
                   type=='Era'?LucideIcons.clock:LucideIcons.activity,
                   color:OrchidStyle.lilac,size:23),
                 const Spacer(),
                 Text(label).semiBold(),
-              ]),
+                  ]),
+                ),
+              ),
             ),
           ),
       ]),
