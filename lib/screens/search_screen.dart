@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart' show EditableText, FocusNode, TextInputType;
 import 'package:flutter/services.dart' show TextEditingValue;
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../widgets/orchid_hover_zoom.dart';
 import '../widgets/orchid_adaptive_controls.dart';
@@ -39,6 +40,73 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final _controller = TextEditingController();
   final _searchFocus = FocusNode();
+  static const _recentKey = 'orchid_recent_searches_v1';
+  List<String> _recentSearches = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _searchFocus.addListener(_onFocusChanged);
+    unawaited(_restoreSearches());
+  }
+
+  void _onFocusChanged() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _restoreSearches() async {
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      if (!mounted) return;
+      setState(() => _recentSearches =
+        preferences.getStringList(_recentKey) ?? []);
+    } catch (error) {
+      debugPrint('[Orchid Search] Recent searches unavailable: $error');
+    }
+  }
+
+  Future<void> _rememberSearch(String raw) async {
+    final term = raw.trim();
+    if (term.isEmpty) return;
+    final updated = [
+      term,
+      ..._recentSearches.where((item) =>
+          item.toLowerCase() != term.toLowerCase()),
+    ].take(12).toList();
+    if (mounted) setState(() => _recentSearches = updated);
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setStringList(_recentKey, updated);
+    } catch (error) {
+      debugPrint('[Orchid Search] Could not save recent search: $error');
+    }
+  }
+
+  Future<void> _clearSearches() async {
+    setState(() => _recentSearches = []);
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.remove(_recentKey);
+    } catch (error) {
+      debugPrint('[Orchid Search] Could not clear recent searches: $error');
+    }
+  }
+
+  void _submitSearch() {
+    _searchDebounce?.cancel();
+    unawaited(_rememberSearch(_controller.text));
+    _searchFocus.unfocus();
+    unawaited(_search());
+  }
+
+  void _selectRecent(String term) {
+    _controller.value = TextEditingValue(
+      text: term,
+      selection: TextSelection.collapsed(offset: term.length),
+    );
+    _submitSearch();
+  }
+
   SearchCategory _category = SearchCategory.all;
   List<TrackResult> _tracks = [];
   List<MusicAlbum> _albums = [];
@@ -78,6 +146,7 @@ class _SearchScreenState extends State<SearchScreen> {
     ++_generation;
     _searchDebounce?.cancel();
     _controller.dispose();
+    _searchFocus.removeListener(_onFocusChanged);
     _searchFocus.dispose();
     super.dispose();
   }
@@ -562,7 +631,7 @@ class _SearchScreenState extends State<SearchScreen> {
                               maxLines: 1,
                               keyboardType: TextInputType.text,
                               onChanged: _onQueryChanged,
-                              onSubmitted: (_) => _search(),
+                              onSubmitted: (_) => _submitSearch(),
                             ),
                           ],
                         ),
@@ -591,11 +660,12 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           ),
           const SizedBox(width:8),
-          OrchidAdaptiveControls.button(prominent: true, onPressed:_searching?null:_search,
+          OrchidAdaptiveControls.button(prominent: true, onPressed:_searching?null:_submitSearch,
             child:Text(_searching?'…':'Search')),
         ]),
       ),
-      SizedBox(height:58,child:ListView(
+      if (_searchFocus.hasFocus)
+        SizedBox(height:58,child:ListView(
         scrollDirection:Axis.horizontal,
         padding:const EdgeInsets.symmetric(horizontal:18,vertical:7),
         children:[
@@ -613,6 +683,43 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
         ],
       )),
+      if (_controller.text.trim().isEmpty && !_searchFocus.hasFocus &&
+          _recentSearches.isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                const Expanded(child: Text('Recently searched',
+                  style: TextStyle(fontSize: 16,
+                    fontWeight: FontWeight.w600))),
+                OrchidAdaptiveControls.button(
+                  onPressed: _clearSearches,
+                  child: const Text('Clear'),
+                ),
+              ]),
+              const SizedBox(height: 10),
+              for (final term in _recentSearches)
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _selectRecent(term),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Row(children: [
+                      const Icon(LucideIcons.history, size: 17,
+                        color: Color(0xFFB8A9C6)),
+                      const SizedBox(width: 13),
+                      Expanded(child: Text(term,
+                        maxLines: 1, overflow: TextOverflow.ellipsis)),
+                      const Icon(LucideIcons.arrowUpLeft, size: 16,
+                        color: Color(0xFFB8A9C6)),
+                    ]),
+                  ),
+                ),
+            ],
+          ),
+        ),
       if(_status!=null)
         Padding(padding:const EdgeInsets.symmetric(horizontal:20,vertical:6),
           child:Align(alignment:Alignment.centerLeft,
