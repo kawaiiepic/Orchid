@@ -364,7 +364,7 @@ class _ThinPlayerSlider extends StatelessWidget {
                     ),
                     FractionallySizedBox(
                       alignment: Alignment.centerLeft,
-                      widthFactor: value.clamp(0.0, 1.0),
+                      widthFactor: value.clamp(0.0, 1.0).toDouble(),
                       child: const ColoredBox(color: Color(0xFFBBA4D6)),
                     ),
                   ]),
@@ -598,7 +598,7 @@ class DesktopPlayerBar extends StatelessWidget {
                                 Expanded(
                                   child: Center(
                                     child: LayoutBuilder(builder: (context, bounds) {
-                                      final width = bounds.maxWidth.clamp(0.0, narrow ? 165.0 : 260.0);
+                                      final width = bounds.maxWidth.clamp(0.0, narrow ? 165.0 : 260.0).toDouble();
                                       return _ThinPlayerSlider(
                                         width: width,
                                         value: total > 0 ? elapsed / total : 0,
