@@ -1,4 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import '../widgets/orchid_adaptive_controls.dart';
 import '../models/addon.dart';
 import '../services/addon_service.dart';
 import '../services/player_service.dart';
@@ -180,7 +181,7 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
              ]),
              const SizedBox(height:19),
              Wrap(spacing:10,runSpacing:10,children:[
-               PrimaryButton(
+               OrchidAdaptiveControls.button(prominent: true, 
                  onPressed:busy?null:playFirst,
                  child:Row(mainAxisSize:MainAxisSize.min,children:[
                    const Icon(LucideIcons.play,size:17),
@@ -188,7 +189,7 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
                    Text(playing?'Starting…':'Play'),
                  ]),
                ),
-               OutlineButton(
+               OrchidAdaptiveControls.button(
                  onPressed:busy?null:queueFirst,
                  child:const Row(mainAxisSize:MainAxisSize.min,children:[
                    Icon(LucideIcons.listMusic,size:17),
@@ -253,7 +254,7 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
          title:'Playback sources',
          subtitle:'Find other versions and providers for this song',
        ),
-       OutlineButton(
+       OrchidAdaptiveControls.button(
          onPressed:busy?null:find,
          child:Text(searching?'Finding versions…':'Find available versions'),
        ),
