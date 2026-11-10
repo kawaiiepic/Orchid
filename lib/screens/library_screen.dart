@@ -219,7 +219,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: widget.library,
     builder: (context, _) => ListView(
-      padding: EdgeInsets.fromLTRB(20,20,20,20+OrchidStyle.iosDockClearance(context)),
+      padding: EdgeInsets.fromLTRB(20,20,20,20+OrchidStyle.iosDockClearance(context)+(MediaQuery.sizeOf(context).width >= 850 ? 110 : 0)),
       children: [
         widget.header,
         const OrchidHero(
