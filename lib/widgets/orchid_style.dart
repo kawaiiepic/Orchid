@@ -46,6 +46,25 @@ abstract final class OrchidStyle {
     shadowElevation: 0,
   );
 
+  /// Reduced-distortion material for Linux/Windows glass chrome.
+  /// Keep the background frosted while minimizing pixelated refraction.
+  static const desktopGlassSettings = glass.LiquidGlassSettings(
+    glassColor: Color(0x84392447),
+    blur: 7,
+    thickness: 9,
+    refractiveIndex: 1.015,
+    chromaticAberration: 0,
+    saturation: 1,
+    lightIntensity: 0,
+    ambientStrength: 0,
+    ambientRim: 0,
+    fresnelStrength: 0,
+    glowIntensity: 0,
+    rimLight: 0,
+    rimShade: 0,
+    shadowElevation: 0,
+  );
+
   static BoxDecoration panelDecoration({double radius = 22}) =>
       BoxDecoration(
         color: panel,
@@ -150,6 +169,7 @@ class OrchidGlassPanel extends StatelessWidget {
   final double radius;
   final double blur;
   final bool transparentOnDesktop;
+  final bool desktopLiquidGlass;
 
   const OrchidGlassPanel({
     super.key,
@@ -157,12 +177,38 @@ class OrchidGlassPanel extends StatelessWidget {
     this.radius = 16,
     this.blur = 16,
     this.transparentOnDesktop = true,
+    this.desktopLiquidGlass = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final desktop = MediaQuery.sizeOf(context).width >= 850;
     if (transparentOnDesktop && desktop) return child;
+    if (desktop && desktopLiquidGlass) {
+      // Keep controls above a low-distortion shader backdrop. Cropping the
+      // oversized shape removes the bright outline without suppressing blur.
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              left: -8, top: -8, right: -8, bottom: -8,
+              child: IgnorePointer(
+                child: glass.GlassContainer(
+                  useOwnLayer: true,
+                  quality: glass.GlassQuality.standard,
+                  shape: glass.LiquidRoundedSuperellipse(
+                    borderRadius: radius + 8),
+                  settings: OrchidStyle.desktopGlassSettings,
+                  child: const SizedBox.expand(),
+                ),
+              ),
+            ),
+            child,
+          ],
+        ),
+      );
+    }
     if (desktop) {
       // Blur only the backdrop, not this panel's text or controls.
       // A clipped Flutter BackdropFilter avoids the low-resolution
