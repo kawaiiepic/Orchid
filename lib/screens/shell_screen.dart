@@ -16,7 +16,6 @@ import 'all_time_top_songs_screen.dart';
 import '../widgets/mini_player_bar.dart';
 import '../widgets/desktop_sidebar.dart';
 import '../widgets/orchid_style.dart';
-import '../widgets/content_drawer.dart';
 import 'orchid_home_screen.dart';
 import 'profile_screen.dart';
 import 'search_screen.dart';
@@ -161,26 +160,6 @@ class _ShellScreenState extends State<ShellScreen>{
   _player.dispose();_library.dispose();_account.removeListener(_accountChanged);_account.dispose();super.dispose();
  }
  void _openProfile()=>_openSettings();
-
- void _openFeatureSheet(String title, Widget child) {
-  Navigator.of(context).push(ShadcnPageRoute<void>(
-   builder:(_) => Scaffold(
-    child:SafeArea(child:Column(children:[
-     Padding(
-      padding:const EdgeInsets.fromLTRB(18,12,18,8),
-      child:Row(children:[
-       IconButton.ghost(
-        onPressed:()=>Navigator.of(context).pop(),
-        icon:const Icon(LucideIcons.arrowLeft)),
-       const SizedBox(width:10),
-       Expanded(child:Text(title).large().semiBold()),
-      ]),
-     ),
-     Expanded(child:child),
-    ])),
-   ),
-  ));
- }
 
  void _openSettings()=>_selectTab(9);
 
