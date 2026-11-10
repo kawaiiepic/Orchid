@@ -312,58 +312,63 @@ class _SearchScreenState extends State<SearchScreen> {
     });
   }
 
-  Widget _tile({required Widget artwork, required String title,
-    required String subtitle, required VoidCallback onTap, Widget? trailing}) =>
-    Padding(padding:const EdgeInsets.symmetric(vertical:2),child:
-      GestureDetector(behavior:HitTestBehavior.opaque,onTap:onTap,
-        child:OrchidHoverSurface(
-          child:OrchidGlassPanel(
-            radius:10,
-            child:Padding(
-            padding:const EdgeInsets.symmetric(horizontal:10,vertical:4),
-            child:Row(children:[
-            artwork,
-            const SizedBox(width:10),
-            Expanded(child:Column(
-              crossAxisAlignment:CrossAxisAlignment.start,
-              children:[
-                Text(title,maxLines:1,overflow:TextOverflow.ellipsis).semiBold(),
-                Text(subtitle.replaceAll('\n', ' · '),maxLines:1,
-                   overflow:TextOverflow.ellipsis).small().muted(),
-              ],
-            )),
-            trailing ?? const Icon(LucideIcons.chevronRight,size:18),
-            ]),
-            ),
-          ),
-        ),
-      ),
-    );
-
+  // Search tracks use an open, comfortable list rather than glass cards.
+  // Keep artist and album on separate lines for quick scanning.
   Widget _trackTile(TrackResult t) => SongContextMenu(
-    track:t, player:widget.player, library:widget.library, addonService: widget.addonService, addons: widget.addons,
-    child:_tile(
-      artwork:AppleCover(
-        artist:t.artist,
-        name:t.title,
-        album:t.album,
-        fallbackUrl:t.artworkUrl,
-        // Tracks returned by the Apple Music playlist API already include
-        // canonical artwork. Do not replace it with an iTunes search guess.
-        preferredUrl:t.sourceId == 'apple-music' ? t.artworkUrl : null,
-        size:38,
-        radius:7,
+    track: t,
+    player: widget.player,
+    library: widget.library,
+    addonService: widget.addonService,
+    addons: widget.addons,
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _play(t),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 13),
+        child: Row(children: [
+          AppleCover(
+            artist: t.artist,
+            name: t.title,
+            album: t.album,
+            fallbackUrl: t.artworkUrl,
+            preferredUrl: t.sourceId == 'apple-music' ? t.artworkUrl : null,
+            size: 58,
+            radius: 9,
+          ),
+          const SizedBox(width: 14),
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(t.title, maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 15, fontWeight: FontWeight.w600,
+                  color: Color(0xFFF8EDFF))),
+              const SizedBox(height: 4),
+              Text(t.artist, maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 13, color: Color(0xFFD1C2DB))),
+              if (t.album?.trim().isNotEmpty == true) ...[
+                const SizedBox(height: 3),
+                Text(t.album!, maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12, color: Color(0xFFAC9EBB))),
+              ],
+            ],
+          )),
+          // SongContextMenu supplies the visible ellipsis on mobile.
+          if (MediaQuery.sizeOf(context).width >= 850 &&
+              trackDurationLabel(t.duration) != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 42),
+              child: Text(trackDurationLabel(t.duration)!,
+                style: const TextStyle(
+                  fontSize: 12, color: Color(0xFFAC9EBB))),
+            )
+          else
+            const SizedBox(width: 40),
+        ]),
       ),
-      title:t.title,
-      subtitle:[t.artist, if(t.album?.trim().isNotEmpty==true) t.album!].join('\n'),
-      onTap:()=>_play(t),
-      trailing:Row(mainAxisSize:MainAxisSize.min,children:[
-        if(trackDurationLabel(t.duration)!=null)...[
-          Text(trackDurationLabel(t.duration)!).xSmall().muted(),
-          const SizedBox(width:4),
-        ],
-        const SizedBox(width:38),
-      ]),
     ),
   );
 
@@ -399,30 +404,34 @@ class _SearchScreenState extends State<SearchScreen> {
     ),
   );
 
-  Widget _artistTile(String artist) => GestureDetector(
-    behavior:HitTestBehavior.opaque,
-    onTap:()=>openArtistPage(context,artist:artist,
-      account:_usingAppleCatalog ? widget.account : null,
-      player:widget.player,addonService:widget.addonService,
-      addons:widget.addons,library:widget.library),
-    child:OrchidGlassPanel(
-      radius:18,
-      child:Padding(
-        padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),
-        child:Row(children:[
-        ClipOval(child:ArtistArtwork(artist:artist,size:84,radius:42)),
-        const SizedBox(width:14),
-        Expanded(child:Column(
-          crossAxisAlignment:CrossAxisAlignment.start,
-          children:[
-            const Text('TOP ARTIST').xSmall().muted(),
-            const SizedBox(height:5),
-            Text(artist,maxLines:2,overflow:TextOverflow.ellipsis).xLarge().semiBold(),
-          ],
-        )),
-        const Icon(LucideIcons.chevronRight),
-        ]),
-      ),
+  Widget _artistTile(String artist) => SizedBox(
+    width: 108,
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => openArtistPage(context, artist: artist,
+        account: _usingAppleCatalog ? widget.account : null,
+        player: widget.player, addonService: widget.addonService,
+        addons: widget.addons, library: widget.library),
+      child: Column(children: [
+        ClipOval(child: ArtistArtwork(
+          artist: artist, size: 88, radius: 44)),
+        const SizedBox(height: 9),
+        Text(artist, textAlign: TextAlign.center,
+          maxLines: 2, overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 12, fontWeight: FontWeight.w600,
+            color: Color(0xFFF3EAF9))),
+      ]),
+    ),
+  );
+
+  Widget _artistShelf() => SizedBox(
+    height: 133,
+    child: ListView.separated(
+      scrollDirection: Axis.horizontal,
+      itemCount: _artists.length,
+      separatorBuilder: (_, __) => const SizedBox(width: 14),
+      itemBuilder: (context, index) => _artistTile(_artists[index]),
     ),
   );
 
@@ -968,8 +977,9 @@ class _SearchScreenState extends State<SearchScreen> {
         padding:const EdgeInsets.fromLTRB(16,4,16,20),
         child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
             if(_artistsOn && _artists.isNotEmpty)...[
-              _section('Artist',_artists.length),
-              ..._artists.map(_artistTile),
+              _section(_category == SearchCategory.artists
+                  ? 'Artists' : 'Artist', _artists.length),
+              _artistShelf(),
             ],
             if(_tracksOn && _tracks.isNotEmpty)...[
               _section('Tracks',_tracks.length),
