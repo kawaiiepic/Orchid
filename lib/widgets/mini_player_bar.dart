@@ -64,10 +64,9 @@ class MiniPlayerBar extends StatelessWidget {
 
   void _openFull(BuildContext context) {
     if (player.current == null) return;
-    showContentDrawer(
+    showFullScreenPlayer(
       context,
-      preferredWidth: 900,
-      builder: (_) => FullPlayerScreen(player: player, library: library),
+      (_) => FullPlayerScreen(player: player, library: library),
     );
   }
 
@@ -212,10 +211,9 @@ class IOSMiniPlayer extends StatelessWidget {
 
   void _openFull(BuildContext context) {
     if (player.current == null) return;
-    showContentDrawer(
+    showFullScreenPlayer(
       context,
-      preferredWidth: 900,
-      builder: (_) => FullPlayerScreen(player: player, library: library),
+      (_) => FullPlayerScreen(player: player, library: library),
     );
   }
 
@@ -412,10 +410,9 @@ class DesktopPlayerBar extends StatelessWidget {
 
   void _openFull(BuildContext context) {
     if (player.current == null) return;
-    showContentDrawer(
+    showFullScreenPlayer(
       context,
-      preferredWidth: 950,
-      builder: (_) => FullPlayerScreen(player: player, library: library),
+      (_) => FullPlayerScreen(player: player, library: library),
     );
   }
 
