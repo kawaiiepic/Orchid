@@ -1,4 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import '../widgets/orchid_adaptive_controls.dart';
 import 'package:flutter/cupertino.dart' as ios;
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
@@ -341,11 +342,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         return Padding(
                           padding: const EdgeInsets.only(left: 6),
                           child: selected
-                              ? PrimaryButton(
+                              ? OrchidAdaptiveControls.button(prominent: true, 
                                   onPressed: () {},
                                   child: Text(labels[i]).xSmall(),
                                 )
-                              : OutlineButton(
+                              : OrchidAdaptiveControls.button(
                                   onPressed: () =>
                                       a.update((x) => x.weightIndex = i),
                                   child: Text(labels[i]).xSmall(),
@@ -416,7 +417,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             const SizedBox(width: 8),
-            PrimaryButton(
+            OrchidAdaptiveControls.button(prominent: true, 
               onPressed: _adding ? null : _addAddon,
               child: Text(_adding ? '…' : 'Add'),
             ),
