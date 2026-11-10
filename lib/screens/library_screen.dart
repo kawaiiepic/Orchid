@@ -763,14 +763,18 @@ class _LibraryScreenState extends State<LibraryScreen> {
           'No artists in your library yet.').muted()
       else
         LayoutBuilder(builder: (context, bounds) {
-      final columns = (bounds.maxWidth / 165).floor().clamp(2, 7).toInt();
+      final compact = MediaQuery.sizeOf(context).width < 850;
+      final columns = (bounds.maxWidth / (compact ? 150 : 165))
+          .floor().clamp(2, 7).toInt();
       return GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         itemCount: artists.length,
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: columns, crossAxisSpacing: 12,
-          mainAxisSpacing: 18, childAspectRatio: .82),
+          crossAxisCount: columns,
+          crossAxisSpacing: compact ? 16 : 12,
+          mainAxisSpacing: compact ? 24 : 18,
+          childAspectRatio: compact ? .9 : .82),
         itemBuilder: (context, index) {
           final artist = artists[index];
           final savedSongCount = widget.library.librarySongs.where((song) =>
@@ -789,15 +793,21 @@ class _LibraryScreenState extends State<LibraryScreen> {
               }),
               child: Column(children: [
                 Expanded(child: LayoutBuilder(builder: (context, bounds) {
-                  final diameter = bounds.maxWidth < bounds.maxHeight
+                  final available = bounds.maxWidth < bounds.maxHeight
                       ? bounds.maxWidth : bounds.maxHeight;
+                  final diameter = compact ? available * 0.76 : available;
                   return Center(child: ClipOval(
                     child: ArtistArtwork(artist: artist, size: diameter,
                       radius: diameter / 2, zoomOnHover: true),
                   ));
                 })),
                 const SizedBox(height: 8),
-                Text(artist, maxLines: 1, overflow: TextOverflow.ellipsis).semiBold(),
+                Text(artist, maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: compact ? 12 : 14,
+                    fontWeight: FontWeight.w600,
+                  )),
                 const SizedBox(height: 3),
                 Text('${savedSongCount} ${savedSongCount == 1 ? 'song' : 'songs'}',
                   maxLines: 1, overflow: TextOverflow.ellipsis).small().muted(),
