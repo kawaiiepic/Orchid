@@ -11,6 +11,7 @@ import 'apple_cover.dart';
 import '../services/music_library.dart';
 import '../services/player_service.dart';
 import 'orchid_style.dart';
+import '../services/orchid_share.dart';
 
 /// Reusable desktop right-click / mobile long-press song actions.
 /// OverlayEntry keeps the menu independent from the current page's layout.
@@ -505,9 +506,11 @@ class _SongActionPanelState extends State<_SongActionPanel> {
           Row(children: [
             _mobileQuickAction('Share', LucideIcons.share,
               () {
-                Clipboard.setData(ClipboardData(
-                  text: '${widget.track.title} - ${widget.track.artist}'));
+                final track = widget.track;
                 widget.dismiss();
+                OrchidShare.song(track).catchError((Object error) {
+                  debugPrint('[Orchid Share] Song share failed: $error');
+                });
               }),
             const SizedBox(width: 10),
             _mobileQuickAction('Queue', LucideIcons.listPlus,
@@ -655,6 +658,13 @@ class _SongActionPanelState extends State<_SongActionPanel> {
           _action('Add to Queue', LucideIcons.listMusic, () {
             widget.player.addToQueue(widget.track);
             widget.dismiss();
+          }),
+          _action('Share Song', LucideIcons.share, () {
+            final track = widget.track;
+            widget.dismiss();
+            OrchidShare.song(track).catchError((Object error) {
+              debugPrint('[Orchid Share] Song share failed: $error');
+            });
           }),
           _action(widget.library.isInLibrary(_saved)
               ? 'Remove from Library' : 'Add to Library',
