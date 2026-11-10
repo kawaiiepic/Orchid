@@ -4,7 +4,6 @@ import '../models/addon.dart';
 import '../services/addon_service.dart';
 import '../services/player_service.dart';
 import '../services/music_library.dart';
-import '../widgets/mini_player_bar.dart';
 import 'music_detail_pages.dart';
 import '../widgets/song_context_menu.dart';
 import '../widgets/content_drawer.dart';
@@ -151,7 +150,6 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
 
  @override
  Widget build(BuildContext context) => Scaffold(
-   footers:[MiniPlayerBar(player:widget.player,library:widget.library)],
    child:ListView(
      padding:const EdgeInsets.fromLTRB(20,12,20,28),
      children:[
