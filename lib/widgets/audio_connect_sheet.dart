@@ -209,8 +209,62 @@ class _AudioConnectSheetState extends State<_AudioConnectSheet> {
               ]),
             ),
           ]),
+          const SizedBox(height:16),
+          Row(children:[
+            const Expanded(child:Text('Equalizer',style:TextStyle(fontWeight:FontWeight.w600))),
+            _action(widget.player.eqEnabled?'On · Disable':'Off · Enable',
+              ()=>_run(()=>widget.player.setEqEnabled(!widget.player.eqEnabled))),
+          ]),
+          Wrap(spacing:12,runSpacing:4,children:[
+            for(final preset in PlayerService.eqPresets.keys)
+              GestureDetector(
+                onTap:()=>_run(()=>widget.player.setEqPreset(preset)),
+                child:Padding(padding:const EdgeInsets.symmetric(vertical:6),
+                  child:Text(preset,style:TextStyle(fontSize:12,
+                    fontWeight:widget.player.eqPreset==preset?
+                      FontWeight.w700:FontWeight.w400,
+                    color:widget.player.eqPreset==preset?
+                      const Color(0xFFE35C9B):const Color(0xFFAAAAAF)))),
+              ),
+          ]),
+          if(widget.player.eqEnabled)...[
+            const SizedBox(height:8),
+            for(var i=0;i<10;i++)
+              Row(children:[
+                SizedBox(width:56,child:Text(
+                  const ['31Hz','63Hz','125Hz','250Hz','500Hz','1k','2k','4k','8k','16k'][i],
+                  style:const TextStyle(fontSize:11))),
+                Expanded(child:Slider(
+                  min:-12,max:12,
+                  value:SliderValue.single(widget.player.activeEqBands[i]),
+                  onChanged:(v)=>_run(()=>widget.player.setEqBand(i,v.value)),
+                )),
+                SizedBox(width:45,child:Text(
+                  '${widget.player.activeEqBands[i].toStringAsFixed(1)}dB',
+                  textAlign:TextAlign.end,
+                  style:const TextStyle(fontSize:11))),
+              ]),
+          ],
+          const SizedBox(height:8),
+          Row(children:[
+            const Expanded(child:Text('Volume normalization')),
+            _action(widget.player.normalizationEnabled?'On':'Off',
+              ()=>_run(()=>widget.player.setNormalization(!widget.player.normalizationEnabled))),
+          ]),
+          const SizedBox(height:10),
+          Row(children:[
+            const Text('Crossfade',style:TextStyle(fontWeight:FontWeight.w600)),
+            const Spacer(),
+            Text('${widget.player.crossfadeSeconds.toStringAsFixed(1)}s',
+              style:const TextStyle(fontSize:12)),
+          ]),
+          Slider(
+            min:0,max:12,
+            value:SliderValue.single(widget.player.crossfadeSeconds),
+            onChanged:(v)=>_run(()=>widget.player.setCrossfade(v.value)),
+          ),
           const SizedBox(height: 12),
-          Text('Pipeline: Untouched · No audio effects',
+          Text('Pipeline: ${widget.player.eqEnabled?'EQ · ':''}${widget.player.normalizationEnabled?'Normalized · ':''}${widget.player.crossfadeSeconds>0?'Crossfade':'Untouched'}',
             style: const TextStyle(fontSize: 12,
               color: Color(0xFFAAA5B0))),
           const SizedBox(height:4),
@@ -321,7 +375,8 @@ class _AudioConnectSheetState extends State<_AudioConnectSheet> {
         ),
         const Divider(),
         _tile(LucideIcons.audioLines, 'Audio Pipeline',
-          'Untouched',
+          widget.player.eqEnabled||widget.player.normalizationEnabled||widget.player.crossfadeSeconds>0
+            ? 'Custom audio effects' : 'Untouched',
           onTap: () => setState(() => _pipeline = !_pipeline),
           trailing: Icon(_pipeline ? LucideIcons.chevronDown
               : LucideIcons.chevronRight,
