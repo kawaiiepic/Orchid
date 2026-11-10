@@ -495,9 +495,10 @@ class _ShellScreenState extends State<ShellScreen>{
           ),
         ),
         child:Stack(children:[
+          // Keep the scrollable content behind the floating player so
+          // Liquid Glass can sample actual artwork and rows, not empty space.
           Positioned.fill(
             left:leftContent,
-            bottom:100,
             child:browsing,
           ),
           Positioned(
