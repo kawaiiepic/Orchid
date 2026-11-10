@@ -251,6 +251,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   String? _playlistFolderId;
   bool _reorderingPlaylists = false;
   bool _importingPlaylist = false;
+  bool _mobilePlaylistListMode = false;
 
   Future<String?> _askName(String title, {String hint = 'Name'}) {
     final controller = TextEditingController();
@@ -1202,6 +1203,183 @@ class _LibraryScreenState extends State<LibraryScreen> {
     });
   }
 
+  Widget _mobilePlaylistsContent(List<MusicPlaylist> playlists) {
+    final sorted = _sortedPlaylists(playlists);
+    final folders = _playlistFolderId == null
+        ? widget.library.playlistFolders : <PlaylistFolder>[];
+    final entries = <({PlaylistFolder? folder, MusicPlaylist? playlist})>[
+      for (final folder in folders) (folder: folder, playlist: null),
+      for (final playlist in sorted) (folder: null, playlist: playlist),
+    ];
+
+    Widget item(({PlaylistFolder? folder, MusicPlaylist? playlist}) entry) {
+      final folder = entry.folder;
+      if (folder != null) {
+        return _playlistFolderCard(folder,
+          playlists.where((playlist) => playlist.folderId == folder.id).length);
+      }
+      final playlist = entry.playlist!;
+      return _playlistButton(playlist.name, playlist.songs,
+        () => _selectMobilePlaylist(playlist.id), playlist: playlist);
+    }
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      if (_playlistFolderId == null) ...[
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => _selectMobilePlaylist('favorites'),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0x553F3050),
+              borderRadius: BorderRadius.circular(21),
+              border: Border.all(color: const Color(0x225E4A6C)),
+            ),
+            child: Row(children: [
+              SizedBox(width: 86, height: 86,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(13),
+                  child: _playlistArtwork(widget.library.favorites,
+                    favorite: true),
+                )),
+              const SizedBox(width: 16),
+              Expanded(child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Favorites', style: TextStyle(
+                    fontSize: 20, fontWeight: FontWeight.w700,
+                  )),
+                  const SizedBox(height: 8),
+                  Text('${widget.library.favorites.length} songs',
+                    style: const TextStyle(fontSize: 13,
+                      color: Color(0xFFBAACCA))),
+                ],
+              )),
+              const Icon(LucideIcons.chevronRight, size: 21,
+                color: Color(0xFFC1B2D0)),
+            ]),
+          ),
+        ),
+        const SizedBox(height: 30),
+      ],
+      Row(children: [
+        const Text('Playlists', style: TextStyle(
+          fontSize: 22, fontWeight: FontWeight.w700,
+        )),
+        const SizedBox(width: 9),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(15),
+            color: const Color(0x554A385F),
+          ),
+          child: Text('${sorted.length}', style: const TextStyle(
+            fontSize: 12, color: Color(0xFFBCAEC9),
+          )),
+        ),
+        const Spacer(),
+        OrchidHoverMenu(
+          showHoverButton: false,
+          openOnTap: true,
+          actions: [
+            for (final sort in const [
+              'Recents', 'Recently Added', 'Alphabetical',
+              'Creator', 'Custom Order',
+            ])
+              OrchidHoverAction(sort, LucideIcons.arrowDownUp,
+                () => setState(() => _playlistSort = sort)),
+          ],
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(LucideIcons.arrowDownUp, size: 16,
+                color: Color(0xFFC5B8D0)),
+              const SizedBox(width: 6),
+              Text(_playlistSort, style: const TextStyle(
+                fontSize: 12, color: Color(0xFFC5B8D0))),
+            ]),
+          ),
+        ),
+        const SizedBox(width: 14),
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => setState(() =>
+            _mobilePlaylistListMode = !_mobilePlaylistListMode),
+          child: Padding(
+            padding: const EdgeInsets.all(6),
+            child: Icon(_mobilePlaylistListMode
+                ? LucideIcons.layoutGrid : LucideIcons.list,
+              color: OrchidStyle.lilac, size: 20),
+          ),
+        ),
+      ]),
+      const SizedBox(height: 20),
+      if (_mobilePlaylistListMode)
+        for (final entry in entries)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 14),
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                if (entry.folder != null) {
+                  setState(() => _playlistFolderId = entry.folder!.id);
+                } else if (entry.playlist != null) {
+                  _selectMobilePlaylist(entry.playlist!.id);
+                }
+              },
+              child: Row(children: [
+                SizedBox(width: 66, height: 66,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: entry.playlist != null
+                        ? _playlistArtwork(entry.playlist!.songs)
+                        : const ColoredBox(
+                            color: Color(0xFF40334C),
+                            child: Icon(LucideIcons.folder,
+                              color: OrchidStyle.lilac),
+                          ),
+                  )),
+                const SizedBox(width: 13),
+                Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(entry.playlist?.name ?? entry.folder!.name,
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 3),
+                    Text(entry.playlist != null
+                      ? '${entry.playlist!.songs.length} songs'
+                      : 'Folder',
+                      style: const TextStyle(
+                        fontSize: 12, color: Color(0xFFBCAEC9))),
+                  ],
+                )),
+                const Icon(LucideIcons.chevronRight, size: 18,
+                  color: Color(0xFFC1B2D0)),
+              ]),
+            ),
+          )
+      else
+        LayoutBuilder(builder: (context, bounds) {
+          const spacing = 16.0;
+          final tileWidth = (bounds.maxWidth - spacing) / 2;
+          return Wrap(
+            spacing: spacing,
+            runSpacing: 22,
+            children: [
+              for (final entry in entries)
+                SizedBox(
+                  width: tileWidth,
+                  height: tileWidth + 48,
+                  child: item(entry),
+                ),
+            ],
+          );
+        }),
+    ]);
+  }
+
   Widget _playlistsToolbar() {
     final folders = widget.library.playlistFolders;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1488,9 +1666,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
           ] else ...[
             if (!mobile) const OrchidSectionHeader(title: 'Playlists'),
             const SizedBox(height: 16),
-            if (!mobile) _playlistsToolbar(),
-            const SizedBox(height: 20),
-            _playlistsGrid(playlists),
+            if (mobile && !widget.playlistsOnly)
+              _mobilePlaylistsContent(playlists)
+            else ...[
+              _playlistsToolbar(),
+              const SizedBox(height: 20),
+              _playlistsGrid(playlists),
+            ],
           ],
         ],
       );
