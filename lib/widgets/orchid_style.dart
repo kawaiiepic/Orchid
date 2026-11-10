@@ -14,17 +14,14 @@ abstract final class OrchidStyle {
     return value * factor;
   }
 
-  // The iOS dock is an overlay, not a footer. Let content scroll behind it
-  // while leaving room to reach the last card at the bottom of the list.
+  // The compact floating dock overlays the scrollable content on every
+  // platform. Leave enough trailing scroll extent to pull the final card
+  // fully above the dock while drawing the page behind the system safe area.
   static double iosDockClearance(BuildContext context) {
-    // Compact desktop windows now use the same floating dock as mobile.
-    // Reserve room for scrolling past the overlay on Linux/Windows/web,
-    // while retaining the existing compact iOS/Android behavior.
-    final width = MediaQuery.sizeOf(context).width;
-    if (width >= 850) return 0;
-    if (kIsWeb || (defaultTargetPlatform != TargetPlatform.iOS &&
-        defaultTargetPlatform != TargetPlatform.android)) return 96;
-    return 12;
+    if (MediaQuery.sizeOf(context).width >= 850 &&
+        (kIsWeb || (defaultTargetPlatform != TargetPlatform.iOS &&
+          defaultTargetPlatform != TargetPlatform.android))) return 0;
+    return 104 + MediaQuery.viewPaddingOf(context).bottom;
   }
 
   static const violet = Color(0xFFBE9AFF);
