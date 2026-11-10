@@ -9,6 +9,7 @@ import 'player_service.dart';
 /// Active Orchid sessions and shared listening. One instance per application
 /// shell; only the backend returns remote devices, never fabricated entries.
 class OrchidConnect extends ChangeNotifier {
+ static OrchidConnect? active;
  OrchidConnect(this.account,this.player);
  final OrchidAccount account;
  final PlayerService player;
