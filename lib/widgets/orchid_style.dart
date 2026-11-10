@@ -34,6 +34,15 @@ abstract final class OrchidStyle {
     blur: 12,
     thickness: 24,
     chromaticAberration: 0.012,
+    // Keep refraction and tint, but remove the bright specular perimeter.
+    lightIntensity: 0,
+    ambientStrength: 0,
+    ambientRim: 0,
+    fresnelStrength: 0,
+    glowIntensity: 0,
+    rimLight: 0,
+    rimShade: 0,
+    shadowElevation: 0,
   );
 
   static BoxDecoration panelDecoration({double radius = 22}) =>
