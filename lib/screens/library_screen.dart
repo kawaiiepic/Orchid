@@ -766,17 +766,69 @@ class _LibraryScreenState extends State<LibraryScreen> {
     return result;
   }
 
+  Widget _playlistFolderCard(PlaylistFolder folder, int count) =>
+    OrchidHoverMenu(
+      showHoverButton: false,
+      actions: [
+        OrchidHoverAction('Open folder', LucideIcons.folderOpen,
+          () => setState(() => _playlistFolderId = folder.id)),
+        OrchidHoverAction('Rename folder', LucideIcons.pencil, () async {
+          final name = await _askName('Rename ${folder.name}');
+          if (name != null) await widget.library.renamePlaylistFolder(folder, name);
+        }),
+        OrchidHoverAction('Delete folder', LucideIcons.trash2,
+          () => widget.library.deletePlaylistFolder(folder)),
+      ],
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => setState(() => _playlistFolderId = folder.id),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AspectRatio(
+                aspectRatio: 1,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(11),
+                  child: ColoredBox(
+                    color: const Color(0xFF362843),
+                    child: Center(child: LayoutBuilder(
+                      builder: (context, bounds) => Icon(
+                        LucideIcons.folder,
+                        size: (bounds.maxWidth * .44).clamp(26.0, 88.0),
+                        color: OrchidStyle.lilac,
+                      ),
+                    )),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(folder.name, maxLines: 1,
+                overflow: TextOverflow.ellipsis).semiBold(),
+              Text('$count ${count == 1 ? 'playlist' : 'playlists'}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis).small().muted(),
+            ],
+          ),
+        ),
+      ),
+    );
+
   Widget _playlistsGrid(List<MusicPlaylist> playlists) {
     final filtered = _sortedPlaylists(playlists);
-    final maxExtent = switch (_playlistSize) {
-      'S' => 140.0,
-      'L' => 235.0,
-      'XL' => 295.0,
-      _ => 185.0,
+    final folders = _playlistFolderId == null
+        ? widget.library.playlistFolders : <PlaylistFolder>[];
+    // Fixed maximum tile widths make S and M visibly different even on
+    // narrower desktop windows, unlike floor-based column counts.
+    final tileWidth = switch (_playlistSize) {
+      'S' => 112.0,
+      'L' => 226.0,
+      'XL' => 282.0,
+      _ => 172.0,
     };
     return LayoutBuilder(builder: (context, bounds) {
       const gap = 12.0;
-      final columns = (bounds.maxWidth / maxExtent).floor().clamp(1, 9).toInt();
       if (_reorderingPlaylists && _playlistSort == 'Custom Order') {
         return fw.ReorderableList(
           shrinkWrap: true,
@@ -814,22 +866,28 @@ class _LibraryScreenState extends State<LibraryScreen> {
           },
         );
       }
-      return GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: filtered.length,
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: columns,
-          crossAxisSpacing: gap,
-          mainAxisSpacing: 18,
-          childAspectRatio: .75,
-        ),
-        itemBuilder: (_, i) {
-          final playlist = filtered[i];
-          return _playlistButton(playlist.name, playlist.songs,
-            () => widget.onPlaylistSelected?.call(playlist.id),
-            playlist: playlist);
-        },
+      // Wrap respects the requested size directly without stretching cards
+      // to fill every column. Folders are first-class grid items.
+      return Wrap(
+        spacing: gap,
+        runSpacing: 18,
+        children: [
+          for (final folder in folders)
+            SizedBox(
+              width: tileWidth,
+              height: tileWidth + 50,
+              child: _playlistFolderCard(folder, playlists
+                .where((p) => p.folderId == folder.id).length),
+            ),
+          for (final playlist in filtered)
+            SizedBox(
+              width: tileWidth,
+              height: tileWidth + 50,
+              child: _playlistButton(playlist.name, playlist.songs,
+                () => widget.onPlaylistSelected?.call(playlist.id),
+                playlist: playlist),
+            ),
+        ],
       );
     });
   }
@@ -882,38 +940,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
             child: const Text('New')),
         ],
       ),
-      if (folders.isNotEmpty || _playlistFolderId != null) ...[
+      if (_playlistFolderId != null) ...[
         const SizedBox(height: 14),
-        Wrap(spacing: 8, runSpacing: 8, children: [
-          OrchidAdaptiveControls.button(
-            prominent: _playlistFolderId == null,
-            onPressed: () => setState(() => _playlistFolderId = null),
-            child: const Text('All')),
-          for (final folder in folders)
-            OrchidHoverMenu(
-              showHoverButton: false,
-              actions: [
-                OrchidHoverAction('Rename folder', LucideIcons.pencil,
-                  () async {
-                    final name = await _askName('Rename ${folder.name}');
-                    if (name != null) {
-                      await widget.library.renamePlaylistFolder(folder, name);
-                    }
-                  }),
-                OrchidHoverAction('Delete folder', LucideIcons.trash2,
-                  () {
-                    if (_playlistFolderId == folder.id) {
-                      setState(() => _playlistFolderId = null);
-                    }
-                    widget.library.deletePlaylistFolder(folder);
-                  }),
-              ],
-              child: OrchidAdaptiveControls.button(
-                prominent: _playlistFolderId == folder.id,
-                onPressed: () => setState(() => _playlistFolderId = folder.id),
-                child: Text(folder.name)),
-            ),
-        ]),
+        OrchidAdaptiveControls.button(
+          onPressed: () => setState(() => _playlistFolderId = null),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(LucideIcons.arrowLeft, size: 16),
+            const SizedBox(width: 8),
+            Text(folders.where((f) => f.id == _playlistFolderId)
+                .map((f) => f.name).firstOrNull ?? 'All playlists'),
+          ]),
+        ),
       ],
     ]);
   }
