@@ -227,7 +227,7 @@ class _ReplayScreenState extends State<ReplayScreen> {
     final sortedYears=years.toList()..sort((a,b)=>b.compareTo(a));
     return ListView(padding:EdgeInsets.fromLTRB(24,
       24 + MediaQuery.paddingOf(context).top, 24,
-      24 + OrchidStyle.iosDockClearance(context)),children:
+      24 + OrchidStyle.iosDockClearance(context)),children: [
       const OrchidHero(
         eyebrow:'Made for You',
         title:'Replay',
