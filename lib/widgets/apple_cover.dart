@@ -1,4 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'orchid_hover_zoom.dart';
 import '../services/apple_artwork_service.dart';
 
 /// Apple's album/track artwork when available, Last.fm image otherwise.
@@ -61,7 +62,8 @@ class AppleCover extends StatelessWidget {
         );
         return ClipRRect(
           borderRadius: BorderRadius.circular(radius),
-          child: SizedBox(
+          child: OrchidHoverZoom(
+            child: SizedBox(
             width: size,
             height: size,
             child: url == null
@@ -82,6 +84,7 @@ class AppleCover extends StatelessWidget {
                               )
                             : placeholder(),
                   ),
+            ),
           ),
         );
       },
