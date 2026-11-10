@@ -70,6 +70,14 @@ class OrchidAudioPlayer {
   bool canAdvanceTo(String key)=>_preloadedKey==key;
   Future<void> preloadNext(String url,String key) async{
     if(_disposed||_preloadedKey==key||_activeKey==key)return;
+    // A changed Play Next/queue order must replace the stale standby deck.
+    if(_preloadedKey!=null && _preloadedKey!=key){
+      final oldIndex=engine.state.currentIndex+1;
+      if(oldIndex>=0 && oldIndex<engine.state.queue.length){
+        await engine.action.removeAt(oldIndex);
+      }
+      _preloadedKey=null;
+    }
     await engine.action.append([
       mini.EngineItem<String>(source:mini.AudioSource(url),data:key),
     ]);
