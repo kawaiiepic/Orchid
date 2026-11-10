@@ -52,6 +52,75 @@ class _LibraryScreenState extends State<LibraryScreen> {
   final _queryController = TextEditingController();
   final _librarySearchFocus = fw.FocusNode();
   String _view = 'Songs';
+  String? _mobileSection;
+  String? _mobilePlaylistId;
+
+  void _openMobileSection(String section) => setState(() {
+    _mobileSection = section;
+    _mobilePlaylistId = null;
+    _selectedAlbumKey = null;
+    _selectedArtist = null;
+    _view = section == 'Playlists' ? 'Songs' : section;
+    _queryController.clear();
+  });
+
+  void _selectMobilePlaylist(String? id) => setState(() {
+    _mobilePlaylistId = id;
+  });
+
+  Widget _mobileLibraryLanding(BuildContext context) {
+    final songs = widget.library.librarySongs;
+    final artists = <String>{
+      ...songs.map((song) => song.artist.trim().toLowerCase()),
+      ...widget.library.savedArtists.keys.map((name) => name.trim().toLowerCase()),
+    }..remove('');
+    final albums = _libraryAlbums();
+    final playlists = widget.library.visiblePlaylists;
+    final entries = <({String title, String count, IconData icon})>[
+      (title: 'Artists', count: '${artists.length}', icon: LucideIcons.mic2),
+      (title: 'Songs', count: '${songs.length}', icon: LucideIcons.music2),
+      (title: 'Albums', count: '${albums.length}', icon: LucideIcons.disc3),
+      (title: 'Playlists', count: '${playlists.length}', icon: LucideIcons.listMusic),
+    ];
+    return ListView(
+      padding: EdgeInsets.fromLTRB(20,
+        24 + MediaQuery.paddingOf(context).top, 20,
+        OrchidStyle.iosDockClearance(context) + 24),
+      children: [
+        const Text('Library', style: TextStyle(
+          fontSize: 34, fontWeight: FontWeight.w700,
+          color: Color(0xFFF9F4FF),
+        )),
+        const SizedBox(height: 24),
+        for (final entry in entries)
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _openMobileSection(entry.title),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 17, horizontal: 6),
+              decoration: const BoxDecoration(border: Border(
+                bottom: BorderSide(color: Color(0x335F496D)),
+              )),
+              child: Row(children: [
+                Icon(entry.icon, size: 24, color: OrchidStyle.pink),
+                const SizedBox(width: 18),
+                Expanded(child: Text(entry.title, style: const TextStyle(
+                  fontSize: 18, color: Color(0xFFF6EDFF),
+                  fontWeight: FontWeight.w500,
+                ))),
+                Text(entry.count, style: const TextStyle(
+                  fontSize: 14, color: Color(0xFFB3A5C1),
+                )),
+                const SizedBox(width: 12),
+                const Icon(LucideIcons.chevronRight, size: 20,
+                  color: Color(0xFFB3A5C1)),
+              ]),
+            ),
+          ),
+      ],
+    );
+  }
+
   String? _selectedAlbumKey;
   String? _selectedArtist;
   bool _followingOnly = false;
@@ -962,7 +1031,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
               width: tileWidth,
               height: tileWidth + 50,
               child: _playlistButton(playlist.name, playlist.songs,
-                () => widget.onPlaylistSelected?.call(playlist.id),
+                () => widget.playlistsOnly
+                    ? widget.onPlaylistSelected?.call(playlist.id)
+                    : _selectMobilePlaylist(playlist.id),
                 playlist: playlist),
             ),
         ],
@@ -1066,7 +1137,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
           widget.library.librarySongs.where((song) =>
             song.artist.trim().toLowerCase() ==
                 activeArtist.trim().toLowerCase()).toList();
-      final id = widget.selectedPlaylistId;
+      final mobile = MediaQuery.sizeOf(context).width < 850;
+      if (mobile && !widget.playlistsOnly && _mobileSection == null) {
+        return _mobileLibraryLanding(context);
+      }
+      final showingPlaylists = widget.playlistsOnly ||
+          (mobile && _mobileSection == 'Playlists');
+      final id = widget.playlistsOnly
+          ? widget.selectedPlaylistId : _mobilePlaylistId;
       MusicPlaylist? activePlaylist;
       if (id != null && id != 'favorites') {
         for (final playlist in playlists) {
@@ -1089,7 +1167,30 @@ class _LibraryScreenState extends State<LibraryScreen> {
           (MediaQuery.sizeOf(context).width >= 850 ? 104 : 0)),
         children: [
           widget.header,
-          if (!widget.playlistsOnly) ...[
+          if (mobile && !widget.playlistsOnly)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 18),
+              child: Align(alignment: Alignment.centerLeft,
+                child: OrchidAdaptiveControls.button(
+                  onPressed: () {
+                    if (_selectedAlbumKey != null) {
+                      setState(() => _selectedAlbumKey = null);
+                    } else if (_selectedArtist != null) {
+                      setState(() => _selectedArtist = null);
+                    } else if (_mobilePlaylistId != null) {
+                      _selectMobilePlaylist(null);
+                    } else {
+                      setState(() => _mobileSection = null);
+                    }
+                  },
+                  child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(LucideIcons.arrowLeft, size: 16),
+                    SizedBox(width: 8), Text('Library'),
+                  ]),
+                ),
+              ),
+            ),
+          if (!showingPlaylists) ...[
             if (activeAlbumSongs != null &&
                 (_view == 'Albums' || _view == 'Artists' &&
                     activeArtist != null)) ...[
@@ -1097,7 +1198,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ] else if (_view == 'Artists' && activeArtist != null) ...[
               _savedArtistDetail(activeArtist, artistSongs, albums),
             ] else ...[
-              const OrchidSectionHeader(title: 'Library'),
+              OrchidSectionHeader(title: mobile ? _view : 'Library'),
               const SizedBox(height: 8),
               Text('${widget.library.librarySongs.length} saved songs').small().muted(),
               const SizedBox(height: 18),
@@ -1111,7 +1212,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 _songList(widget.library.librarySongs),
             ],
           ] else if (selected) ...[
-            if (widget.onPlaylistSelected != null)
+            if (widget.playlistsOnly && widget.onPlaylistSelected != null)
               Align(alignment: Alignment.centerLeft,
                 child: IconButton.ghost(
                   onPressed: () => widget.onPlaylistSelected!(null),
@@ -1169,7 +1270,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
                           OrchidHoverAction('Delete playlist', LucideIcons.trash2,
                             () async {
                               await widget.library.deletePlaylist(activePlaylist!);
-                              widget.onPlaylistSelected?.call(null);
+                              if (widget.playlistsOnly) {
+                                widget.onPlaylistSelected?.call(null);
+                              } else {
+                                _selectMobilePlaylist(null);
+                              }
                             }),
                           ],
                         ],
