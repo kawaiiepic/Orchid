@@ -1,6 +1,5 @@
 import 'dart:async';
-import 'dart:ui' show ImageFilter;
-import 'package:cupertino_native_better/cupertino_native.dart' as native;
+import 'package:liquid_design/liquid_design.dart' as liquid;
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../models/addon.dart';
@@ -235,22 +234,17 @@ class _ShellScreenState extends State<ShellScreen>{
   );
  }
  Widget _glassDockAction(IconData icon,int index,int page) {
-  return GestureDetector(
-   onTap:()=>_selectTab(index),
-   behavior:HitTestBehavior.opaque,
-   child:ClipRRect(
-    borderRadius:BorderRadius.circular(32),
-    child:BackdropFilter(
-     filter:ImageFilter.blur(sigmaX:18,sigmaY:18),
-     child:Container(
-      width:58,height:58,
-      decoration:BoxDecoration(
-       color:const Color(0xFF38373E).withValues(alpha:0.78),
-       borderRadius:BorderRadius.circular(32),
-       border:Border.all(color:const Color(0x70FFFFFF),width:0.7),
-      ),
-      child:Icon(icon,size:24,color:page==index?OrchidStyle.pink:const Color(0xFFF8F6FC)),
-     ),
+  return liquid.LiquidGlass(
+   shape:const liquid.LiquidGlassShape.circle(),
+   style:liquid.LiquidGlassStyle.regular,
+   fallback:liquid.LiquidGlassFallback.frosted,
+   child:GestureDetector(
+    onTap:()=>_selectTab(index),
+    behavior:HitTestBehavior.opaque,
+    child:SizedBox(
+     width:58,height:58,
+     child:Icon(icon,size:24,
+      color:page==index?OrchidStyle.pink:const Color(0xFFF8F6FC)),
     ),
    ),
   );
@@ -287,20 +281,26 @@ class _ShellScreenState extends State<ShellScreen>{
             ),
             const SizedBox(height:8),
            ],
-           native.CNTabBar(
-            items:const [
-             native.CNTabBarItem(
-              label:'Home',icon:native.CNSymbol('house'),
-              activeIcon:native.CNSymbol('house.fill')),
-             native.CNTabBarItem(
-              label:'Explore',icon:native.CNSymbol('safari'),
-              activeIcon:native.CNSymbol('safari.fill')),
-             native.CNTabBarItem(
-              label:'Library',icon:native.CNSymbol('music.note.list')),
-            ],
+           liquid.LiquidGlassNavigationBar(
             currentIndex:page.clamp(0,2),
             onTap:_selectTab,
-            iconSize:23,
+            onReselect:_selectTab,
+            activeColor:const Color(0xFFF8E4FF),
+            inactiveColor:const Color(0xFFCEBEDA),
+            items:const [
+             liquid.LiquidGlassNavItem(
+              icon:Icon(LucideIcons.house),
+              label:'Home',
+             ),
+             liquid.LiquidGlassNavItem(
+              icon:Icon(LucideIcons.compass),
+              label:'Explore',
+             ),
+             liquid.LiquidGlassNavItem(
+              icon:Icon(LucideIcons.library),
+              label:'Library',
+             ),
+            ],
            ),
           ],
          ),
