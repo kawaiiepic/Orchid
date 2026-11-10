@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
+import '../services/orchid_connect.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import '../services/player_service.dart';
@@ -31,6 +33,91 @@ class _AudioConnectSheetState extends State<_AudioConnectSheet> {
   static const _platform = MethodChannel('orchid/audio_routes');
   String? _message;
   bool _pipeline = false;
+  bool _jamExpanded = false;
+  String _jamCode = '';
+  bool _networkExpanded = false;
+  bool _refreshing = false;
+
+  Future<void> _refreshDevices() async {
+    final connect=OrchidConnect.active;
+    if(connect==null)return;
+    setState(()=>_refreshing=true);
+    try{await connect.refresh();}finally{if(mounted)setState(()=>_refreshing=false);}
+  }
+
+  Future<void> _run(Future<void> Function() action) async {
+    try{await action();}
+    catch(e){debugPrint('[Orchid Connect] $e');if(mounted)setState(()=>_message='$e');}
+  }
+
+  Widget _connectContent(OrchidConnect connect) => ListenableBuilder(
+    listenable:connect,
+    builder:(context,_) {
+      final others=connect.devices.where((d)=>d['id']!=connect.deviceId).toList();
+      return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        _section('Your Devices'),
+        if(!connect.account.signedIn)
+          _tile(LucideIcons.logIn,'Sign in to Orchid',
+            'Your account is required for device transfer and Jams')
+        else if(others.isEmpty)
+          _tile(LucideIcons.monitor,'No other Orchid devices',
+            'Open Orchid on another signed-in device'),
+        for(final device in others)
+          _tile(
+            device['platform']=='web'?LucideIcons.globe:
+              device['platform']=='ios'||device['platform']=='android'
+                ?LucideIcons.smartphone:LucideIcons.monitor,
+            device['name']?.toString()??'Orchid device',
+            (device['playback'] is Map&&
+             (device['playback'] as Map)['playing']==true)
+              ? 'Currently playing · Tap to transfer'
+              : 'Tap to play here',
+            onTap:connect.working?null:()=>_run(()=>connect.transferTo(device['id'] as String)),
+            trailing:const Icon(LucideIcons.chevronRight,color:Color(0xFF99999F)),
+          ),
+        if(connect.error!=null)
+          Padding(padding:const EdgeInsets.symmetric(horizontal:18,vertical:6),
+            child:Text(connect.error!,style:const TextStyle(fontSize:12,color:Color(0xFFF6B1B1)))),
+        _section('Listen Together'),
+        _tile(LucideIcons.radio,connect.jamId==null?'Start a Jam':
+          'Jam · ${connect.jamId}',
+          connect.jamId==null?'Listen together in real time':
+            '${connect.jamListeners} listening · ${connect.jamHost?'Hosting':'Joined'}',
+          onTap:()=>setState(()=>_jamExpanded=!_jamExpanded),
+          trailing:Icon(_jamExpanded?LucideIcons.chevronDown:LucideIcons.chevronRight,
+            color:const Color(0xFF99999F))),
+        if(_jamExpanded)Padding(
+          padding:const EdgeInsets.fromLTRB(22,4,22,16),
+          child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+            if(connect.jamId==null)...[
+              _action('Create Jam',()=>_run(connect.createJam)),
+              const SizedBox(height:12),
+              TextField(placeholder:const Text('Invite code'),
+                onChanged:(value)=>_jamCode=value),
+              const SizedBox(height:8),
+              _action('Join Jam',()=>_run(()=>connect.joinJam(_jamCode))),
+            ]else...[
+              Text('Invite code: ${connect.jamId}',
+                style:const TextStyle(fontSize:15)),
+              const SizedBox(height:8),
+              _action('Copy invite code',()=>Clipboard.setData(
+                ClipboardData(text:connect.jamId!))),
+              const SizedBox(height:8),
+              _action(connect.jamHost?'End Jam':'Leave Jam',
+                ()=>_run(connect.leaveJam)),
+            ],
+          ]),
+        ),
+      ]);
+    },
+  );
+
+  Widget _action(String title,VoidCallback onTap) => GestureDetector(
+    behavior:HitTestBehavior.opaque,onTap:onTap,
+    child:Padding(padding:const EdgeInsets.symmetric(vertical:10),
+      child:Text(title,style:const TextStyle(
+        color:Color(0xFFE35C9B),fontSize:15,fontWeight:FontWeight.w600))),
+  );
 
   Future<void> _openSystemAudioSettings() async {
     try {
@@ -156,6 +243,13 @@ class _AudioConnectSheetState extends State<_AudioConnectSheet> {
             )),
             GestureDetector(
               behavior: HitTestBehavior.opaque,
+              onTap: _refreshDevices,
+              child:Padding(padding:const EdgeInsets.all(8),
+                child:Icon(LucideIcons.refreshCw,size:19,
+                  color:_refreshing?const Color(0xFF777777):const Color(0xFFE35C9B))),
+            ),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
               onTap: widget.close,
               child: const Padding(
                 padding: EdgeInsets.all(10),
@@ -193,12 +287,28 @@ class _AudioConnectSheetState extends State<_AudioConnectSheet> {
             onTap: _openSystemAudioSettings,
             trailing: const Icon(LucideIcons.chevronRight,
               color: Color(0xFF99999F))),
-        _section('Your Devices'),
-        _tile(LucideIcons.monitor, 'Other Orchid devices',
-          'Remote transfer is not available yet'),
-        _section('Listen Together'),
-        _tile(LucideIcons.radio, 'Start a Jam',
-          'Shared playback sessions are not available yet'),
+        if(OrchidConnect.active!=null)
+          _connectContent(OrchidConnect.active!)
+        else _tile(LucideIcons.monitor,'Orchid Connect',
+          'Session service not ready'),
+        _section('Network Speakers'),
+        _tile(LucideIcons.speaker,'Network speakers',
+          kIsWeb?'Not supported in the web player':
+          defaultTargetPlatform==TargetPlatform.iOS
+            ? 'Use Speaker & TV for compatible AirPlay speakers'
+            : 'Select a system-connected network audio output',
+          onTap:()=>setState(()=>_networkExpanded=!_networkExpanded),
+          trailing:Icon(_networkExpanded?LucideIcons.chevronDown:
+            LucideIcons.chevronRight,color:const Color(0xFF99999F))),
+        if(_networkExpanded)Padding(
+          padding:const EdgeInsets.fromLTRB(22,0,22,14),
+          child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            const Text('Chromecast and DLNA playback are not yet supported. System-connected AirPlay and Bluetooth outputs are supported where available.',
+              style:TextStyle(fontSize:12,color:Color(0xFFAAAAAF))),
+            if(!kIsWeb&&defaultTargetPlatform!=TargetPlatform.iOS)
+              _action('Open audio settings',_openSystemAudioSettings),
+          ]),
+        ),
         const Divider(),
         _tile(LucideIcons.audioLines, 'Audio Pipeline',
           'Volume, shuffle, repeat & playback source',
