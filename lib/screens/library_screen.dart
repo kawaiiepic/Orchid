@@ -165,8 +165,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Future<void> _newFolder() async {
+    if (_playlistFolderId != null) return;
     final name = await _askName('New folder');
-    if (name == null || !mounted) return;
+    if (name == null || !mounted || _playlistFolderId != null) return;
     await widget.library.createPlaylistFolder(name);
   }
 
@@ -933,8 +934,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
             onPressed: _importingPlaylist ? null : _spotifyImport,
             child: Text(_importingPlaylist ? 'Importing…' : 'Import'),
           ),
-          OrchidAdaptiveControls.button(
-            onPressed: _newFolder, child: const Text('New Folder')),
+          if (_playlistFolderId == null)
+            OrchidAdaptiveControls.button(
+              onPressed: _newFolder, child: const Text('New Folder')),
           OrchidAdaptiveControls.button(
             prominent: true, onPressed: _newPlaylist,
             child: const Text('New')),
