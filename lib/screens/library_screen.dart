@@ -48,6 +48,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   String _view = 'Songs';
   String? _selectedAlbumKey;
   String? _selectedArtist;
+  bool _followingOnly = false;
 
   @override
   void dispose() {
@@ -511,11 +512,39 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   Widget _savedArtistsGrid() {
     final query = _queryController.text.trim().toLowerCase();
-    // Only explicitly followed artists belong in this category.
-    final artists = widget.library.savedArtists.keys
+    final allArtists = <String, String>{};
+    if (!_followingOnly) {
+      for (final song in widget.library.librarySongs) {
+        final artist = song.artist.trim();
+        if (artist.isNotEmpty) {
+          allArtists.putIfAbsent(artist.toLowerCase(), () => artist);
+        }
+      }
+    }
+    for (final artist in widget.library.savedArtists.keys) {
+      final name = artist.trim();
+      if (name.isNotEmpty) {
+        allArtists.putIfAbsent(name.toLowerCase(), () => name);
+      }
+    }
+    final artists = allArtists.values
         .where((name) => name.toLowerCase().contains(query)).toList()
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-    if (artists.isEmpty) return const Text('No followed artists found.').muted();
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      OrchidAdaptiveControls.button(
+        prominent: _followingOnly,
+        onPressed: () => setState(() => _followingOnly = !_followingOnly),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(_followingOnly ? LucideIcons.check : LucideIcons.users, size: 16),
+          const SizedBox(width: 8),
+          const Text('Following only'),
+        ]),
+      ),
+      const SizedBox(height: 16),
+      if (artists.isEmpty)
+        Text(_followingOnly ? 'No followed artists found.' :
+          'No artists in your library yet.').muted()
+      else
     return LayoutBuilder(builder: (context, bounds) {
       final columns = (bounds.maxWidth / 165).floor().clamp(2, 7).toInt();
       return GridView.builder(
@@ -549,7 +578,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
           );
         },
       );
-    });
+    }),
+    ]);
   }
 
   Widget _playlistsGrid(List<MusicPlaylist> playlists) =>
@@ -585,7 +615,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
       final activeAlbumSongs = albums[_selectedAlbumKey];
       final selectedArtist = _selectedArtist;
       final activeArtist = selectedArtist != null &&
-          widget.library.isArtistSaved(selectedArtist)
+          (widget.library.isArtistSaved(selectedArtist) ||
+            widget.library.librarySongs.any((song) =>
+              song.artist.trim().toLowerCase() ==
+                  selectedArtist.trim().toLowerCase()))
           ? selectedArtist : null;
       final artistSongs = activeArtist == null ? <SavedSong>[] :
           widget.library.librarySongs.where((song) =>
