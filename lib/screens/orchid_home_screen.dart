@@ -1124,7 +1124,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
         _desktop ? 28 : 12, _desktop ? 30 : 0,
         _desktop ? 0 : OrchidStyle.iosDockClearance(context)),
       children: [
-        widget.header,
+        _homeInset(widget.header),
         _homeInset(_desktopShortcuts()),
         gap,
         _homeInset(_desktopSection('Made For You')),
