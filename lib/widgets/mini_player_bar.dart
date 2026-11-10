@@ -20,42 +20,54 @@ class _BorderlessPlayerGlass extends StatelessWidget {
   final Widget child;
   const _BorderlessPlayerGlass({required this.radius, required this.child});
 
+  // Desktop uses the lightweight shader pipeline on Linux. Reduce refraction
+  // and dispersion to avoid the stepped/pixelated look while retaining blur.
+  static const _desktopGlassSettings = glass.LiquidGlassSettings(
+    glassColor: Color(0x84392447),
+    blur: 7,
+    thickness: 9,
+    refractiveIndex: 1.015,
+    chromaticAberration: 0,
+    saturation: 1,
+    lightIntensity: 0,
+    ambientStrength: 0,
+    ambientRim: 0,
+    fresnelStrength: 0,
+    glowIntensity: 0,
+    rimLight: 0,
+    rimShade: 0,
+    shadowElevation: 0,
+  );
+
   @override
   Widget build(BuildContext context) {
-    if (MediaQuery.sizeOf(context).width >= 850) {
-      // The Linux/Windows lightweight glass pass can downsample and blur
-      // the scrolling song titles underneath this floating player.
-      // A translucent, borderless desktop surface stays pixel-sharp.
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(radius),
-        child: ColoredBox(
-          color: const Color(0xD02C203B),
-          child: child,
-        ),
-      );
-    }
+    final desktop = MediaQuery.sizeOf(context).width >= 850;
     return ClipRRect(
-    borderRadius: BorderRadius.circular(radius),
-    child: Stack(
-      children: [
-        // Crop the shader's illuminated rim instead of drawing a white
-        // perimeter around the desktop mini-player.
-        Positioned.fill(
-          left: -8, top: -8, right: -8, bottom: -8,
-          child: IgnorePointer(
-            child: glass.GlassContainer(
-              useOwnLayer: true,
-              quality: glass.GlassQuality.premium,
-              shape: glass.LiquidRoundedSuperellipse(
-                borderRadius: radius + 8),
-              settings: OrchidStyle.glassSettings,
-              child: const SizedBox.expand(),
+      borderRadius: BorderRadius.circular(radius),
+      child: Stack(
+        children: [
+          // Crop the shader's edge highlights so only the frosted glass
+          // body appears. Keep all player controls above the shader.
+          Positioned.fill(
+            left: -8, top: -8, right: -8, bottom: -8,
+            child: IgnorePointer(
+              child: glass.GlassContainer(
+                useOwnLayer: true,
+                quality: desktop
+                    ? glass.GlassQuality.standard
+                    : glass.GlassQuality.premium,
+                shape: glass.LiquidRoundedSuperellipse(
+                  borderRadius: radius + 8),
+                settings: desktop
+                    ? _desktopGlassSettings
+                    : OrchidStyle.glassSettings,
+                child: const SizedBox.expand(),
+              ),
             ),
           ),
-        ),
-        child,
-      ],
-    ),
+          child,
+        ],
+      ),
     );
   }
 }
