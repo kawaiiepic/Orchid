@@ -17,6 +17,8 @@ class DesktopSidebar extends StatelessWidget {
   final VoidCallback onReplay;
   final VoidCallback onRadio;
   final VoidCallback onAiDj;
+  final String? selectedPlaylistId;
+  final ValueChanged<String?> onPlaylistSelected;
   final VoidCallback onSettings;
   final VoidCallback onProfile;
 
@@ -34,6 +36,8 @@ class DesktopSidebar extends StatelessWidget {
     required this.onReplay,
     required this.onRadio,
     required this.onAiDj,
+    required this.selectedPlaylistId,
+    required this.onPlaylistSelected,
     required this.onSettings,
     required this.onProfile,
   });
@@ -89,7 +93,6 @@ class DesktopSidebar extends StatelessWidget {
           _nav('Playlists', LucideIcons.listMusic, onPlaylists, selected: selectedTab == 4),
           _nav('Replay', LucideIcons.audioLines, onReplay, selected: selectedTab == 5),
           _nav('Radio', LucideIcons.radio, onRadio, selected: selectedTab == 6),
-          _nav('AI DJ', LucideIcons.bot, onAiDj, selected: selectedTab == 7),
           const SizedBox(height: 17),
           const Padding(
             padding: EdgeInsets.fromLTRB(21, 0, 12, 9),
@@ -97,7 +100,9 @@ class DesktopSidebar extends StatelessWidget {
               fontSize: 10, fontWeight: FontWeight.w700,
               letterSpacing: 1.3, color: Color(0xFF88819D))),
           ),
-          _nav('Favorites', LucideIcons.heart, onPlaylists),
+          _nav('Favorites', LucideIcons.heart,
+            () => onPlaylistSelected('favorites'),
+            selected: selectedTab == 4 && selectedPlaylistId == 'favorites'),
           Expanded(
             child: ListenableBuilder(
               listenable: library,
@@ -105,7 +110,9 @@ class DesktopSidebar extends StatelessWidget {
                 padding: EdgeInsets.zero,
                 children: [
                   for (final playlist in library.visiblePlaylists)
-                    _nav(playlist.name, LucideIcons.listMusic, onPlaylists),
+                    _nav(playlist.name, LucideIcons.listMusic,
+                      () => onPlaylistSelected(playlist.id),
+                      selected: selectedTab == 4 && selectedPlaylistId == playlist.id),
                   if (library.visiblePlaylists.isEmpty)
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
