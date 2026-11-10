@@ -1,4 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import '../widgets/orchid_adaptive_controls.dart';
 
 import '../services/orchid_account.dart';
 import '../widgets/orchid_style.dart';
@@ -146,7 +147,7 @@ class _AiDjScreenState extends State<AiDjScreen> {
           enabled:!_sending,
         )),
         const SizedBox(width:10),
-        PrimaryButton(
+        OrchidAdaptiveControls.button(prominent: true, 
           onPressed:_sending?null:_send,
           child:const Icon(LucideIcons.send,size:19),
         ),
