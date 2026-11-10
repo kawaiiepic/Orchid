@@ -464,6 +464,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () {
+            if (MediaQuery.sizeOf(context).width < 850 &&
+                _mobileSelecting && _mobileSection == 'Songs') {
+              _toggleMobileSelection(_songSelectionKey(song));
+              return;
+            }
             widget.player.setAddons(widget.addons);
             widget.player.playTrack(_track(song)).catchError((Object e) {
               debugPrint('[Orchid Library] Playback failed: $e');
@@ -472,9 +477,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
             child: Row(children: [
-              SizedBox(width: 30, child: Center(child: hovered
-                ? const Icon(LucideIcons.play, size: 16)
-                : Text('$number').small().muted())),
+              SizedBox(width: 30, child: Center(
+                child: MediaQuery.sizeOf(context).width < 850 &&
+                    _mobileSelecting && _mobileSection == 'Songs'
+                  ? Icon(_mobileSelected.contains(_songSelectionKey(song))
+                        ? LucideIcons.checkCircle2
+                        : LucideIcons.circle,
+                      size: 20, color: OrchidStyle.pink)
+                  : hovered
+                    ? const Icon(LucideIcons.play, size: 16)
+                    : Text('$number').small().muted(),
+              )),
               const SizedBox(width: 10),
               AppleCover(artist: song.artist, name: song.title,
                 album: song.album, fallbackUrl: song.artwork,
@@ -755,22 +768,36 @@ class _LibraryScreenState extends State<LibraryScreen> {
             cursor: SystemMouseCursors.click,
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onTap: () => setState(() => _selectedAlbumKey = entry.key),
+              onTap: () {
+                if (MediaQuery.sizeOf(context).width < 850 &&
+                    _mobileSelecting && _mobileSection == 'Albums') {
+                  _toggleMobileSelection(entry.key);
+                } else {
+                  setState(() => _selectedAlbumKey = entry.key);
+                }
+              },
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(child: LayoutBuilder(builder: (context, size) =>
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: AppleCover(
-                        artist: song.artist,
-                        name: song.album!,
-                        isAlbum: true,
-                        fallbackUrl: song.artwork,
-                        size: size.maxWidth,
-                        radius: 0, zoomOnHover: true),
-                    ),
-                  )),
+                  Expanded(child: Stack(children: [
+                    Positioned.fill(child: LayoutBuilder(builder: (context, size) =>
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: AppleCover(
+                          artist: song.artist,
+                          name: song.album!,
+                          isAlbum: true,
+                          fallbackUrl: song.artwork,
+                          size: size.maxWidth,
+                          radius: 0, zoomOnHover: true),
+                      ),
+                    )),
+                    if (_mobileSelecting && _mobileSection == 'Albums')
+                      Positioned(top: 8, right: 8,
+                        child: Icon(_mobileSelected.contains(entry.key)
+                            ? LucideIcons.checkCircle2 : LucideIcons.circle,
+                          color: OrchidStyle.pink, size: 23)),
+                  ])),
                   const SizedBox(height: 8),
                   Text(song.album!, maxLines: 1,
                     overflow: TextOverflow.ellipsis).semiBold(),
@@ -980,10 +1007,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
               LucideIcons.library,
               () => widget.library.toggleArtistSaved(artist))],
             child: GestureDetector(
-              onTap: () => setState(() {
-                _selectedArtist = artist;
-                _selectedAlbumKey = null;
-              }),
+              onTap: () {
+                if (compact && _mobileSelecting && _mobileSection == 'Artists') {
+                  _toggleMobileSelection(artist);
+                } else {
+                  setState(() {
+                    _selectedArtist = artist;
+                    _selectedAlbumKey = null;
+                  });
+                }
+              },
               child: Column(children: [
                 Expanded(child: LayoutBuilder(builder: (context, bounds) {
                   final available = bounds.maxWidth < bounds.maxHeight
@@ -995,6 +1028,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   ));
                 })),
                 const SizedBox(height: 8),
+                if (compact && _mobileSelecting && _mobileSection == 'Artists')
+                  Icon(_mobileSelected.contains(artist)
+                      ? LucideIcons.checkCircle2 : LucideIcons.circle,
+                    size: 18, color: OrchidStyle.pink),
                 Text(artist, maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
