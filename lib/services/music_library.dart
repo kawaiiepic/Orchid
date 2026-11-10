@@ -74,7 +74,21 @@ class MusicLibrary extends ChangeNotifier {
 
   bool _includeInLibrary(SavedSong song) {
     final songs = _savedLibrary.songs;
-    if (songs.any((s) => s.key == song.key)) return false;
+    final index = songs.indexWhere((s) => s.key == song.key);
+    if (index >= 0) {
+      final existing = songs[index];
+      if ((existing.duration == null || existing.duration! <= 0) &&
+          song.duration != null && song.duration! > 0) {
+        songs[index] = SavedSong(
+          existing.title, existing.artist,
+          album: existing.album ?? song.album,
+          artwork: existing.artwork ?? song.artwork,
+          duration: song.duration,
+        );
+        return true;
+      }
+      return false;
+    }
     songs.insert(0, song);
     return true;
   }
