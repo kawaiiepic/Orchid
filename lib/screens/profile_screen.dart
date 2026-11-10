@@ -8,7 +8,9 @@ import '../widgets/avatar_crop_dialog.dart';
 class ProfileScreen extends StatefulWidget {
  final OrchidAccount account;
  final bool embedded;
- const ProfileScreen({super.key,required this.account,this.embedded=false});
+ final String section;
+ const ProfileScreen({super.key,required this.account,this.embedded=false,
+  this.section='all'});
  @override State<ProfileScreen> createState()=>_ProfileScreenState();
 }
 class _ProfileScreenState extends State<ProfileScreen> {
@@ -95,11 +97,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
  @override Widget build(BuildContext context){
   final a=widget.account;
   final children=<Widget>[
-   const Text('Your account').x2Large().semiBold(),
-   const SizedBox(height:8),
-   const Text('One Petal account for Petal and Orchid.').muted(),
-   const SizedBox(height:24),
-   if(a.loading)const Text('Loading account…')
+   if(widget.section!='connections') ...[
+    const Text('Your account').x2Large().semiBold(),
+    const SizedBox(height:8),
+    const Text('One Petal account for Petal and Orchid.').muted(),
+    const SizedBox(height:24),
+   ],
+   if(widget.section=='connections' && !a.signedIn)
+    const Text('Sign in to connect services.').muted()
+   else if(a.loading)const Text('Loading account…')
    else if(!a.signedIn)...[
     if(registering)...[
      const Text('Username'),const SizedBox(height:6),
@@ -119,6 +125,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     GhostButton(onPressed:busy?null:()=>setState(()=>registering=!registering),
       child:Text(registering?'Already have a Petal account? Sign in':'Create a Petal account')),
    ]else...[
+    if(widget.section!='connections') ...[
     Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(
      crossAxisAlignment:CrossAxisAlignment.start,children:[
       Row(children:[
@@ -152,7 +159,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       const SizedBox(height:12),
       OutlineButton(onPressed:busy?null:()=>_run(a.logout),child:const Text('Sign out')),
     ]))),
-    const SizedBox(height:22),
+    ],
+    if(widget.section!='account') ...[
     const Text('Connected services').large().semiBold(),
     const SizedBox(height:10),
     Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(
@@ -173,6 +181,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
        ]
       ],
      ]))),
+    ],
    ],
    if(avatarStatus!=null)...[const SizedBox(height:14),Text(avatarStatus!).small()],
    if(error!=null)...[const SizedBox(height:14),Text(error!).small()],
