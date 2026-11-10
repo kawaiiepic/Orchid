@@ -37,6 +37,7 @@ class _CanvasVideoState extends State<CanvasVideo> {
   Duration _lastPosition = Duration.zero;
   bool _recovering = false;
   int _recoveries = 0;
+  DateTime _recoveryWindow = DateTime.now();
   bool _ready = false;
   bool _failed = false;
   int _generation = 0;
@@ -98,6 +99,13 @@ class _CanvasVideoState extends State<CanvasVideo> {
     if (_recovering || !mounted || _failed) return;
     _recovering = true;
     try {
+      // Do not penalize normal HLS loop boundaries across a long session.
+      // Only give up after repeated failures within a short interval.
+      final now = DateTime.now();
+      if (now.difference(_recoveryWindow) > const Duration(seconds: 45)) {
+        _recoveryWindow = now;
+        _recoveries = 0;
+      }
       if (++_recoveries > 3) {
         debugPrint('[Orchid Artwork] Repeated stalls; using still cover');
         if (mounted) setState(() { _failed = true; _ready = false; });
@@ -174,6 +182,7 @@ class _CanvasVideoState extends State<CanvasVideo> {
       // Invalidate any earlier asynchronous HLS load before replacing media.
       ++_generation;
       _recoveries = 0;
+      _recoveryWindow = DateTime.now();
       _recovering = false;
       unawaited(_video.stop().then((_) {
         if (mounted) return _start();
