@@ -425,6 +425,34 @@ class _SearchScreenState extends State<SearchScreen> {
     ),
   );
 
+  Widget _featuredArtistCard(String artist) => GestureDetector(
+    behavior: HitTestBehavior.opaque,
+    onTap: () => openArtistPage(context, artist: artist,
+      account: _usingAppleCatalog ? widget.account : null,
+      player: widget.player, addonService: widget.addonService,
+      addons: widget.addons, library: widget.library),
+    child: OrchidGlassPanel(
+      radius: 18,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(children: [
+          ClipOval(child: ArtistArtwork(artist: artist, size: 84, radius: 42)),
+          const SizedBox(width: 14),
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('TOP ARTIST').xSmall().muted(),
+              const SizedBox(height: 5),
+              Text(artist, maxLines: 2,
+                overflow: TextOverflow.ellipsis).xLarge().semiBold(),
+            ],
+          )),
+          const Icon(LucideIcons.chevronRight),
+        ]),
+      ),
+    ),
+  );
+
   Widget _artistShelf() => SizedBox(
     height: 133,
     child: ListView.separated(
@@ -979,7 +1007,10 @@ class _SearchScreenState extends State<SearchScreen> {
             if(_artistsOn && _artists.isNotEmpty)...[
               _section(_category == SearchCategory.artists
                   ? 'Artists' : 'Artist', _artists.length),
-              _artistShelf(),
+              if (_category == SearchCategory.artists)
+                _artistShelf()
+              else
+                _featuredArtistCard(_artists.first),
             ],
             if(_tracksOn && _tracks.isNotEmpty)...[
               _section('Tracks',_tracks.length),
