@@ -11,6 +11,7 @@ import '../widgets/orchid_style.dart';
 import '../widgets/artist_artwork.dart';
 import '../widgets/apple_cover.dart';
 import '../widgets/song_context_menu.dart';
+import '../widgets/track_duration.dart';
 
 class OrchidHomeScreen extends StatefulWidget {
   final Widget header;
@@ -776,6 +777,111 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     );
   }
 
+  /// Dense desktop track rows, keeping the iOS artwork shelf unchanged.
+  Widget _desktopSongList(List<Map<String, dynamic>> tracks) {
+    final visible = tracks.take(12).toList();
+    return Column(
+      children: [
+        for (var index = 0; index < visible.length; index++) ...[
+          _desktopSongRow(visible[index], index),
+          if (index < visible.length - 1)
+            const Divider(color: Color(0x293C3546)),
+        ],
+      ],
+    );
+  }
+
+  Widget _desktopSongRow(Map<String, dynamic> track, int index) {
+    final title = track['title']?.toString() ?? 'Unknown track';
+    final artist = track['artist']?.toString() ?? 'Unknown artist';
+    final album = track['album']?.toString();
+    final image = track['image']?.toString();
+    final seconds = track['duration'] is num
+        ? (track['duration'] as num).toInt()
+        : int.tryParse(track['duration']?.toString() ?? '');
+    final duration = trackDurationLabel(seconds);
+    final song = TrackResult(
+      id: '${artist.toLowerCase()}|${title.toLowerCase()}',
+      title: title,
+      artist: artist,
+      album: album,
+      artworkUrl: image,
+      duration: seconds,
+      sourceId: 'orchid-history',
+      sourceName: 'Orchid History',
+    );
+    return SongContextMenu(
+      track: song,
+      player: widget.player,
+      library: widget.library,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            widget.player.setAddons(widget.addons);
+            widget.player.playTrack(song).catchError((Object error) {
+              debugPrint('[Orchid] Song playback failed: $error');
+            });
+          },
+          child: Container(
+            height: 58,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(children: [
+              SizedBox(
+                width: 27,
+                child: Text('${index + 1}',
+                  style: const TextStyle(color: Color(0xFF8C8498),
+                    fontSize: 12)),
+              ),
+              AppleCover(
+                artist: artist, name: title, album: album,
+                fallbackUrl: image, size: 43, radius: 7,
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                flex: 4,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Color(0xFFF3EDFA),
+                        fontWeight: FontWeight.w600, fontSize: 12)),
+                    const SizedBox(height: 3),
+                    Text(artist, maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Color(0xFFA89FB5),
+                        fontSize: 11)),
+                  ],
+                ),
+              ),
+              if (album != null && album.isNotEmpty) ...[
+                const SizedBox(width: 14),
+                Expanded(
+                  flex: 2,
+                  child: Text(album, maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF8F879D), fontSize: 11)),
+                ),
+              ],
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 48,
+                child: Text(duration ?? '—', textAlign: TextAlign.end,
+                  style: const TextStyle(
+                    fontSize: 11, color: Color(0xFFB2A9BC))),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showMusicDetail(Map<String, dynamic> item, {required bool isAlbum}) {
     if (isAlbum) {
       openAlbumPage(context,
@@ -909,13 +1015,13 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
         if (_loading && _history == null)
           const Text('Finding music for you…').muted()
         else if (charts.isNotEmpty)
-          _recentCards(charts.take(12).toList())
+          _desktopSongList(charts)
         else
           const Text('Fresh music will appear here soon.').muted(),
         gap,
         if (recent.isNotEmpty) ...[
           _desktopSection('Recently Played'),
-          _recentCards(recent),
+          _desktopSongList(recent),
           gap,
         ],
         if (_items('featuredAlbums').isNotEmpty) ...[
