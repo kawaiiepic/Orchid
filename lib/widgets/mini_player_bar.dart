@@ -530,6 +530,24 @@ class DesktopPlayerBar extends StatelessWidget {
                                         )),
                                     ),
                                   ),
+                                  if (!player.resolving &&
+                                      player.streamQuality?.isNotEmpty == true)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 2),
+                                      child: Text(
+                                        player.streamQuality!
+                                          .replaceAll('_', ' ')
+                                          .replaceAll('-', ' ')
+                                          .toUpperCase(),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Color(0xFFCDB0EC),
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
