@@ -91,6 +91,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       height: 194,
       child: ListView(
         scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.symmetric(
+          horizontal: MediaQuery.sizeOf(context).width < 850 ? 16 : 0),
         children: [
           for (final item in tracks.take(20))
             SizedBox(
@@ -150,6 +152,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       height: compact ? 152 : 177,
       child: ListView(
         scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.symmetric(
+          horizontal: MediaQuery.sizeOf(context).width < 850 ? 16 : 0),
         children: [
           for (final item in artists.take(14))
             GestureDetector(
@@ -188,6 +192,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       height: 192,
       child: ListView(
         scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.symmetric(
+          horizontal: MediaQuery.sizeOf(context).width < 850 ? 16 : 0),
         children: [
           for (final item in albums.take(14))
             GestureDetector(
@@ -228,20 +234,30 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     );
   }
 
+  Widget _pageInset(Widget child) =>
+      MediaQuery.sizeOf(context).width >= 850
+          ? child
+          : Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: child,
+            );
+
   @override
   Widget build(BuildContext context) => ListView(
-    padding: EdgeInsets.fromLTRB(28,
-      22 + MediaQuery.paddingOf(context).top, 30,
+    padding: EdgeInsets.fromLTRB(
+      MediaQuery.sizeOf(context).width >= 850 ? 28 : 0,
+      22 + MediaQuery.paddingOf(context).top,
+      MediaQuery.sizeOf(context).width >= 850 ? 30 : 0,
       MediaQuery.sizeOf(context).width >= 850
           ? 136 : 24 + OrchidStyle.iosDockClearance(context)),
     children: [
       widget.header,
-      const OrchidHero(
+      _pageInset(const OrchidHero(
         eyebrow: 'Find your next favorite',
         title: 'Discover',
         description: 'Fresh tracks, popular releases and artists worth exploring.',
         icon: LucideIcons.compass,
-      ),
+      )),
       const SizedBox(height: 24),
       if (loading && home == null)
         const Text('Discovering music…').muted(),
@@ -250,17 +266,17 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         OutlineButton(onPressed: _refresh, child: const Text('Try again')),
       ],
       if (home != null) ...[
-        const OrchidSectionHeader(title: 'Artists to Explore'),
+        _pageInset(const OrchidSectionHeader(title: 'Artists to Explore')),
         const SizedBox(height: 12),
         _artists(),
         SizedBox(height: MediaQuery.sizeOf(context).width < 850 ? 30 : 22),
         if (_items('featuredAlbums').isNotEmpty) ...[
-          const OrchidSectionHeader(title: 'Featured Albums'),
+          _pageInset(const OrchidSectionHeader(title: 'Featured Albums')),
           const SizedBox(height: 12),
           _albums(),
           const SizedBox(height: 22),
         ],
-        const OrchidSectionHeader(title: 'Popular Right Now'),
+        _pageInset(const OrchidSectionHeader(title: 'Popular Right Now')),
         const SizedBox(height: 8),
         _tracks(),
       ],
