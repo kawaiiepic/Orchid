@@ -150,10 +150,10 @@ Widget _trackTile(BuildContext context, TrackResult song, {
   required PlayerService player, required AddonService addonService,
   required List<InstalledAddon> addons, required MusicLibrary library,
   int? number,
-}) => SongContextMenu(
-  track: song, player: player, library: library,
-  addonService: addonService, addons: addons,
-  child: OrchidHoverSurface(
+}) => OrchidHoverSurface(
+  child: SongContextMenu(
+    track: song, player: player, library: library,
+    addonService: addonService, addons: addons,
     child: Button(
   style: const ButtonStyle.ghost(),
   onPressed: () {
