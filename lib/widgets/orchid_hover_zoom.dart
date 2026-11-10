@@ -56,3 +56,40 @@ class _OrchidHoverSurfaceState extends State<OrchidHoverSurface> {
     ),
   );
 }
+
+  
+/// Subtle brightness tint for clickable cards that should not scale.
+class OrchidHoverBrighten extends StatefulWidget {
+  final Widget child;
+  const OrchidHoverBrighten({super.key, required this.child});
+
+  @override
+  State<OrchidHoverBrighten> createState() => _OrchidHoverBrightenState();
+}
+
+class _OrchidHoverBrightenState extends State<OrchidHoverBrighten> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+    onEnter: (_) => setState(() => _hovered = true),
+    onExit: (_) => setState(() => _hovered = false),
+    child: Stack(children: [
+      widget.child,
+      Positioned.fill(
+        child: IgnorePointer(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            curve: Curves.easeOutCubic,
+            decoration: BoxDecoration(
+              color: _hovered
+                  ? const Color(0x18FFFFFF)
+                  : const Color(0x00FFFFFF),
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+      ),
+    ]),
+  );
+}
