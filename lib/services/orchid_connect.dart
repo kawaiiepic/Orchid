@@ -51,6 +51,14 @@ class OrchidConnect extends ChangeNotifier {
   _timer=Timer.periodic(const Duration(seconds:5),(_)=>unawaited(refresh()));
   await refresh();
  }
+ Map<String,dynamic> _serializeTrack(TrackResult t)=>{
+    'id':t.id,'title':t.title,'artist':t.artist,
+    'album':t.album,'duration':t.duration,'artworkUrl':t.artworkUrl,
+    'sourceId':t.sourceId,'sourceName':t.sourceName,
+    'previewUrl':t.previewUrl,'shareUrl':t.shareUrl,
+    'spotifyTrackId':t.spotifyTrackId,'videoId':t.videoId,
+    'fromStreamAddon':t.fromStreamAddon,'addonBaseUrl':t.addonBaseUrl,
+  };
  Map<String,dynamic> get playback {
   final t=player.current;
   return {
@@ -58,14 +66,9 @@ class OrchidConnect extends ChangeNotifier {
    'position':player.player.position.inMilliseconds/1000,
    'shuffle':player.shuffleEnabled,
    'repeat':player.repeatMode.name,
-   'track':t==null?null:{
-    'id':t.id,'title':t.title,'artist':t.artist,
-    'album':t.album,'duration':t.duration,'artworkUrl':t.artworkUrl,
-    'sourceId':t.sourceId,'sourceName':t.sourceName,
-    'previewUrl':t.previewUrl,'shareUrl':t.shareUrl,
-    'spotifyTrackId':t.spotifyTrackId,'videoId':t.videoId,
-    'fromStreamAddon':t.fromStreamAddon,'addonBaseUrl':t.addonBaseUrl,
-   },
+   'track':t==null?null:_serializeTrack(t),
+   'queue':player.queue.take(100).map(_serializeTrack).toList(),
+   'queueIndex':player.queueIndex,
   };
  }
  TrackResult? _track(dynamic raw){
@@ -89,7 +92,15 @@ class OrchidConnect extends ChangeNotifier {
   final target=_track(state['track']);
   if(target==null)return;
   if(player.current?.id!=target.id||player.current?.sourceId!=target.sourceId){
-   await player.playTrack(target,fromQueue:[target]);
+   final rawQueue=state['queue'];
+   final queue=<TrackResult>[];
+   if(rawQueue is List){
+    for(final item in rawQueue){
+     final parsed=_track(item);
+     if(parsed!=null)queue.add(parsed);
+    }
+   }
+   await player.playTrack(target,fromQueue:queue.isEmpty?[target]:queue);
   }
   final position=(state['position'] as num?)?.toDouble()??0;
   if((player.player.position.inMilliseconds/1000-position).abs()>(sync?3:0.5)){
