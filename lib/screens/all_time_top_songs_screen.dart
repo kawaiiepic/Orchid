@@ -1,4 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import '../widgets/orchid_adaptive_controls.dart';
 import '../models/addon.dart';
 import '../services/orchid_account.dart';
 import '../services/player_service.dart';
@@ -45,11 +46,11 @@ class _AllTimeTopSongsScreenState extends State<AllTimeTopSongsScreen>{
       const SizedBox(height:20),
       if(loading)const Center(child:CircularProgressIndicator())
       else if(error!=null)...[
-        Text(error!).muted(),OutlineButton(onPressed:_load,child:const Text('Retry')),
+        Text(error!).muted(),OrchidAdaptiveControls.button(onPressed:_load,child:const Text('Retry')),
       ]else if(songs.isEmpty)
         const Text('Your favorites will appear after you listen to music in Orchid.').muted()
       else...[
-        PrimaryButton(onPressed:()=>_play(0),child:const Text('Play your top songs')),
+        OrchidAdaptiveControls.button(prominent: true, onPressed:()=>_play(0),child:const Text('Play your top songs')),
         const SizedBox(height:16),
         for(var i=0;i<songs.length;i++)
           Padding(
