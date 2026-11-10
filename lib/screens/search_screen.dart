@@ -269,6 +269,8 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void _choose(SearchCategory category) {
+    // Selecting a search filter must not dismiss the text field or keyboard.
+    if (!_searchFocus.hasFocus) _searchFocus.requestFocus();
     if (_category == category) return;
     setState(() => _category = category);
     _search();
@@ -625,6 +627,9 @@ class _SearchScreenState extends State<SearchScreen> {
                     selectionColor: const Color(0x665F4391),
                     maxLines: 1,
                     keyboardType: TextInputType.text,
+                    // Filter chips share this search surface. Do not let
+                    // pointer taps outside EditableText steal its focus.
+                    onTapOutside: (_) {},
                     onChanged: _onQueryChanged,
                     onSubmitted: (_) => _submitSearch(),
                   ),
@@ -660,24 +665,24 @@ class _SearchScreenState extends State<SearchScreen> {
   );
 
   Widget _mobileCategoryChips() => SizedBox(
-    height: 56,
+    height: 43,
     child: ListView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
       children: [
         for (final category in SearchCategory.values)
           Padding(
-            padding: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.only(right: 6),
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () => _choose(category),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
                 decoration: BoxDecoration(
                   color: category == _category
                     ? const Color(0x664E344E)
                     : const Color(0x445B4269),
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: category == _category
                       ? const Color(0xAAE48BBE)
@@ -685,14 +690,14 @@ class _SearchScreenState extends State<SearchScreen> {
                   ),
                 ),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(_categoryIcon(category), size: 15,
+                  Icon(_categoryIcon(category), size: 13,
                     color: category == _category
                       ? OrchidStyle.pink
                       : const Color(0xFFC7B7D0)),
-                  const SizedBox(width: 7),
+                  const SizedBox(width: 5),
                   Text(_categoryLabel(category),
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: category == _category
                         ? FontWeight.w600 : FontWeight.w500,
                       color: category == _category
