@@ -819,10 +819,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Align(alignment: Alignment.centerLeft,
-          child: IconButton.ghost(
-            onPressed: () => setState(() => _selectedAlbumKey = null),
-            icon: const Icon(LucideIcons.arrowLeft))),
+        if (MediaQuery.sizeOf(context).width >= 850)
+          Align(alignment: Alignment.centerLeft,
+            child: IconButton.ghost(
+              onPressed: () => setState(() => _selectedAlbumKey = null),
+              icon: const Icon(LucideIcons.arrowLeft))),
         const SizedBox(height: 12),
         LayoutBuilder(builder: (context, bounds) {
           final artwork = SizedBox(
@@ -883,13 +884,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Align(alignment: Alignment.centerLeft,
-          child: IconButton.ghost(
-            onPressed: () => setState(() {
-              _selectedArtist = null;
-              _selectedAlbumKey = null;
-            }),
-            icon: const Icon(LucideIcons.arrowLeft))),
+        if (MediaQuery.sizeOf(context).width >= 850)
+          Align(alignment: Alignment.centerLeft,
+            child: IconButton.ghost(
+              onPressed: () => setState(() {
+                _selectedArtist = null;
+                _selectedAlbumKey = null;
+              }),
+              icon: const Icon(LucideIcons.arrowLeft))),
         const SizedBox(height: 12),
         LayoutBuilder(builder: (context, bounds) {
           final artwork = ArtistArtwork(
