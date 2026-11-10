@@ -72,6 +72,8 @@ class TrackResult {
   final List<String> genres;
   /// Direct playable URL when the search source already provides one (e.g. iTunes preview).
   final String? previewUrl;
+  /// Public catalog URL, never an addon stream or private playback URL.
+  final String? shareUrl;
   /// Spotify track ID (22 base62 chars) for services like Spicy Lyrics.
   final String? spotifyTrackId;
   /// YouTube video ID from stream-capable addons (used for direct Spicy Lyrics lookup).
@@ -93,6 +95,7 @@ class TrackResult {
     this.isrc,
     this.genres = const [],
     this.previewUrl,
+    this.shareUrl,
     this.spotifyTrackId,
     this.videoId,
     required this.sourceId,
@@ -150,6 +153,8 @@ class TrackResult {
           ? (json['genres'] as List).whereType<String>().toList()
           : json['genre'] is String ? [json['genre'] as String] : const [],
       previewUrl: json['streamURL'] as String?,
+      shareUrl: json['shareUrl'] as String? ??
+          json['externalUrl'] as String?,
       spotifyTrackId: (spotifyTrackId ?? '').isEmpty ? null : spotifyTrackId,
       videoId: json['videoId'] as String?,
       sourceId: addonBaseUrl,
