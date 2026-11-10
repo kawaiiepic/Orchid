@@ -7,6 +7,7 @@ import '../services/addon_service.dart';
 import '../services/lyrics_appearance.dart';
 import '../services/orchid_account.dart';
 import '../services/player_service.dart';
+import '../services/orchid_audio_handler.dart';
 import '../services/music_library.dart';
 import 'library_screen.dart';
 import 'replay_screen.dart';
@@ -94,6 +95,7 @@ class _ShellScreenState extends State<ShellScreen>{
   _library.configure(_account);
   _addonService.configure(_account);
   _player=PlayerService(addonService:_addonService);
+  OrchidBackgroundAudio.attach(_player);
   _player.addListener(_trackChanged);
   _positionSubscription=_player.player.positionStream.listen(_positionChanged);
   LyricsAppearance.instance.load();
@@ -180,6 +182,7 @@ class _ShellScreenState extends State<ShellScreen>{
  @override void dispose(){
   _positionSubscription?.cancel();_player.removeListener(_trackChanged);
   _contentRevision.dispose();
+  OrchidBackgroundAudio.detach();
   _player.dispose();_library.dispose();_account.removeListener(_accountChanged);_account.dispose();super.dispose();
  }
  void _openProfile()=>_openSettings();
