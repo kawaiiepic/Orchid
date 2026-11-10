@@ -1,5 +1,6 @@
 import 'package:flutter/scheduler.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'orchid_style.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/lyrics_service.dart';
@@ -188,21 +189,12 @@ class _FloatingLyricsBubbleState extends State<_FloatingLyricsBubble>
           });
         },
         onPanEnd: (_) => widget.onOffset(_pos),
-        child: Container(
-          width: 268,
-          padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
-          decoration: BoxDecoration(
-            color: scheme.card.withValues(alpha: 0.94),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: scheme.border),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF000000).withValues(alpha: 0.35),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
+        child: OrchidGlassPanel(
+          radius: 14,
+          child: SizedBox(
+            width: 268,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
@@ -273,6 +265,8 @@ class _FloatingLyricsBubbleState extends State<_FloatingLyricsBubble>
                 ],
               ),
             ],
+              ),
+            ),
           ),
         ),
       ),
