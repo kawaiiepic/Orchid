@@ -12,6 +12,7 @@ import '../services/music_library.dart';
 import '../services/player_service.dart';
 import 'song_detail_screen.dart';
 import '../widgets/orchid_style.dart';
+import '../services/orchid_share.dart';
 import '../widgets/artist_artwork.dart';
 import '../widgets/song_context_menu.dart';
 import '../widgets/content_drawer.dart';
@@ -591,6 +592,17 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
                     ? 'Following' : 'Follow'),
                 ),
               ),
+              OrchidAdaptiveControls.button(
+                onPressed: () => OrchidShare.artist(widget.artist)
+                    .catchError((Object error) {
+                  debugPrint('[Orchid Share] Artist share failed: $error');
+                }),
+                child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(LucideIcons.share, size: 17),
+                  SizedBox(width: 7),
+                  Text('Share'),
+                ]),
+              ),
             ]),
           ),
           const SizedBox(height: 28),
@@ -849,6 +861,18 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
                     Icon(LucideIcons.radio, size: 17),
                     SizedBox(width: 8),
                     Text('Play Radio'),
+                  ]),
+                ),
+                OrchidAdaptiveControls.button(
+                  onPressed: () => OrchidShare.album(
+                    widget.collectionId, widget.artist, widget.album,
+                  ).catchError((Object error) {
+                    debugPrint('[Orchid Share] Album share failed: $error');
+                  }),
+                  child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(LucideIcons.share, size: 17),
+                    SizedBox(width: 8),
+                    Text('Share'),
                   ]),
                 ),
               ]),
