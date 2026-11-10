@@ -145,8 +145,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   Widget _artists() {
     final artists = _items('artists');
     if (artists.isEmpty) return const SizedBox.shrink();
+    final compact = MediaQuery.sizeOf(context).width < 850;
     return SizedBox(
-      height: 177,
+      height: compact ? 152 : 177,
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
@@ -160,16 +161,18 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                 player: widget.player, addonService: widget.addonService,
                 addons: widget.addons, library: widget.library),
               child: SizedBox(
-                width: 128,
+                width: compact ? 110 : 128,
                 child: Column(children: [
                   ClipOval(child: ArtistArtwork(
                     artist: (item['name'] ?? '').toString(),
                     fallbackUrl: item['image']?.toString(),
-                    size: 102, radius: 50, zoomOnHover: true)),
-                  const SizedBox(height: 9),
+                    size: compact ? 82 : 102,
+                    radius: compact ? 41 : 50, zoomOnHover: true)),
+                  SizedBox(height: compact ? 12 : 9),
                   Text((item['name'] ?? '').toString(),
                     textAlign: TextAlign.center,
-                    maxLines: 2, overflow: TextOverflow.ellipsis).small(),
+                    maxLines: 2, overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: compact ? 11 : 12)),
                 ]),
               ),
             ),
@@ -250,7 +253,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         const OrchidSectionHeader(title: 'Artists to Explore'),
         const SizedBox(height: 12),
         _artists(),
-        const SizedBox(height: 22),
+        SizedBox(height: MediaQuery.sizeOf(context).width < 850 ? 30 : 22),
         if (_items('featuredAlbums').isNotEmpty) ...[
           const OrchidSectionHeader(title: 'Featured Albums'),
           const SizedBox(height: 12),
