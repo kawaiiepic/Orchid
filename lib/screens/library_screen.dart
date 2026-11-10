@@ -199,9 +199,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final albums = _libraryAlbums();
     final playlists = widget.library.visiblePlaylists;
     final entries = <({String title, String count, IconData icon})>[
-      (title: 'Artists', count: '${artists.length}', icon: LucideIcons.mic2),
+      (title: 'Artists', count: '${artists.length}', icon: LucideIcons.users),
       (title: 'Songs', count: '${songs.length}', icon: LucideIcons.music2),
-      (title: 'Albums', count: '${albums.length}', icon: LucideIcons.disc3),
+      (title: 'Albums', count: '${albums.length}', icon: LucideIcons.library),
       (title: 'Playlists', count: '${playlists.length}', icon: LucideIcons.listMusic),
     ];
     return ListView(
@@ -482,7 +482,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 child: MediaQuery.sizeOf(context).width < 850 &&
                     _mobileSelecting && _mobileSection == 'Songs'
                   ? Icon(_mobileSelected.contains(_songSelectionKey(song))
-                        ? LucideIcons.checkCircle2
+                        ? LucideIcons.check
                         : LucideIcons.circle,
                       size: 20, color: OrchidStyle.pink)
                   : hovered
@@ -796,7 +796,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     if (_mobileSelecting && _mobileSection == 'Albums')
                       Positioned(top: 8, right: 8,
                         child: Icon(_mobileSelected.contains(entry.key)
-                            ? LucideIcons.checkCircle2 : LucideIcons.circle,
+                            ? LucideIcons.check : LucideIcons.circle,
                           color: OrchidStyle.pink, size: 23)),
                   ])),
                   const SizedBox(height: 8),
@@ -1033,7 +1033,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 const SizedBox(height: 8),
                 if (compact && _mobileSelecting && _mobileSection == 'Artists')
                   Icon(_mobileSelected.contains(artist)
-                      ? LucideIcons.checkCircle2 : LucideIcons.circle,
+                      ? LucideIcons.check : LucideIcons.circle,
                     size: 18, color: OrchidStyle.pink),
                 Text(artist, maxLines: 1,
                   overflow: TextOverflow.ellipsis,
