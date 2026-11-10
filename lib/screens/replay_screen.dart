@@ -168,7 +168,7 @@ class _ReplayScreenState extends State<ReplayScreen> {
       const SizedBox(height:6),
       const Text('Based on plays recorded by Orchid. Dates use UTC.').small().muted(),
       const SizedBox(height:18),
-      if(loading)const Center(child:CircularProgressIndicator())
+      if(loading)const Center(child:Text('Loading…'))
       else if(error!=null)...[
         Text(error!).small(),
         const SizedBox(height:10),
