@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/widgets.dart' show EditableText, FocusNode, TextInputAction, TextInputType;
+import 'package:flutter/widgets.dart' show EditableText, FocusNode, TextInputType;
 import 'package:flutter/services.dart' show TextEditingValue;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -558,7 +558,6 @@ class _SearchScreenState extends State<SearchScreen> {
                               selectionColor: const Color(0x665F4391),
                               maxLines: 1,
                               keyboardType: TextInputType.text,
-                              textInputAction: TextInputAction.search,
                               onChanged: _onQueryChanged,
                               onSubmitted: (_) => _search(),
                             ),
