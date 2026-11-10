@@ -22,7 +22,7 @@ class SongContextMenu extends StatefulWidget {
     required this.player,
     required this.library,
     this.openOnTap = false,
-    this.showMenuButton = false,
+    this.showMenuButton = true,
   });
 
   @override
@@ -31,6 +31,7 @@ class SongContextMenu extends StatefulWidget {
 
 class _SongContextMenuState extends State<SongContextMenu> {
   OverlayEntry? _entry;
+  bool _hovered = false;
 
   void _close() {
     _entry?.remove();
@@ -83,25 +84,36 @@ class _SongContextMenuState extends State<SongContextMenu> {
   }
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-    behavior: HitTestBehavior.opaque,
-    onSecondaryTapDown: (details) => _open(details.globalPosition),
-    onLongPressStart: (details) => _open(details.globalPosition),
-    onTap: widget.openOnTap ? _openBelowButton : null,
-    child: widget.showMenuButton
-      ? Stack(children: [
-          widget.child,
-          Positioned(
-            right: 0, top: 0, bottom: 0,
-            child: Center(
-              child: IconButton.ghost(
-                onPressed: _openBelowButton,
-                icon: const Icon(LucideIcons.ellipsis, size: 19),
+  Widget build(BuildContext context) => MouseRegion(
+    onEnter: (_) { if (mounted) setState(() => _hovered = true); },
+    onExit: (_) { if (mounted) setState(() => _hovered = false); },
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onSecondaryTapDown: (details) => _open(details.globalPosition),
+      onLongPressStart: (details) => _open(details.globalPosition),
+      onTap: widget.openOnTap ? _openBelowButton : null,
+      child: widget.showMenuButton
+        ? Stack(children: [
+            widget.child,
+            Positioned(
+              right: 0, top: 0, bottom: 0,
+              child: IgnorePointer(
+                ignoring: !_hovered,
+                child: AnimatedOpacity(
+                  opacity: _hovered ? 1 : 0,
+                  duration: const Duration(milliseconds: 140),
+                  child: Center(
+                    child: IconButton.ghost(
+                      onPressed: _openBelowButton,
+                      icon: const Icon(LucideIcons.ellipsis, size: 19),
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
-        ])
-      : widget.child,
+          ])
+        : widget.child,
+    ),
   );
 }
 
