@@ -109,7 +109,12 @@ class OrchidAudioHandler extends BaseAudioHandler {
     } else if (previous?.id != id || previous?.duration !=
         (player.duration ?? (track.duration == null
             ? null : Duration(seconds: track.duration!)))) {
-      mediaItem.add(_itemFor(track, actualDuration: player.duration));
+      final updated = _itemFor(track, actualDuration: player.duration);
+      // Preserve asynchronously loaded cover art when duration changes.
+      mediaItem.add(previous?.id == id && previous?.artUri != null &&
+              updated.artUri == null
+          ? updated.copyWith(artUri: previous!.artUri)
+          : updated);
       if (previous?.id != id && (track.artworkUrl == null ||
           track.artworkUrl!.trim().isEmpty)) {
         final generation = ++_artworkGeneration;
