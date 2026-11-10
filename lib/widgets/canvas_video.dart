@@ -13,8 +13,11 @@ class CanvasVideo extends StatefulWidget {
   final String url;
   final String? fallbackArtworkUrl;
   final VoidCallback? onFailure;
+  /// Fired after the video has actually rendered its first frame.
+  final VoidCallback? onReady;
   const CanvasVideo({
-    super.key, required this.url, this.fallbackArtworkUrl, this.onFailure,
+    super.key, required this.url, this.fallbackArtworkUrl,
+    this.onFailure, this.onReady,
   });
 
   @override
@@ -83,6 +86,11 @@ class _CanvasVideoState extends State<CanvasVideo> {
           .timeout(const Duration(seconds: 15));
       if (!mounted || generation != _generation || _failed) return;
       setState(() => _ready = true);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && generation == _generation && !_failed) {
+          widget.onReady?.call();
+        }
+      });
     } catch (e) {
       debugPrint('[Orchid Artwork] Video could not open: $e');
       if (mounted && generation == _generation) {
