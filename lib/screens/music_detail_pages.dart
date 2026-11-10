@@ -221,13 +221,45 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
         : MusicCatalogService.instance.appleArtist(widget.account!, widget.artist);
   }
 
-  void _playArtist(List<TrackResult> tracks, {bool radio = false}) {
+  void _playArtist(List<TrackResult> tracks) {
     if (tracks.isEmpty) return;
-    final queue = [...tracks];
-    if (radio) queue.shuffle();
+    widget.player.setAddons(widget.addons);
+    widget.player.playTrack(tracks.first, fromQueue: tracks).catchError(
+      (Object error) => debugPrint('[Orchid Artist] Play failed: $error'),
+    );
+  }
+
+  Future<void> _playArtistRadio(ArtistCatalog catalog) async {
+    final radio = [...catalog.songs];
+    // Include related artists where possible. If catalog lookups fail,
+    // the artist's available tracks still form a playable station.
+    if (catalog.similarArtists.isNotEmpty) {
+      try {
+        final related = await Future.wait(
+          catalog.similarArtists.take(3).map((artist) =>
+            MusicCatalogService.instance.searchTracks(artist)),
+        );
+        for (var i = 0; i < related.length; i++) {
+          final name = catalog.similarArtists[i].trim().toLowerCase();
+          radio.addAll(related[i].where((song) =>
+            song.artist.trim().toLowerCase() == name).take(5));
+        }
+      } catch (error) {
+        debugPrint('[Orchid Artist] Related tracks unavailable: $error');
+      }
+    }
+    if (radio.isEmpty) return;
+    final unique = <String, TrackResult>{};
+    for (final song in radio) {
+      unique.putIfAbsent(
+        '${song.artist.toLowerCase()}|${song.title.toLowerCase()}',
+        () => song);
+    }
+    final queue = unique.values.toList()..shuffle();
+    if (!mounted) return;
     widget.player.setAddons(widget.addons);
     widget.player.playTrack(queue.first, fromQueue: queue).catchError(
-      (Object error) => debugPrint('[Orchid Artist] Play failed: $error'),
+      (Object error) => debugPrint('[Orchid Artist] Radio failed: $error'),
     );
   }
 
@@ -410,8 +442,8 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
                 ]),
               ),
               OrchidAdaptiveControls.button(
-                onPressed: tracks.isEmpty ? null :
-                  () => _playArtist(tracks, radio: true),
+                onPressed: catalog == null || tracks.isEmpty ? null :
+                  () => _playArtistRadio(catalog),
                 child: const Row(mainAxisSize: MainAxisSize.min, children: [
                   Icon(LucideIcons.radio, size: 17),
                   SizedBox(width: 7),
