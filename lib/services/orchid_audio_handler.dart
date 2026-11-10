@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
-import 'package:just_audio/just_audio.dart' as ja;
+import 'orchid_audio_player.dart';
 
 import '../models/addon.dart';
 import 'player_service.dart';
@@ -16,7 +16,7 @@ class OrchidAudioHandler extends BaseAudioHandler {
   PlayerService? _service;
   int _artworkGeneration = 0;
   AudioSession? _session;
-  StreamSubscription<ja.PlayerState>? _playbackSubscription;
+  StreamSubscription<OrchidPlayerState>? _playbackSubscription;
   StreamSubscription<Duration>? _positionSubscription;
   StreamSubscription<Duration?>? _durationSubscription;
   StreamSubscription<Duration>? _bufferedSubscription;
@@ -136,11 +136,11 @@ class OrchidAudioHandler extends BaseAudioHandler {
       if (service.hasNext) MediaControl.skipToNext,
     ];
     final state = switch (player.processingState) {
-      ja.ProcessingState.idle => AudioProcessingState.idle,
-      ja.ProcessingState.loading => AudioProcessingState.loading,
-      ja.ProcessingState.buffering => AudioProcessingState.buffering,
-      ja.ProcessingState.ready => AudioProcessingState.ready,
-      ja.ProcessingState.completed => AudioProcessingState.completed,
+      OrchidProcessingState.idle => AudioProcessingState.idle,
+      OrchidProcessingState.loading => AudioProcessingState.loading,
+      OrchidProcessingState.buffering => AudioProcessingState.buffering,
+      OrchidProcessingState.ready => AudioProcessingState.ready,
+      OrchidProcessingState.completed => AudioProcessingState.completed,
     };
     playbackState.add(PlaybackState(
       controls: controls,
