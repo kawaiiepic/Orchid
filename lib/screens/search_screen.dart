@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import 'package:liquid_design/liquid_design.dart' as liquid;
 import '../widgets/orchid_adaptive_controls.dart';
 
 import '../models/addon.dart';
@@ -516,12 +515,26 @@ class _SearchScreenState extends State<SearchScreen> {
       Padding(
         padding:const EdgeInsets.fromLTRB(20,8,20,10),
         child:Row(children:[
-          Expanded(child:liquid.LiquidGlassSearchBar(
-            controller:_controller,
-            hintText:'Search music…',
-            onChanged:_onQueryChanged,
-            onSubmitted:(_)=>_search(),
-          )),
+          Expanded(
+            child: OrchidGlassPanel(
+              radius: 13,
+              transparentOnDesktop: false,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(children: [
+                  const Icon(LucideIcons.search,
+                    size: 18, color: OrchidStyle.lilac),
+                  const SizedBox(width: 10),
+                  Expanded(child: TextField(
+                    controller: _controller,
+                    placeholder: const Text('Search music…'),
+                    onChanged: _onQueryChanged,
+                    onSubmitted: (_) => _search(),
+                  )),
+                ]),
+              ),
+            ),
+          ),
           const SizedBox(width:8),
           OrchidAdaptiveControls.button(prominent: true, onPressed:_searching?null:_search,
             child:Text(_searching?'…':'Search')),
