@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'orchid_adaptive_controls.dart';
 
 import '../models/addon.dart';
 import '../services/player_service.dart';
@@ -67,7 +68,7 @@ class _QueueDrawerBody extends StatelessWidget {
                             .xSmall().muted(),
                       ],
                     )),
-                    OutlineButton(
+                    OrchidAdaptiveControls.button(
                       onPressed: () => player.setKeepPlaying(!player.keepPlaying),
                       child: Text(player.keepPlaying ? 'On' : 'Off'),
                     ),
