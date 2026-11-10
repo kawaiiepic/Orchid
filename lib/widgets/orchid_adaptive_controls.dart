@@ -27,17 +27,17 @@ abstract final class OrchidAdaptiveControls {
           style: prominent
               ? glass.GlassButtonStyle.prominent
               : glass.GlassButtonStyle.filled,
-          shape: const glass.LiquidRoundedSuperellipse(borderRadius: 12),
-          height: 40,
+          shape: const glass.LiquidRoundedSuperellipse(borderRadius: 10),
+          height: 36,
           stretch: 0.15,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             child: DefaultTextStyle.merge(
               style: TextStyle(
                 color: onPressed == null
                     ? const Color(0xFF9B8CAC)
                     : const Color(0xFFF8E9FF),
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: prominent ? FontWeight.w600 : FontWeight.w500,
               ),
               child: child,
@@ -56,19 +56,19 @@ abstract final class OrchidAdaptiveControls {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 170),
             curve: Curves.easeOutCubic,
-            constraints: const BoxConstraints(minHeight: 38),
+            constraints: const BoxConstraints(minHeight: 34),
             padding: const EdgeInsets.symmetric(
-              horizontal: 17, vertical: 10),
+              horizontal: 14, vertical: 7),
             decoration: BoxDecoration(
               color: prominent
                   ? const Color(0xE06D4C9F)
                   : const Color(0xB04A385F),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: DefaultTextStyle.merge(
               style: TextStyle(
-                fontSize: 13,
-                height: 1.25,
+                fontSize: 12,
+                height: 1.2,
                 fontWeight: prominent
                     ? FontWeight.w600
                     : FontWeight.w500,
