@@ -59,9 +59,19 @@ class _ShellScreenState extends State<ShellScreen>{
   }
   return false;
  }
+ String? _selectedPlaylistId;
+ void _selectPlaylist(String? id) {
+  setState(() {
+   _selectedPlaylistId = id;
+   selected = const ValueKey(4);
+   _initializedTabs.add(4);
+   _verticalScrollAccum = 0;
+  });
+ }
  void _selectTab(int index) {
   setState(() {
    selected=ValueKey(index);
+   if (index == 4) _selectedPlaylistId = null;
    _initializedTabs.add(index);
    _verticalScrollAccum=0;
   });
@@ -432,6 +442,8 @@ class _ShellScreenState extends State<ShellScreen>{
        addonService:_addonService,addons:_addons,
        openExplore:()=>_selectTab(3),
        playlistsOnly:true,
+       selectedPlaylistId:_selectedPlaylistId,
+       onPlaylistSelected:_selectPlaylist,
      ) else const SizedBox.shrink(),
      if(_initializedTabs.contains(5))
       _featurePage(ReplayScreen(account:_account),desktop)
@@ -497,6 +509,8 @@ class _ShellScreenState extends State<ShellScreen>{
             onSearch:()=>_selectTab(1),
             onDiscover:()=>_selectTab(3),
             onPlaylists:()=>_selectTab(4),
+            selectedPlaylistId:_selectedPlaylistId,
+            onPlaylistSelected:_selectPlaylist,
             onLibrary:()=>_selectTab(2),
             onReplay:()=>_selectTab(5),
             onRadio:()=>_selectTab(6),
