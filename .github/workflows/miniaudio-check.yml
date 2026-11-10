@@ -62,10 +62,6 @@ jobs:
   ios-build:
     runs-on: macos-latest
     timeout-minutes: 60
-    env:
-      CFLAGS_aarch64_apple_ios: "-x objective-c"
-      CFLAGS_aarch64_apple_ios_sim: "-x objective-c"
-      CFLAGS_x86_64_apple_ios: "-x objective-c"
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -75,6 +71,8 @@ jobs:
           cache: true
       - name: Resolve dependencies
         run: flutter pub get
+      - name: Apply miniaudio iOS native bridge patch
+        run: python3 scripts/patch_miniaudio_ios.py
       - name: Build unsigned iOS app with native compiler diagnostics
         shell: bash
         run: |
