@@ -144,14 +144,15 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
    artist: widget.artist,
    name: widget.title,
    fallbackUrl: widget.artworkUrl ?? widget.track?.artworkUrl,
-   size: 194,
-   radius: 16,
+   size: 148,
+   radius: 12,
+   zoomOnHover: false,
  );
 
  @override
- Widget build(BuildContext context) => Scaffold(
-   child:ListView(
-     padding:const EdgeInsets.fromLTRB(20,12,20,28),
+ Widget build(BuildContext context) => ListView(
+     padding: EdgeInsets.fromLTRB(24, 24, 30,
+       28 + (MediaQuery.sizeOf(context).width >= 850 ? 104 : 0)),
      children:[
        Align(
          alignment: Alignment.centerLeft,
@@ -192,14 +193,12 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
            ),
          ]),
        ),
-       const SizedBox(height:27),
+       const SizedBox(height:28),
        const OrchidSectionHeader(title:'About this song'),
-       OrchidGlassPanel(
-         radius:16,
-         transparentOnDesktop: false,
-         child:Padding(
-           padding:const EdgeInsets.all(15),
-           child:Column(
+       const SizedBox(height:12),
+       Padding(
+         padding:const EdgeInsets.symmetric(horizontal:2),
+         child:Column(
            crossAxisAlignment:CrossAxisAlignment.start,
            children:[
              const Text('Artist').small().muted(),
@@ -237,14 +236,14 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
                Text(widget.listenedAt!.toLocal().toString()).semiBold(),
              ],
              ],
-           ),
          ),
        ),
-       const SizedBox(height:26),
+       const SizedBox(height:28),
        const OrchidSectionHeader(
          title:'Playback sources',
          subtitle:'Find other versions and providers for this song',
        ),
+       const SizedBox(height:12),
        OrchidAdaptiveControls.button(
          onPressed:busy?null:find,
          child:Text(searching?'Finding versions…':'Find available versions'),
@@ -287,6 +286,5 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
          )),
        ],
      ],
-   ),
- );
+   );
 }
