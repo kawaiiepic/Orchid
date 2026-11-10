@@ -163,7 +163,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final desktop = bounds.maxWidth >= 850;
       final currentSection = desktop && _section == -1 ? 0 : _section;
       final content = ListView(
-      padding: EdgeInsets.fromLTRB(desktop ? 4 : 16, 0, desktop ? 18 : 16, desktop ? 100 : 110),
+      padding: EdgeInsets.fromLTRB(desktop ? 4 : 16,
+        desktop ? 0 : 12 + MediaQuery.paddingOf(context).top,
+        desktop ? 18 : 16,
+        desktop ? 100 : 20 + OrchidStyle.iosDockClearance(context)),
       children: [
         if (!desktop && _section == -1) ...[
           const Text('Settings').x2Large().semiBold(),
