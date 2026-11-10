@@ -496,9 +496,12 @@ class DesktopPlayerBar extends StatelessWidget {
                                     ),
                               ),
                               const SizedBox(width: 10),
-                              Expanded(child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              Flexible(
+                                fit: FlexFit.loose,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(track.title,
                                     maxLines: 1, overflow: TextOverflow.ellipsis,
@@ -527,9 +530,10 @@ class DesktopPlayerBar extends StatelessWidget {
                                         )),
                                     ),
                                   ),
-                                ],
-                              )),
-                              const SizedBox(width: 3),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 2),
                               ListenableBuilder(
                                 listenable: library,
                                 builder: (context, _) {
