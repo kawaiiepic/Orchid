@@ -197,6 +197,7 @@ class _SearchScreenState extends State<SearchScreen> {
           artworkUrl:item['image']?.toString(),
           duration:item['duration'] is num?(item['duration'] as num).toInt():null,
           previewUrl:item['previewUrl']?.toString(),
+          shareUrl:item['url']?.toString(),
           sourceId:'apple-music',sourceName:'Apple Music',
         ));
       }
@@ -522,6 +523,7 @@ class _SearchScreenState extends State<SearchScreen> {
     artworkUrl:item['image']?.toString(),
     duration:item['duration'] is num ? (item['duration'] as num).toInt() : null,
     previewUrl:item['previewUrl']?.toString(),
+    shareUrl:item['url']?.toString(),
     sourceId:'apple-music', sourceName:'Apple Music',
   );
 
