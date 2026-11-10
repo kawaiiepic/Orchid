@@ -151,11 +151,11 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
        if(widget.library!=null)
          Align(alignment:Alignment.centerRight,child:_libraryActions()),
        const SizedBox(height:12),
-       Container(
-         width:double.infinity,
-         padding:const EdgeInsets.all(20),
-         decoration:OrchidStyle.gradientDecoration(radius:22),
-         child:Column(
+       OrchidGlassPanel(
+         radius:22,
+         child:Padding(
+           padding:const EdgeInsets.all(20),
+           child:Column(
            crossAxisAlignment:CrossAxisAlignment.start,
            children:[
              Center(child:artwork()),
@@ -198,14 +198,16 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
                ),
              ]),
            ],
+           ),
          ),
        ),
        const SizedBox(height:27),
        const OrchidSectionHeader(title:'About this song'),
-       Container(
-         padding:const EdgeInsets.all(15),
-         decoration:OrchidStyle.panelDecoration(radius:16),
-         child:Column(
+       OrchidGlassPanel(
+         radius:16,
+         child:Padding(
+           padding:const EdgeInsets.all(15),
+           child:Column(
            crossAxisAlignment:CrossAxisAlignment.start,
            children:[
              const Text('Artist').small().muted(),
@@ -242,7 +244,8 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
                const SizedBox(height:5),
                Text(widget.listenedAt!.toLocal().toString()).semiBold(),
              ],
-           ],
+             ],
+           ),
          ),
        ),
        const SizedBox(height:26),
@@ -262,8 +265,8 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
          const SizedBox(height:12),
          ...matches.take(12).map((t)=>Padding(
            padding:const EdgeInsets.only(bottom:7),
-           child:Container(
-             decoration:OrchidStyle.panelDecoration(radius:14),
+           child:OrchidGlassPanel(
+             radius:14,
              child:Row(children:[
                Expanded(child:Button(
                  style:const ButtonStyle.ghost(),
