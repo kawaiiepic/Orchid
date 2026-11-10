@@ -484,7 +484,6 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
   // iOS-style mobile now playing. Desktop retains the original player.
   Widget _mobileNowPlaying(BuildContext context) {
     final track = widget.player.current;
-    final media = MediaQuery.sizeOf(context);
     const foreground = Color(0xFFF9F5F8);
     const secondary = Color(0xD9F0E7EE);
     return Scaffold(
@@ -762,7 +761,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
           Text(_fmt(position), style: const TextStyle(
             color: Color(0xCCFFFFFF), fontSize: 12)),
           Text('-${_fmt(Duration(milliseconds:
-              (maxMs - position.inMilliseconds).clamp(0, maxMs))) }',
+              (maxMs - position.inMilliseconds).clamp(0, maxMs).toInt()))}',
               style: const TextStyle(
                 color: Color(0xCCFFFFFF), fontSize: 12)),
         ]),
