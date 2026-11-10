@@ -391,6 +391,10 @@ class _ShellScreenState extends State<ShellScreen>{
   final desktop=(kIsWeb || (defaultTargetPlatform!=TargetPlatform.iOS
     && defaultTargetPlatform!=TargetPlatform.android))
     && MediaQuery.sizeOf(context).width>=850;
+  final mobileDock = !kIsWeb && (
+    defaultTargetPlatform == TargetPlatform.iOS ||
+    defaultTargetPlatform == TargetPlatform.android);
+
   final browsing=NotificationListener<ScrollNotification>(
     onNotification:_onContentScroll,
     child:IndexedStack(
@@ -518,7 +522,7 @@ class _ShellScreenState extends State<ShellScreen>{
 
   return Scaffold(
    footers:[
-    if(kIsWeb || defaultTargetPlatform!=TargetPlatform.iOS) ...[
+    if(!mobileDock) ...[
      MiniPlayerBar(player:_player,library:_library),
      const Divider(),
      SafeArea(
@@ -541,7 +545,7 @@ class _ShellScreenState extends State<ShellScreen>{
    ],
    child:Stack(children:[
     browsing,
-    if(!kIsWeb && defaultTargetPlatform==TargetPlatform.iOS)
+    if(mobileDock)
       _iosFloatingDock(page),
    ]),
   );
