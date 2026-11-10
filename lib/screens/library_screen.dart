@@ -135,7 +135,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }) => SizedBox(
     height: 62,
     child: Row(children: [
-      OrchidBackButton(onPressed: _mobileBack),
+      SizedBox(
+        width: 76,
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: OrchidBackButton(onPressed: _mobileBack),
+        ),
+      ),
       Expanded(child: Text(title,
         textAlign: TextAlign.center,
         maxLines: 1,
@@ -145,11 +151,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
           fontSize: 19, fontWeight: FontWeight.w700,
         ))),
       SizedBox(
-        width: 48,
-        child: Center(child: _mobileTopButton(
-          onTap: action,
-          child: actionChild,
-        )),
+        width: 76,
+        child: Align(
+          alignment: Alignment.centerRight,
+          child: _mobileTopButton(
+            onTap: action,
+            child: actionChild,
+          ),
+        ),
       ),
     ]),
   );
