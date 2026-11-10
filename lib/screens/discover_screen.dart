@@ -228,7 +228,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   @override
   Widget build(BuildContext context) => ListView(
     padding: EdgeInsets.fromLTRB(28, 22, 30,
-      MediaQuery.sizeOf(context).width >= 850 ? 136 : 30),
+      MediaQuery.sizeOf(context).width >= 850
+          ? 136 : 24 + OrchidStyle.iosDockClearance(context)),
     children: [
       widget.header,
       const OrchidHero(
