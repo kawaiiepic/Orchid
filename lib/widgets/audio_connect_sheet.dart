@@ -1,14 +1,12 @@
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform, debugPrint;
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 import '../services/orchid_connect.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import '../services/player_service.dart';
 import 'content_drawer.dart';
 
-/// Device output and local sound options. Remote-session handoff is only
-/// possible once Orchid provides a real shared playback/session backend.
+/// Device outputs, Orchid Connect handoff and shared listening controls.
 void showAudioConnectSheet(BuildContext context, PlayerService player) {
   showOrchidActionDrawer(
     context,
@@ -262,10 +260,14 @@ class _AudioConnectSheetState extends State<_AudioConnectSheet> {
         ),
         const Divider(),
         _tile(LucideIcons.smartphone, 'This device',
-          'Currently playing locally',
+          widget.player.player.playing?'Currently playing':'Ready to play',
           subtitleColor: const Color(0xFFE35C9B),
           trailing: const Icon(LucideIcons.volume2,
             color: Color(0xFFE35C9B), size: 20)),
+        if(OrchidConnect.active!=null)
+          _connectContent(OrchidConnect.active!)
+        else _tile(LucideIcons.monitor,'Orchid Connect',
+          'Session service not ready'),
         _section('AirPlay & Bluetooth'),
         if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)
           Padding(
@@ -287,10 +289,6 @@ class _AudioConnectSheetState extends State<_AudioConnectSheet> {
             onTap: _openSystemAudioSettings,
             trailing: const Icon(LucideIcons.chevronRight,
               color: Color(0xFF99999F))),
-        if(OrchidConnect.active!=null)
-          _connectContent(OrchidConnect.active!)
-        else _tile(LucideIcons.monitor,'Orchid Connect',
-          'Session service not ready'),
         _section('Network Speakers'),
         _tile(LucideIcons.speaker,'Network speakers',
           kIsWeb?'Not supported in the web player':
