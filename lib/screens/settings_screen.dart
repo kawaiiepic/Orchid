@@ -7,7 +7,6 @@ import '../services/addon_service.dart';
 import '../services/lyrics_appearance.dart';
 import '../services/orchid_account.dart';
 import 'profile_screen.dart';
-import '../widgets/orchid_adaptive_controls.dart';
 import '../widgets/orchid_style.dart';
 
 class SettingsScreen extends StatefulWidget {
