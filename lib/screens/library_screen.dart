@@ -432,7 +432,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
             aspectRatio: 1,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(11),
-              child: _playlistArtwork(songs, favorite: favorite)),
+              child: OrchidHoverZoom(
+                child: _playlistArtwork(songs, favorite: favorite))),
           ),
           const SizedBox(height: 8),
           Text(name, maxLines: 1, overflow: TextOverflow.ellipsis).semiBold(),
@@ -510,7 +511,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         isAlbum: true,
                         fallbackUrl: song.artwork,
                         size: size.maxWidth,
-                        radius: 0),
+                        radius: 0, zoomOnHover: true),
                     ),
                   )),
                   const SizedBox(height: 8),
@@ -728,7 +729,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       ? bounds.maxWidth : bounds.maxHeight;
                   return Center(child: ClipOval(
                     child: ArtistArtwork(artist: artist, size: diameter,
-                      radius: diameter / 2),
+                      radius: diameter / 2, zoomOnHover: true),
                   ));
                 })),
                 const SizedBox(height: 8),
@@ -792,8 +793,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 aspectRatio: 1,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(11),
-                  child: ColoredBox(
-                    color: const Color(0xFF362843),
+                  child: OrchidHoverZoom(
+                    child: ColoredBox(
+                      color: const Color(0xFF362843),
                     child: Center(child: LayoutBuilder(
                       builder: (context, bounds) => Icon(
                         LucideIcons.folder,
@@ -801,6 +803,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         color: OrchidStyle.lilac,
                       ),
                     )),
+                    ),
                   ),
                 ),
               ),
