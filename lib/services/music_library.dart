@@ -174,6 +174,7 @@ class MusicLibrary extends ChangeNotifier {
   int _revision = 0;
   int _loadGeneration = 0;
   Future<void> _pendingSave = Future<void>.value();
+  Map<String, dynamic> _syncedSnapshot = const {};
 
   void configure(OrchidAccount account) => _client = account;
 
@@ -188,6 +189,7 @@ class MusicLibrary extends ChangeNotifier {
     savedArtists.clear();
     savedPlaylistIds.clear();
     _revision = 0;
+    _syncedSnapshot = const {};
     loaded = false;
     _needsLibraryMigration = false;
     notifyListeners();
@@ -203,6 +205,8 @@ class MusicLibrary extends ChangeNotifier {
       final raw = response['library'];
       if (raw is Map) {
         final data = Map<String, dynamic>.from(raw);
+        // Baseline for three-way merges when another device writes first.
+        _syncedSnapshot = _deepCopy(data);
         favorites.addAll((data['favorites'] as List? ?? [])
             .whereType<Map>()
             .map((s) => SavedSong.fromJson(Map<String, dynamic>.from(s))));
@@ -250,28 +254,214 @@ class MusicLibrary extends ChangeNotifier {
     }
   }
 
+  Map<String, dynamic> _deepCopy(Map<String, dynamic> map) =>
+      Map<String, dynamic>.from(
+        Map<String, dynamic>.from(_copyValue(map)));
+
+  dynamic _copyValue(dynamic value) {
+    if (value is Map) {
+      return value.map((key, item) =>
+        MapEntry(key.toString(), _copyValue(item)));
+    }
+    if (value is List) return value.map(_copyValue).toList();
+    return value;
+  }
+
+  bool _same(dynamic a, dynamic b) =>
+      _valueSignature(a) == _valueSignature(b);
+
+  String _valueSignature(dynamic value) {
+    if (value is Map) {
+      final keys = value.keys.map((key) => key.toString()).toList()..sort();
+      return '{${keys.map((key) => '$key:${_valueSignature(value[key])}').join(',')}}';
+    }
+    if (value is List) return '[${value.map(_valueSignature).join(',')}]';
+    return '${value.runtimeType}:$value';
+  }
+
+  Map<String, dynamic> _snapshot() => {
+    'favorites': favorites.map((v) => v.toJson()).toList(),
+    'playlists': playlists.map((v) => v.toJson()).toList(),
+    'playlistFolders': playlistFolders.map((v) => v.toJson()).toList(),
+    'savedArtists': Map<String, String?>.from(savedArtists),
+    'savedPlaylistIds': savedPlaylistIds.toList(),
+  };
+
+  List<dynamic> _mergeList(
+    dynamic baseRaw, dynamic localRaw, dynamic remoteRaw,
+    String Function(Map<String, dynamic>) keyOf,
+    {bool mergePlaylistContents = false},
+  ) {
+    List<Map<String, dynamic>> unpack(dynamic raw) => raw is List
+        ? raw.whereType<Map>().map((item) =>
+            Map<String, dynamic>.from(item)).toList()
+        : <Map<String, dynamic>>[];
+    final base = unpack(baseRaw);
+    final local = unpack(localRaw);
+    final remote = unpack(remoteRaw);
+    final baseMap = {for (final x in base) keyOf(x): x};
+    final localMap = {for (final x in local) keyOf(x): x};
+    final remoteMap = {for (final x in remote) keyOf(x): x};
+    final merged = <String, Map<String, dynamic>>{};
+    for (final item in remote) {
+      final id = keyOf(item);
+      final previous = baseMap[id];
+      final changed = localMap[id];
+      if (previous != null && changed == null) continue; // locally deleted
+      if (changed == null || _same(previous, changed)) {
+        merged[id] = item; // remote changed, local did not
+      } else if (previous == null || !mergePlaylistContents) {
+        merged[id] = changed;
+      } else {
+        final updated = Map<String, dynamic>.from(item);
+        for (final field in changed.keys) {
+          if (!_same(previous[field], changed[field])) {
+            updated[field] = field == 'songs'
+                ? _mergeList(previous[field], changed[field], item[field],
+                    (song) => '${song['artist']?.toString().toLowerCase()}|'
+                        '${song['title']?.toString().toLowerCase()}')
+                : changed[field];
+          }
+        }
+        merged[id] = updated;
+      }
+    }
+    for (final item in local) {
+      final id = keyOf(item);
+      if (!remoteMap.containsKey(id) && !baseMap.containsKey(id)) {
+        merged[id] = item;
+      }
+    }
+    final localOrder = local.map(keyOf).toList();
+    final baseOrder = base.map(keyOf).toList();
+    final orderChanged = !_same(
+      localOrder.where(baseMap.containsKey).toList(),
+      baseOrder.where(localMap.containsKey).toList(),
+    );
+    final order = orderChanged
+        ? [...localOrder, ...remote.map(keyOf)]
+        : [...remote.map(keyOf), ...localOrder];
+    final seen = <String>{};
+    return [
+      for (final id in order)
+        if (merged.containsKey(id) && seen.add(id)) merged[id]!,
+    ];
+  }
+
+  Map<String, dynamic> _mergeConflict(
+    Map<String, dynamic> baseline, Map<String, dynamic> local,
+    Map<String, dynamic> remote,
+  ) {
+    final merged = _deepCopy(remote);
+    merged['playlists'] = _mergeList(
+      baseline['playlists'], local['playlists'], remote['playlists'],
+      (item) => item['id'].toString(),
+      mergePlaylistContents: true,
+    );
+    merged['playlistFolders'] = _mergeList(
+      baseline['playlistFolders'], local['playlistFolders'],
+      remote['playlistFolders'], (item) => item['id'].toString(),
+    );
+    merged['favorites'] = _mergeList(
+      baseline['favorites'], local['favorites'], remote['favorites'],
+      (item) => '${item['artist']?.toString().toLowerCase()}|'
+          '${item['title']?.toString().toLowerCase()}',
+    );
+    final baseArtists = baseline['savedArtists'] is Map
+        ? Map<String, dynamic>.from(baseline['savedArtists'] as Map)
+        : <String, dynamic>{};
+    final localArtists = local['savedArtists'] is Map
+        ? Map<String, dynamic>.from(local['savedArtists'] as Map)
+        : <String, dynamic>{};
+    final remoteArtists = remote['savedArtists'] is Map
+        ? Map<String, dynamic>.from(remote['savedArtists'] as Map)
+        : <String, dynamic>{};
+    for (final key in {...baseArtists.keys, ...localArtists.keys}) {
+      if (_same(baseArtists[key], localArtists[key]) &&
+          baseArtists.containsKey(key) == localArtists.containsKey(key)) {
+        continue;
+      }
+      if (localArtists.containsKey(key)) {
+        remoteArtists[key] = localArtists[key];
+      } else {
+        remoteArtists.remove(key);
+      }
+    }
+    merged['savedArtists'] = remoteArtists;
+    final baseSaved = (baseline['savedPlaylistIds'] as List? ?? []).toSet();
+    final localSaved = (local['savedPlaylistIds'] as List? ?? []).toSet();
+    final remoteSaved = (remote['savedPlaylistIds'] as List? ?? []).toSet();
+    remoteSaved.removeAll(baseSaved.difference(localSaved));
+    remoteSaved.addAll(localSaved.difference(baseSaved));
+    merged['savedPlaylistIds'] = remoteSaved.toList();
+    return merged;
+  }
+
+  void _applySynced(Map<String, dynamic> snapshot) {
+    favorites
+      ..clear()
+      ..addAll((snapshot['favorites'] as List? ?? [])
+          .whereType<Map>().map((item) => SavedSong.fromJson(
+            Map<String, dynamic>.from(item))));
+    playlists
+      ..clear()
+      ..addAll((snapshot['playlists'] as List? ?? [])
+          .whereType<Map>().map((item) => MusicPlaylist.fromJson(
+            Map<String, dynamic>.from(item))));
+    playlistFolders
+      ..clear()
+      ..addAll((snapshot['playlistFolders'] as List? ?? [])
+          .whereType<Map>().map((item) => PlaylistFolder.fromJson(
+            Map<String, dynamic>.from(item))));
+    savedArtists
+      ..clear()
+      ..addAll((snapshot['savedArtists'] as Map? ?? {})
+          .map((key, value) => MapEntry(key.toString(), value?.toString())));
+    savedPlaylistIds
+      ..clear()
+      ..addAll((snapshot['savedPlaylistIds'] as List? ?? [])
+          .map((value) => value.toString()));
+    notifyListeners();
+  }
+
   Future<void> _save() async {
     final account = _account;
     final api = _client;
     notifyListeners();
     if (account == null || api == null || !loaded) return;
-    final snapshot = <String, dynamic>{
-      'favorites': favorites.map((v) => v.toJson()).toList(),
-      'playlists': playlists.map((v) => v.toJson()).toList(),
-      'playlistFolders': playlistFolders.map((v) => v.toJson()).toList(),
-      'savedArtists': savedArtists,
-      'savedPlaylistIds': savedPlaylistIds.toList(),
-    };
     final generation = _loadGeneration;
     final previous = _pendingSave;
     final done = Completer<void>();
     _pendingSave = done.future;
     try {
-      await previous.catchError((Object _) {});
+      await previous;
       if (_account != account || generation != _loadGeneration) return;
-      final result = await api.saveLibrary(snapshot, _revision);
-      if (_account == account && generation == _loadGeneration) {
-        _revision = (result['revision'] as num?)?.toInt() ?? _revision + 1;
+      // Snapshot AFTER waiting: queued writes must include earlier mutations.
+      var snapshot = _deepCopy(_snapshot());
+      var mergedRemote = false;
+      for (var attempt = 0; attempt < 3; attempt++) {
+        try {
+          final result = await api.saveLibrary(snapshot, _revision);
+          if (_account == account && generation == _loadGeneration) {
+            _revision = (result['revision'] as num?)?.toInt() ?? _revision + 1;
+            _syncedSnapshot = _deepCopy(snapshot);
+            if (mergedRemote) _applySynced(snapshot);
+          }
+          return;
+        } on OrchidAuthException catch (error) {
+          final conflict = error.status == 409 ||
+              error.message.contains('Library changed on another device');
+          if (!conflict || attempt == 2) rethrow;
+          final latest = await api.loadLibrary();
+          if (_account != account || generation != _loadGeneration) return;
+          final remote = latest['library'] is Map
+              ? Map<String, dynamic>.from(latest['library'] as Map)
+              : <String, dynamic>{};
+          snapshot = _mergeConflict(_syncedSnapshot, _snapshot(), remote);
+          _revision = (latest['revision'] as num?)?.toInt() ?? _revision;
+          mergedRemote = true;
+          debugPrint('[Orchid Library] Merged concurrent library changes; retrying sync');
+        }
       }
     } catch (error) {
       debugPrint('[Orchid Library] Could not sync account library: $error');
@@ -380,6 +570,19 @@ class MusicLibrary extends ChangeNotifier {
     for (final song in unique.values) {
       _includeInLibrary(song);
     }
+    await _save();
+    return playlist;
+  }
+
+  Future<MusicPlaylist> createPlaylistWithSong(
+      String name, SavedSong song) async {
+    final playlist = MusicPlaylist(
+      id: '${DateTime.now().microsecondsSinceEpoch}_${_counter++}',
+      name: name.trim(),
+      songs: [song],
+    );
+    playlists.add(playlist);
+    _includeInLibrary(song);
     await _save();
     return playlist;
   }
