@@ -124,7 +124,7 @@ class _ShellScreenState extends State<ShellScreen>{
   final track=_player.current;
   if(track!=null){
    _library.recordPlay(SavedSong(track.title,track.artist,
-    album:track.album,artwork:track.artworkUrl));
+    album:track.album,artwork:track.artworkUrl,duration:track.duration));
    // Once playback starts, publish the currently playing track.
    void send() async{
     if(!_player.player.playing||!_account.lastfmConnected)return;
