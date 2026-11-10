@@ -408,7 +408,7 @@ class _ShellScreenState extends State<ShellScreen>{
   final browsing=NotificationListener<ScrollNotification>(
     onNotification:_onContentScroll,
     child:IndexedStack(
-      index:page.clamp(0,2),
+      index:page.clamp(0,4),
       children:[
      OrchidHomeScreen(
       header:desktop ? _desktopGreeting() : _topBar(context),
