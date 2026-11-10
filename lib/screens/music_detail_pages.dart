@@ -182,12 +182,14 @@ Widget _musicHeader(BuildContext context, {
   required String eyebrow,
   required String title,
   required String subtitle,
+  Widget? subtitleContent,
   required Widget artwork,
   required Widget actions,
 }) => OrchidDetailHeader(
   eyebrow: eyebrow,
   title: title,
   subtitle: subtitle,
+  subtitleContent: subtitleContent,
   artwork: artwork,
   actions: actions,
 );
@@ -679,6 +681,7 @@ class AlbumDetailPage extends StatefulWidget {
 
 class _AlbumDetailPageState extends State<AlbumDetailPage> {
   late Future<List<TrackResult>> _tracks;
+  late Future<ArtistCatalog> _otherReleases;
   @override
   void initState() {
     super.initState();
@@ -767,26 +770,72 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
             _musicHeader(context,
               eyebrow:'Album',
               title:widget.album,
-              subtitle:'${widget.artist} · ${tracks.length} tracks'
-                '${_catalogDuration(tracks).isNotEmpty ? ' · ${_catalogDuration(tracks)}' : ''}',
+              subtitle: widget.artist,
+              subtitleContent: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 5,
+                runSpacing: 4,
+                children: [
+                  MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => openArtistPage(context,
+                        artist: widget.artist,
+                        player: widget.player,
+                        addonService: widget.addonService,
+                        addons: widget.addons,
+                        library: widget.library),
+                      child: Text(widget.artist, style: const TextStyle(
+                        color: Color(0xFFE4D2FA),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      )),
+                    ),
+                  ),
+                  Text('· ${tracks.length} tracks'
+                    '${_catalogDuration(tracks).isNotEmpty ? ' · ${_catalogDuration(tracks)}' : ''}',
+                    style: const TextStyle(
+                      color: Color(0xFFB7ABCA), fontSize: 13)),
+                ],
+              ),
               artwork:_cover(context,
                 widget.artwork ?? (tracks.isNotEmpty ? tracks.first.artworkUrl:null),
                 size:148),
-              actions:Column(
-                crossAxisAlignment:CrossAxisAlignment.start,
-                children:[
-                  _catalogActions(tracks:tracks,player:widget.player,
-                    addons:widget.addons),
-                  const SizedBox(height:12),
-                  GhostButton(
-                    onPressed:()=>openArtistPage(context,
-                      artist:widget.artist,player:widget.player,
-                      addonService:widget.addonService,addons:widget.addons,
-                      library:widget.library),
-                    child:const Text('View artist'),
-                  ),
-                ],
-              ),
+              actions: Wrap(spacing: 10, runSpacing: 10, children: [
+                OrchidAdaptiveControls.button(
+                  prominent: true,
+                  onPressed: tracks.isEmpty ? null : () {
+                    widget.player.setAddons(widget.addons);
+                    widget.player.playTrack(
+                      tracks.first, fromQueue: tracks,
+                    ).catchError((Object error) {
+                      debugPrint('[Orchid Album] Playback failed: $error');
+                    });
+                  },
+                  child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(LucideIcons.play, size: 17),
+                    SizedBox(width: 8),
+                    Text('Play'),
+                  ]),
+                ),
+                OrchidAdaptiveControls.button(
+                  onPressed: tracks.isEmpty ? null : () {
+                    final queue = [...tracks]..shuffle();
+                    widget.player.setAddons(widget.addons);
+                    widget.player.playTrack(
+                      queue.first, fromQueue: queue,
+                    ).catchError((Object error) {
+                      debugPrint('[Orchid Album] Radio failed: $error');
+                    });
+                  },
+                  child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(LucideIcons.radio, size: 17),
+                    SizedBox(width: 8),
+                    Text('Play Radio'),
+                  ]),
+                ),
+              ]),
             ),
             const SizedBox(height:28),
             if (snapshot.connectionState != ConnectionState.done)
