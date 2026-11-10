@@ -135,11 +135,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }) => SizedBox(
     height: 62,
     child: Row(children: [
-      _mobileTopButton(
-        onTap: _mobileBack,
-        child: const Icon(LucideIcons.chevronLeft, size: 24,
-          color: Color(0xFFF5EDFF)),
-      ),
+      OrchidBackButton(onPressed: _mobileBack),
       Expanded(child: Text(title,
         textAlign: TextAlign.center,
         maxLines: 1,
@@ -148,9 +144,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
           color: Color(0xFFF8F1FF),
           fontSize: 19, fontWeight: FontWeight.w700,
         ))),
-      _mobileTopButton(
-        onTap: action,
-        child: actionChild,
+      SizedBox(
+        width: 48,
+        child: Center(child: _mobileTopButton(
+          onTap: action,
+          child: actionChild,
+        )),
       ),
     ]),
   );
