@@ -130,8 +130,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
   );
 
   Widget _mobilePageHeader(String title, {
-    VoidCallback? action,
-    Widget? actionChild,
+    required VoidCallback action,
+    required Widget actionChild,
   }) => SizedBox(
     height: 62,
     child: Row(children: [
@@ -149,8 +149,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
           fontSize: 19, fontWeight: FontWeight.w700,
         ))),
       _mobileTopButton(
-        onTap: action ?? () {},
-        child: actionChild ?? const SizedBox.shrink(),
+        onTap: action,
+        child: actionChild,
       ),
     ]),
   );
@@ -1291,29 +1291,54 @@ class _LibraryScreenState extends State<LibraryScreen> {
           (MediaQuery.sizeOf(context).width >= 850 ? 104 : 0)),
         children: [
           widget.header,
-          if (mobile && !widget.playlistsOnly)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 18),
-              child: Align(alignment: Alignment.centerLeft,
-                child: OrchidAdaptiveControls.button(
-                  onPressed: () {
-                    if (_selectedAlbumKey != null) {
-                      setState(() => _selectedAlbumKey = null);
-                    } else if (_selectedArtist != null) {
-                      setState(() => _selectedArtist = null);
-                    } else if (_mobilePlaylistId != null) {
-                      _selectMobilePlaylist(null);
-                    } else {
-                      setState(() => _mobileSection = null);
-                    }
-                  },
-                  child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(LucideIcons.arrowLeft, size: 16),
-                    SizedBox(width: 8), Text('Library'),
-                  ]),
-                ),
-              ),
+          if (mobile && !widget.playlistsOnly) ...[
+            _mobilePageHeader(
+              _mobilePlaylistId != null
+                  ? selectedTitle
+                  : _selectedAlbumKey != null
+                      ? (activeAlbumSongs?.first.album ?? 'Album')
+                      : activeArtist ?? (_playlistFolderId != null
+                          ? widget.library.playlistFolders
+                              .where((folder) => folder.id == _playlistFolderId)
+                              .map((folder) => folder.name)
+                              .firstOrNull ?? 'Folder'
+                          : _mobileSection ?? 'Library'),
+              action: () {
+                if (_mobilePlaylistId != null) {
+                  if (selectedSongs.isNotEmpty) _playCollection(selectedSongs);
+                } else if (_selectedAlbumKey != null) {
+                  if (activeAlbumSongs != null) _playCollection(activeAlbumSongs);
+                } else if (activeArtist != null) {
+                  widget.library.toggleArtistSaved(activeArtist);
+                } else if (showingPlaylists) {
+                  _newPlaylist();
+                } else {
+                  setState(() {
+                    _mobileSelecting = !_mobileSelecting;
+                    _mobileSelected.clear();
+                  });
+                }
+              },
+              actionChild: _mobilePlaylistId != null ||
+                           _selectedAlbumKey != null
+                  ? const Icon(LucideIcons.play, size: 21,
+                      color: OrchidStyle.pink)
+                  : activeArtist != null
+                      ? Icon(widget.library.isArtistSaved(activeArtist)
+                          ? LucideIcons.check : LucideIcons.plus,
+                          size: 21, color: OrchidStyle.pink)
+                      : showingPlaylists
+                          ? const Icon(LucideIcons.plus, size: 24,
+                              color: OrchidStyle.pink)
+                          : Text(_mobileSelecting ? 'Done' : 'Select',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: OrchidStyle.pink,
+                                fontWeight: FontWeight.w600)),
             ),
+            const SizedBox(height: 20),
+            _mobileSelectionBar(albums),
+          ],
           if (!showingPlaylists) ...[
             if (activeAlbumSongs != null &&
                 (_view == 'Albums' || _view == 'Artists' &&
@@ -1322,7 +1347,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ] else if (_view == 'Artists' && activeArtist != null) ...[
               _savedArtistDetail(activeArtist, artistSongs, albums),
             ] else ...[
-              OrchidSectionHeader(title: mobile ? _view : 'Library'),
+              if (!mobile) const OrchidSectionHeader(title: 'Library'),
               const SizedBox(height: 8),
               Text(mobile
                 ? switch (_view) {
@@ -1424,9 +1449,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
             const SizedBox(height: 18),
             _songList(selectedSongs, playlist: activePlaylist),
           ] else ...[
-            const OrchidSectionHeader(title: 'Playlists'),
+            if (!mobile) const OrchidSectionHeader(title: 'Playlists'),
             const SizedBox(height: 16),
-            _playlistsToolbar(),
+            if (!mobile) _playlistsToolbar(),
             const SizedBox(height: 20),
             _playlistsGrid(playlists),
           ],
