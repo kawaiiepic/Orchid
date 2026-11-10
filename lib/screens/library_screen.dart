@@ -46,6 +46,7 @@ class LibraryScreen extends StatefulWidget {
 class _LibraryScreenState extends State<LibraryScreen> {
   final _queryController = TextEditingController();
   String _view = 'Songs';
+  String? _selectedAlbumKey;
 
   @override
   void dispose() {
@@ -288,6 +289,147 @@ class _LibraryScreenState extends State<LibraryScreen> {
     ),
   );
 
+
+  /// Album identity includes the artist so same-titled albums stay separate.
+  String _albumKey(SavedSong song) =>
+      '${song.artist.trim().toLowerCase()}|'
+      '${(song.album ?? '').trim().toLowerCase()}';
+
+  Map<String, List<SavedSong>> _libraryAlbums() {
+    final groups = <String, List<SavedSong>>{};
+    for (final song in widget.library.librarySongs) {
+      if (song.album?.trim().isNotEmpty != true) continue;
+      groups.putIfAbsent(_albumKey(song), () => []).add(song);
+    }
+    return groups;
+  }
+
+  Widget _albumsGrid(Map<String, List<SavedSong>> albums) {
+    final query = _queryController.text.trim().toLowerCase();
+    final entries = albums.entries.where((entry) {
+      final song = entry.value.first;
+      return query.isEmpty ||
+          song.album!.toLowerCase().contains(query) ||
+          song.artist.toLowerCase().contains(query) ||
+          entry.value.any((track) => track.title.toLowerCase().contains(query));
+    }).toList()
+      ..sort((a, b) {
+        final first = a.value.first;
+        final second = b.value.first;
+        final compare = first.album!.toLowerCase().compareTo(
+          second.album!.toLowerCase());
+        return compare != 0 ? compare :
+          first.artist.toLowerCase().compareTo(second.artist.toLowerCase());
+      });
+
+    if (entries.isEmpty) return const Text('No saved albums found.').muted();
+    return LayoutBuilder(builder: (context, constraints) {
+      const gap = 12.0;
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: entries.length,
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 210,
+          crossAxisSpacing: gap,
+          mainAxisSpacing: 18,
+          childAspectRatio: .78,
+        ),
+        itemBuilder: (context, index) {
+          final entry = entries[index];
+          final song = entry.value.first;
+          return MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => setState(() => _selectedAlbumKey = entry.key),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: LayoutBuilder(builder: (context, size) =>
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: AppleCover(
+                        artist: song.artist,
+                        name: song.album!,
+                        isAlbum: true,
+                        fallbackUrl: song.artwork,
+                        size: size.maxWidth,
+                        radius: 0),
+                    ),
+                  )),
+                  const SizedBox(height: 8),
+                  Text(song.album!, maxLines: 1,
+                    overflow: TextOverflow.ellipsis).semiBold(),
+                  const SizedBox(height: 3),
+                  Text(song.artist, maxLines: 1,
+                    overflow: TextOverflow.ellipsis).small().muted(),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    });
+  }
+
+  Widget _savedAlbumDetail(List<SavedSong> songs) {
+    final album = songs.first;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Align(alignment: Alignment.centerLeft,
+          child: IconButton.ghost(
+            onPressed: () => setState(() => _selectedAlbumKey = null),
+            icon: const Icon(LucideIcons.arrowLeft))),
+        const SizedBox(height: 12),
+        LayoutBuilder(builder: (context, bounds) {
+          final artwork = SizedBox(
+            width: 168, height: 168,
+            child: ClipRRect(borderRadius: BorderRadius.circular(13),
+              child: AppleCover(
+                artist: album.artist, name: album.album!,
+                isAlbum: true, fallbackUrl: album.artwork,
+                size: 168, radius: 0)),
+          );
+          final info = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Album').small().muted(),
+              const SizedBox(height: 6),
+              Text(album.album!).x2Large().semiBold(),
+              const SizedBox(height: 7),
+              Text(album.artist).muted(),
+              const SizedBox(height: 4),
+              Text('${songs.length} saved ${songs.length == 1 ? 'song' : 'songs'}')
+                .small().muted(),
+              const SizedBox(height: 16),
+              OrchidAdaptiveControls.button(
+                prominent: true,
+                onPressed: () => _playCollection(songs),
+                child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(LucideIcons.play, size: 17),
+                  SizedBox(width: 8),
+                  Text('Play all'),
+                ]),
+              ),
+            ],
+          );
+          if (bounds.maxWidth < 530) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [artwork, const SizedBox(height: 18), info]);
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [artwork, const SizedBox(width: 22), Expanded(child: info)]);
+        }),
+        const SizedBox(height: 28),
+        for (var i = 0; i < songs.length; i++) _songRow(songs[i], i + 1),
+      ],
+    );
+  }
+
   Widget _savedArtistsGrid() {
     final query = _queryController.text.trim().toLowerCase();
     final artists = widget.library.savedArtists.keys
@@ -355,6 +497,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
     listenable: widget.library,
     builder: (context, _) {
       final playlists = widget.library.visiblePlaylists;
+      final albums = _libraryAlbums();
+      final activeAlbumSongs = albums[_selectedAlbumKey];
       final id = widget.selectedPlaylistId;
       MusicPlaylist? activePlaylist;
       if (id != null && id != 'favorites') {
@@ -378,20 +522,26 @@ class _LibraryScreenState extends State<LibraryScreen> {
         children: [
           widget.header,
           if (!widget.playlistsOnly) ...[
-            const Text('Library').x2Large().semiBold(),
-            const SizedBox(height: 8),
-            Text('${widget.library.librarySongs.length} saved songs').small().muted(),
-            const SizedBox(height: 18),
-            _libraryTools(),
-            const SizedBox(height: 18),
-            if (_view == 'Artists')
-              _savedArtistsGrid()
-            else if (_view == 'Playlists')
-              _playlistsGrid(widget.library.savedPlaylists.where((playlist) =>
-                playlist.name.toLowerCase().contains(
-                  _queryController.text.trim().toLowerCase())).toList())
-            else
-              _songList(widget.library.librarySongs),
+            if (_view == 'Albums' && activeAlbumSongs != null) ...[
+              _savedAlbumDetail(activeAlbumSongs),
+            ] else ...[
+              const Text('Library').x2Large().semiBold(),
+              const SizedBox(height: 8),
+              Text('${widget.library.librarySongs.length} saved songs').small().muted(),
+              const SizedBox(height: 18),
+              _libraryTools(),
+              const SizedBox(height: 18),
+              if (_view == 'Artists')
+                _savedArtistsGrid()
+              else if (_view == 'Playlists')
+                _playlistsGrid(widget.library.savedPlaylists.where((playlist) =>
+                  playlist.name.toLowerCase().contains(
+                    _queryController.text.trim().toLowerCase())).toList())
+              else if (_view == 'Albums')
+                _albumsGrid(albums)
+              else
+                _songList(widget.library.librarySongs),
+            ],
           ] else if (selected) ...[
             if (widget.onPlaylistSelected != null)
               Align(alignment: Alignment.centerLeft,
