@@ -115,9 +115,10 @@ class _SongContextMenuState extends State<SongContextMenu> {
             Positioned(
               right: 0, top: 0, bottom: 0,
               child: IgnorePointer(
-                ignoring: !_hovered,
+                ignoring: !(_hovered || MediaQuery.sizeOf(context).width < 850),
                 child: AnimatedOpacity(
-                  opacity: _hovered ? 1 : 0,
+                  opacity: (_hovered || MediaQuery.sizeOf(context).width < 850)
+                      ? 1 : 0,
                   duration: const Duration(milliseconds: 140),
                   child: Center(
                     child: MouseRegion(
