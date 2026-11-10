@@ -5,22 +5,13 @@ import '../models/addon.dart';
 import '../services/player_service.dart';
 import 'track_duration.dart';
 
-/// Opens the queue / history panel as a full-screen Shadcn bottom sheet.
+/// Queue and listening history open as a real page instead of an overlay.
 void showQueueSheet(BuildContext context, PlayerService player) {
-  showOverlay(
-    context,
-    const SheetConfiguration(
-      position: OverlayPosition.bottom,
-      useSafeArea: true,
-      barrierDismissible: true,
-      draggable: true,
+  Navigator.of(context).push(ShadcnPageRoute<void>(
+    builder: (_) => Scaffold(
+      child: SafeArea(child: _QueueDrawerBody(player: player)),
     ),
-    builder: (sheetContext) => SizedBox(
-      width: (MediaQuery.sizeOf(sheetContext).width * 0.94).clamp(0.0, 1100.0),
-      height: MediaQuery.sizeOf(sheetContext).height,
-      child: _QueueDrawerBody(player: player),
-    ),
-  );
+  ));
 }
 
 class _QueueDrawerBody extends StatelessWidget {
@@ -54,7 +45,7 @@ class _QueueDrawerBody extends StatelessWidget {
                     Text('${queue.length} tracks').xSmall().muted(),
                     IconButton(
                       variance: ButtonVariance.ghost,
-                      onPressed: () => closeOverlay(context),
+                      onPressed: () => Navigator.of(context).maybePop(),
                       icon: const Icon(LucideIcons.x, size: 18),
                     ),
                   ],
@@ -97,7 +88,7 @@ class _QueueDrawerBody extends StatelessWidget {
                           subtitle: 'History',
                           onTap: () {
                             player.playTrack(t);
-                            closeOverlay(context);
+                            Navigator.of(context).maybePop();
                           },
                         ),
                       ),
@@ -124,7 +115,7 @@ class _QueueDrawerBody extends StatelessWidget {
                           highlighted: isCurrent,
                           onTap: () {
                             player.playTrack(t, fromQueue: queue);
-                            closeOverlay(context);
+                            Navigator.of(context).maybePop();
                           },
                         );
                       }),
@@ -152,7 +143,7 @@ class _QueueDrawerBody extends StatelessWidget {
                         subtitle: 'Recommended',
                         onTap: () {
                           player.playTrack(t);
-                          closeOverlay(context);
+                          Navigator.of(context).maybePop();
                         },
                       )),
                     ],
