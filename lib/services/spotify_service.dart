@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/addon.dart';
+import 'music_library.dart';
 
 /// Spotify Web API Client for searching tracks and resolving to track IDs.
 /// 
@@ -10,6 +11,12 @@ import '../models/addon.dart';
 /// - Authenticates with Spotify's client credentials
 /// - Searches for tracks by title+artist
 /// - Returns Spotify track ID (22 base62 chars) for lyrics lookup
+class SpotifyPlaylistImport {
+  final String name;
+  final List<SavedSong> songs;
+  const SpotifyPlaylistImport(this.name, this.songs);
+}
+
 class SpotifyService {
   final http.Client _client;
 
@@ -67,6 +74,261 @@ class SpotifyService {
 
   static String _base64Encode(String text) {
     return base64Encode(utf8.encode(text));
+  }
+
+  /// Import playlist metadata from a Spotify link. Spotify may reject
+  /// playlist-items access without user OAuth, especially for newer apps.
+  Future<SpotifyPlaylistImport> importPublicPlaylist(String link) async {
+    final parsed = Uri.tryParse(link.trim());
+    if (parsed == null ||
+        !(parsed.host == 'open.spotify.com' ||
+          parsed.host == 'www.open.spotify.com') ||
+        parsed.pathSegments.length < 2 ||
+        parsed.pathSegments[0] != 'playlist' ||
+        !RegExp(r'^[a-zA-Z0-9]{22}
+  Future<List<dynamic>> searchTracks(
+    String query, {
+    int limit = 5,
+    bool includeTracksOnly = false,
+  }) async {
+    try {
+      final token = await getAccessToken();
+      
+      final searchUri = Uri.parse('https://api.spotify.com/v1/search')
+        .replace(queryParameters: {
+          'q': query,
+          'type': includeTracksOnly ? 'track' : 'track,album,artist',
+          'limit': limit.toString(),
+        });
+
+      debugPrint('[Orchid] Spotify: Searching for "$query"');
+      
+      final res = await _client.get(searchUri, headers: {
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      }).timeout(const Duration(seconds: 30));
+
+      if (res.statusCode != 200) {
+        debugPrint('[Orchid] Spotify: Search failed - ${res.statusCode}');
+        return [];
+      }
+
+      final data = jsonDecode(res.body);
+      
+      if (data is! Map || !data.containsKey('tracks')) return [];
+
+      // Spotify returns tracks as a nested object: { "tracks": { "items": [ ... ] } }
+      final trackGroup = data['tracks'];
+      final items = trackGroup is Map ? trackGroup['items'] : null;
+      if (items is! List) return [];
+
+      final tracks = items;
+      debugPrint('[Orchid] Spotify: Found ${tracks.length} tracks for "$query"');
+      
+      return tracks;
+    } catch (e) {
+      debugPrint('[Orchid] Spotify: Search error: $e');
+      return [];
+    }
+  }
+
+  /// Search specifically for tracks (not albums/artists)
+  Future<List<dynamic>> searchTracksOnly(String query, {int limit = 5}) async {
+    final results = await searchTracks(query, includeTracksOnly: true, limit: limit);
+    if (results.isEmpty) {
+      debugPrint('[Orchid] Spotify: No tracks found for "$query"');
+    } else {
+      // Log track info
+      final firstTrack = results.first;
+      if (firstTrack is Map) {
+        final name = firstTrack['name'] as String? ?? '';
+        // Spotify returns artists as a list of objects: [{ "name": "..." }, ...]
+        final artists = firstTrack['artists'];
+        String artist = 'unknown';
+        if (artists is List && artists.isNotEmpty) {
+          final first = artists.first;
+          artist = first is Map ? (first['name'] as String? ?? 'unknown') : first.toString();
+        }
+        debugPrint('[Orchid] Spotify: Top result: "$name" by $artist');
+      }
+    }
+    return results;
+  }
+
+  /// Extract Spotify track ID from search results
+  String? extractTrackId(dynamic track) {
+    if (track is Map && track.containsKey('id')) {
+      final id = track['id'] as String? ?? '';
+      // Validate: Spotify track IDs are exactly 22 base62 characters
+      if (id.length == 22 && _isValidBase62(id)) {
+        debugPrint('[Orchid] Spotify: Extracted track ID: $id');
+        return id;
+      }
+    }
+    return null;
+  }
+
+  /// Check if a string is a valid base62 Spotify ID (alphanumeric only)
+  bool _isValidBase62(String id) {
+    final regex = RegExp(r'^[A-Za-z0-9]{22}$');
+    return regex.hasMatch(id);
+  }
+
+  /// Get Spotify track name from search results
+  String? getTrackName(dynamic track) {
+    if (track is Map && track.containsKey('name')) {
+      return track['name'] as String?;
+    }
+    return null;
+  }
+
+  /// Get Spotify artist from search results  
+  String? getArtist(dynamic track) {
+    if (track is Map && track.containsKey('artists')) {
+      final artists = track['artists'] as List<dynamic>;
+      if (artists.isNotEmpty) {
+        final first = artists.first as Map<String, dynamic>?;
+        return first?.toString()
+          .replaceAll('[', '')
+          .replaceAll(']', '')
+          .replaceAll('"', '');
+      }
+    }
+    return null;
+  }
+
+  /// Get Spotify album from search results
+  String? getAlbum(dynamic track) {
+    if (track is Map && track.containsKey('album') && 
+        track['album'] is Map &&
+        track['album'].containsKey('name')) {
+      return track['album']['name'] as String?;
+    }
+    return null;
+  }
+
+  /// Get Spotify duration from search results (in milliseconds)
+  int? getDuration(dynamic track) {
+    if (track is Map && track.containsKey('duration_ms')) {
+      return track['duration_ms'] as int?;
+    }
+    return null;
+  }
+
+  /// Get Spotify cover art URL
+  String? getCoverArtUrl(dynamic track) {
+    if (track is Map && track.containsKey('images') && 
+        track['images'] is List) {
+      final images = track['images'] as List<dynamic>;
+      if (images.isNotEmpty) {
+        final image = images.first as Map<String, dynamic>?;
+        if (image != null) {
+          final url = image['url'] as String?;
+          return url;
+        }
+        return null;
+      }
+    }
+    return null;
+  }
+
+  /// Create a TrackResult from Spotify search results
+  TrackResult fromSpotify(dynamic track, {String? previewUrl}) {
+    final id = extractTrackId(track);
+    
+    if (id == null) {
+      debugPrint('[Orchid] Spotify: Could not extract valid track ID');
+      return TrackResult(
+        id: '',
+        title: getTrackName(track) ?? 'Unknown',
+        artist: getArtist(track) ?? 'Unknown',
+        previewUrl: previewUrl,
+        sourceId: 'spotify-search',
+        sourceName: 'Spotify Search',
+        fromStreamAddon: false,
+      );
+    }
+
+    return TrackResult(
+      id: id,  // Use Spotify track ID as the main ID for lyrics lookup
+      title: getTrackName(track) ?? 'Unknown',
+      artist: getArtist(track) ?? 'Unknown',
+      album: getAlbum(track),
+      duration: getDuration(track),
+      artworkUrl: getCoverArtUrl(track)?.replaceAll('300x300bb', '600x600bb'),
+      previewUrl: previewUrl,
+      spotifyTrackId: id,  // This is what Spicy Lyrics needs!
+      sourceId: 'spotify-search',
+      sourceName: 'Spotify Search',
+      fromStreamAddon: false,
+    );
+  }
+
+  /// Spotify API credentials (stored in code for now)
+  static const _clientId = '3f8ea455038c4abab2e533a540d5de4c';
+  static const _clientSecret = 'e0bc707c20d94c07a5ff5b7138be108f';
+}).hasMatch(parsed.pathSegments[1])) {
+      throw const FormatException(
+        'Enter a Spotify playlist link, for example '
+        'https://open.spotify.com/playlist/...');
+    }
+    final id = parsed.pathSegments[1];
+    final token = await getAccessToken();
+    final headers = {'Authorization': 'Bearer $token', 'Accept': 'application/json'};
+    Future<Map<String, dynamic>> fetch(Uri uri) async {
+      final response = await _client.get(uri, headers: headers)
+          .timeout(const Duration(seconds: 30));
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        throw StateError(
+          'Spotify denied playlist access. Spotify now restricts playlist '
+          'items to playlists owned by or shared with the signed-in Spotify '
+          'user. Orchid needs Spotify account authorization for this link.');
+      }
+      if (response.statusCode != 200) {
+        throw StateError('Spotify returned HTTP ${response.statusCode}.');
+      }
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map) throw const FormatException('Invalid Spotify response');
+      return Map<String, dynamic>.from(decoded);
+    }
+    final info = await fetch(Uri.parse('https://api.spotify.com/v1/playlists/$id'));
+    final name = (info['name'] ?? 'Imported Spotify playlist').toString();
+    final songs = <SavedSong>[];
+    final seen = <String>{};
+    Uri? page = Uri.parse('https://api.spotify.com/v1/playlists/$id/items?limit=50');
+    while (page != null) {
+      final data = await fetch(page);
+      for (final entry in data['items'] is List ? data['items'] as List : const []) {
+        if (entry is! Map) continue;
+        final track = entry['item'] ?? entry['track'];
+        if (track is! Map || track['type'] == 'episode') continue;
+        final artists = track['artists'];
+        final artist = artists is List && artists.isNotEmpty && artists.first is Map
+            ? (artists.first['name'] ?? '').toString() : '';
+        final title = (track['name'] ?? '').toString();
+        if (title.isEmpty || artist.isEmpty) continue;
+        final album = track['album'];
+        String? artwork;
+        if (album is Map && album['images'] is List &&
+            (album['images'] as List).isNotEmpty &&
+            (album['images'] as List).first is Map) {
+          artwork = ((album['images'] as List).first as Map)['url']?.toString();
+        }
+        final duration = track['duration_ms'] is num
+            ? ((track['duration_ms'] as num) / 1000).round() : null;
+        final song = SavedSong(title, artist,
+          album: album is Map ? album['name']?.toString() : null,
+          artwork: artwork, duration: duration);
+        if (seen.add(song.key)) songs.add(song);
+      }
+      final next = data['next']?.toString();
+      page = next != null && next.startsWith('https://api.spotify.com/')
+          ? Uri.parse(next) : null;
+    }
+    if (songs.isEmpty) {
+      throw const FormatException('This playlist has no importable songs.');
+    }
+    return SpotifyPlaylistImport(name, songs);
   }
 
   /// Search for tracks on Spotify
