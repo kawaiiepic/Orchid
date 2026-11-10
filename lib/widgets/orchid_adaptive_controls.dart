@@ -48,13 +48,12 @@ abstract final class OrchidAdaptiveControls {
             duration: const Duration(milliseconds: 170),
             curve: Curves.easeOutCubic,
             constraints: const BoxConstraints(minHeight: 38),
-            alignment: Alignment.center,
             padding: const EdgeInsets.symmetric(
               horizontal: 17, vertical: 10),
             decoration: BoxDecoration(
               color: prominent
-                  ? const Color(0x995D428F)
-                  : const Color(0x185E487A),
+                  ? const Color(0xE06D4C9F)
+                  : const Color(0xB04A385F),
               borderRadius: BorderRadius.circular(12),
             ),
             child: DefaultTextStyle.merge(
@@ -70,7 +69,11 @@ abstract final class OrchidAdaptiveControls {
                         : const Color(0xFFE8DCF3))
                     : const Color(0xFF9B8CAC),
               ),
-              child: child,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [child],
+              ),
             ),
           ),
         ),
