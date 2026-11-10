@@ -593,7 +593,7 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
                 ),
               ),
               OrchidAdaptiveControls.button(
-                onPressed: () => OrchidShare.artist(widget.artist)
+                onPressed: () => OrchidShare.artist(widget.artist, context: context)
                     .catchError((Object error) {
                   debugPrint('[Orchid Share] Artist share failed: $error');
                 }),
@@ -866,6 +866,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
                 OrchidAdaptiveControls.button(
                   onPressed: () => OrchidShare.album(
                     widget.collectionId, widget.artist, widget.album,
+                    context: context,
                   ).catchError((Object error) {
                     debugPrint('[Orchid Share] Album share failed: $error');
                   }),
