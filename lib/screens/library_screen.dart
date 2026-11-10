@@ -647,11 +647,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
           ]);
         }),
         const SizedBox(height: 30),
-        Text('Saved Albums').large().semiBold(),
+        const OrchidSectionHeader(title: 'Saved Albums'),
         const SizedBox(height: 14),
         _albumsGrid(artistAlbums),
         const SizedBox(height: 28),
-        Text('Saved Songs').large().semiBold(),
+        const OrchidSectionHeader(title: 'Saved Songs'),
         const SizedBox(height: 12),
         if (songs.isEmpty)
           const Text('No songs from this artist in your library yet.').muted()
@@ -1019,7 +1019,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ] else if (_view == 'Artists' && activeArtist != null) ...[
               _savedArtistDetail(activeArtist, artistSongs, albums),
             ] else ...[
-              const Text('Library').x2Large().semiBold(),
+              const OrchidSectionHeader(title: 'Library'),
               const SizedBox(height: 8),
               Text('${widget.library.librarySongs.length} saved songs').small().muted(),
               const SizedBox(height: 18),
@@ -1111,7 +1111,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             const SizedBox(height: 18),
             _songList(selectedSongs, playlist: activePlaylist),
           ] else ...[
-            const Text('Playlists').x2Large().semiBold(),
+            const OrchidSectionHeader(title: 'Playlists'),
             const SizedBox(height: 16),
             _playlistsToolbar(),
             const SizedBox(height: 20),
