@@ -10,6 +10,7 @@ import '../widgets/apple_cover.dart';
 import 'song_detail_screen.dart';
 import '../widgets/orchid_style.dart';
 import '../widgets/song_context_menu.dart';
+import '../widgets/track_duration.dart';
 
 class LibraryScreen extends StatefulWidget {
   final Widget header;
@@ -40,6 +41,15 @@ class LibraryScreen extends StatefulWidget {
 }
 
 class _LibraryScreenState extends State<LibraryScreen> {
+  final _queryController = TextEditingController();
+  String _view = 'Songs';
+
+  @override
+  void dispose() {
+    _queryController.dispose();
+    super.dispose();
+  }
+
   void _openSong(SavedSong song) {
     showSongDetailDrawer(context,
       player:widget.player, addonService:widget.addonService,
@@ -76,12 +86,36 @@ class _LibraryScreenState extends State<LibraryScreen> {
     sourceId: 'orchid-library', sourceName: 'Library',
   );
 
-  Widget _songRow(SavedSong song, {MusicPlaylist? playlist}) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4),
-    child: SongContextMenu(
-      track: _track(song), player: widget.player, library: widget.library,
-      child: Row(children: [
-        Expanded(child: GestureDetector(
+  List<SavedSong> _filtered(List<SavedSong> songs) {
+    final query = _queryController.text.trim().toLowerCase();
+    final filtered = songs.where((song) =>
+      query.isEmpty ||
+      song.title.toLowerCase().contains(query) ||
+      song.artist.toLowerCase().contains(query) ||
+      (song.album ?? '').toLowerCase().contains(query)).toList();
+    if (_view == 'Songs') {
+      filtered.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+    } else if (_view == 'Albums') {
+      filtered.sort((a, b) {
+        final primary = (a.album ?? '').toLowerCase().compareTo((b.album ?? '').toLowerCase());
+        return primary != 0 ? primary : a.title.toLowerCase().compareTo(b.title.toLowerCase());
+      });
+    } else {
+      filtered.sort((a, b) {
+        final primary = a.artist.toLowerCase().compareTo(b.artist.toLowerCase());
+        return primary != 0 ? primary : a.title.toLowerCase().compareTo(b.title.toLowerCase());
+      });
+    }
+    return filtered;
+  }
+
+  Widget _songRow(SavedSong song, int number, {MusicPlaylist? playlist}) =>
+    Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: SongContextMenu(
+        track: _track(song), player: widget.player,
+        library: widget.library,
+        child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () {
             widget.player.setAddons(widget.addons);
@@ -90,13 +124,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
             });
           },
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
+            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
             child: Row(children: [
+              SizedBox(width: 30,
+                child: Text('$number', textAlign: TextAlign.center).small().muted()),
+              const SizedBox(width: 10),
               AppleCover(artist: song.artist, name: song.title,
                 album: song.album, fallbackUrl: song.artwork,
-                size: 46, radius: 7),
+                size: 42, radius: 7),
               const SizedBox(width: 12),
-              Expanded(child: Column(
+              Expanded(flex: 4, child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(song.title, maxLines: 1,
@@ -105,67 +142,149 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     overflow: TextOverflow.ellipsis).small().muted(),
                 ],
               )),
+              if (MediaQuery.sizeOf(context).width >= 720)
+                Expanded(flex: 3, child: Text(
+                  song.album?.isNotEmpty == true ? song.album! : 'Unknown album',
+                  maxLines: 1, overflow: TextOverflow.ellipsis).small().muted()),
+              SizedBox(width: 64, child: Text(
+                trackDurationLabel(song.duration) ?? '—',
+                textAlign: TextAlign.end).small().muted()),
+              const SizedBox(width: 38),
             ]),
-          ),
-        )),
-        IconButton.ghost(
-          onPressed: () => _openSong(song),
-          icon: const Icon(LucideIcons.info, size: 17),
-        ),
-        if (playlist != null)
-          IconButton.ghost(
-            onPressed: () => widget.library.removeFromPlaylist(playlist, song),
-            icon: const Icon(LucideIcons.x, size: 17),
-          ),
-      ]),
-    ),
-  );
-
-  Widget _playlistButton(String name, List<SavedSong> songs,
-      VoidCallback action, {bool favorite = false}) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: action,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(9),
-          child: ColoredBox(
-            color: const Color(0x293B244A),
-            child: SizedBox(height: 62,
-              child: Row(children: [
-                if (songs.isNotEmpty)
-                  AppleCover(
-                    artist: songs.first.artist,
-                    name: songs.first.title,
-                    fallbackUrl: songs.first.artwork,
-                    size: 62, radius: 0,
-                  )
-                else
-                  SizedBox(width: 62, height: 62,
-                    child: ColoredBox(color: const Color(0x444B2F62),
-                      child: Icon(favorite ? LucideIcons.heart
-                        : LucideIcons.listMusic, color: OrchidStyle.lilac))),
-                const SizedBox(width: 12),
-                Expanded(child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(name, maxLines: 1,
-                      overflow: TextOverflow.ellipsis).semiBold(),
-                    Text('${songs.length} songs').small().muted(),
-                  ],
-                )),
-                const Icon(LucideIcons.chevronRight,
-                  color: OrchidStyle.lilac, size: 17),
-                const SizedBox(width: 12),
-              ]),
-            ),
           ),
         ),
       ),
     );
+
+  Widget _songList(List<SavedSong> songs, {MusicPlaylist? playlist}) {
+    if (songs.isEmpty) return const Text('No songs found.').muted();
+    final items = _filtered(songs);
+    if (items.isEmpty) return const Text('No matching songs.').muted();
+    if (_view == 'Songs') {
+      return Column(children: [
+        for (var i = 0; i < items.length; i++)
+          _songRow(items[i], i + 1, playlist: playlist),
+      ]);
+    }
+    final groups = <String, List<SavedSong>>{};
+    for (final song in items) {
+      final key = _view == 'Albums'
+        ? (song.album?.trim().isNotEmpty == true ? song.album!.trim() : 'Unknown album')
+        : song.artist;
+      groups.putIfAbsent(key, () => []).add(song);
+    }
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      for (final entry in groups.entries) ...[
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 24, 0, 10),
+          child: Text(entry.key).large().semiBold(),
+        ),
+        for (final song in entry.value)
+          _songRow(song, items.indexOf(song) + 1, playlist: playlist),
+      ],
+    ]);
   }
+
+  Widget _libraryTools() => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      TextField(
+        controller: _queryController,
+        placeholder: const Text('Search your library…'),
+        onChanged: (_) => setState(() {}),
+      ),
+      const SizedBox(height: 14),
+      Wrap(spacing: 8, runSpacing: 8, children: [
+        for (final view in const ['Songs', 'Albums', 'Artists'])
+          OrchidAdaptiveControls.button(
+            prominent: _view == view,
+            onPressed: () => setState(() => _view = view),
+            child: Text(view),
+          ),
+      ]),
+    ],
+  );
+
+  Widget _playlistArtwork(List<SavedSong> songs, {bool favorite = false}) {
+    final covers = songs.take(4).toList();
+    if (covers.isEmpty) {
+      return ColoredBox(
+        color: const Color(0x4D4D3664),
+        child: Center(child: Icon(
+          favorite ? LucideIcons.heart : LucideIcons.listMusic,
+          size: 42, color: OrchidStyle.lilac)),
+      );
+    }
+    Widget image(SavedSong song, double size) => AppleCover(
+      artist: song.artist, name: song.title, album: song.album,
+      fallbackUrl: song.artwork, size: size, radius: 0);
+    return LayoutBuilder(builder: (context, bounds) {
+      final size = bounds.maxWidth;
+      if (covers.length == 1) return image(covers.first, size);
+      if (covers.length == 2) {
+        return Row(children: [
+          for (final song in covers)
+            Expanded(child: SizedBox.expand(child: image(song, size / 2))),
+        ]);
+      }
+      return Column(children: [
+        for (var row = 0; row < 2; row++)
+          Expanded(child: Row(children: [
+            for (var col = 0; col < 2; col++)
+              Expanded(child: row * 2 + col < covers.length
+                ? image(covers[row * 2 + col], size / 2)
+                : const ColoredBox(color: Color(0x55432F57))),
+          ])),
+      ]);
+    });
+  }
+
+  Widget _playlistButton(String name, List<SavedSong> songs,
+      VoidCallback action, {bool favorite = false}) =>
+    MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: action,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          AspectRatio(
+            aspectRatio: 1,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(11),
+              child: _playlistArtwork(songs, favorite: favorite)),
+          ),
+          const SizedBox(height: 8),
+          Text(name, maxLines: 1, overflow: TextOverflow.ellipsis).semiBold(),
+          Text('${songs.length} songs', maxLines: 1,
+            overflow: TextOverflow.ellipsis).small().muted(),
+        ]),
+      ),
+    );
+
+  Widget _playlistsGrid(List<MusicPlaylist> playlists) =>
+    LayoutBuilder(builder: (context, bounds) {
+      const gap = 12.0;
+      final columns = (bounds.maxWidth / 165).floor().clamp(2, 7).toInt();
+      final entries = <Widget>[
+        _playlistButton('Favorites', widget.library.favorites,
+          () => widget.onPlaylistSelected?.call('favorites'), favorite: true),
+        for (final playlist in playlists)
+          _playlistButton(playlist.name, playlist.songs,
+            () => widget.onPlaylistSelected?.call(playlist.id)),
+      ];
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: entries.length,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: columns,
+          crossAxisSpacing: gap,
+          mainAxisSpacing: 18,
+          childAspectRatio: .75,
+        ),
+        itemBuilder: (_, i) => entries[i],
+      );
+    });
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -198,11 +317,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
             const Text('Library').x2Large().semiBold(),
             const SizedBox(height: 8),
             Text('${widget.library.librarySongs.length} saved songs').small().muted(),
-            const SizedBox(height: 20),
-            if (widget.library.librarySongs.isEmpty)
-              const Text('Your saved songs will appear here.').muted()
-            else
-              ...widget.library.librarySongs.map(_songRow),
+            const SizedBox(height: 18),
+            _libraryTools(),
+            const SizedBox(height: 18),
+            _songList(widget.library.librarySongs),
           ] else if (selected) ...[
             if (widget.onPlaylistSelected != null)
               Align(alignment: Alignment.centerLeft,
@@ -239,39 +357,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
               ]),
             ],
             const SizedBox(height: 18),
-            if (selectedSongs.isEmpty)
-              const Text('This playlist is empty.').muted()
-            else
-              ...selectedSongs.map((song) =>
-                _songRow(song, playlist: activePlaylist)),
+            _songList(selectedSongs, playlist: activePlaylist),
           ] else ...[
             const Text('Playlists').x2Large().semiBold(),
             const SizedBox(height: 20),
-            LayoutBuilder(builder: (context, bounds) {
-              final desktop = bounds.maxWidth >= 600;
-              const gap = 12.0;
-              final width = desktop
-                ? (bounds.maxWidth - gap) / 2
-                : bounds.maxWidth;
-              return Wrap(
-                spacing: gap, runSpacing: gap,
-                children: [
-                  SizedBox(width: width,
-                    child: _playlistButton('Favorites',
-                      widget.library.favorites,
-                      () => widget.onPlaylistSelected?.call('favorites'),
-                      favorite: true)),
-                  for (final playlist in playlists)
-                    SizedBox(width: width,
-                      child: _playlistButton(
-                        playlist.name, playlist.songs,
-                        () => widget.onPlaylistSelected?.call(playlist.id))),
-                ],
-              );
-            }),
+            _playlistsGrid(playlists),
           ],
         ],
       );
     },
   );
+
 }
