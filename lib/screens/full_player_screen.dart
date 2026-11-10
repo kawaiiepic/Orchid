@@ -14,6 +14,7 @@ import '../widgets/orchid_style.dart';
 import '../services/animated_artwork_service.dart';
 import '../widgets/canvas_video.dart';
 import '../widgets/artist_artwork.dart';
+import '../widgets/audio_connect_sheet.dart';
 
 class FullPlayerScreen extends StatefulWidget {
   final PlayerService player;
@@ -749,9 +750,8 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                             _mobileLyrics ? LucideIcons.image : LucideIcons.mic,
                             () => setState(() => _mobileLyrics = !_mobileLyrics),
                             active: _mobileLyrics),
-                          _mobileBottomAction(LucideIcons.shuffle,
-                            widget.player.toggleShuffle,
-                            active: widget.player.shuffleEnabled),
+                          _mobileBottomAction(LucideIcons.speaker,
+                            () => showAudioConnectSheet(context, widget.player)),
                           _mobileBottomAction(LucideIcons.listMusic,
                             () => showQueueSheet(context, widget.player)),
                         ],
