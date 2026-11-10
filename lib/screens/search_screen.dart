@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/widgets.dart' show EditableText, FocusNode, TextInputType;
-import 'package:flutter/services.dart' show TextEditingValue;
+import 'package:flutter/services.dart' show TextEditingValue, TextSelection;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
