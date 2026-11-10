@@ -7,6 +7,7 @@ class OrchidDetailHeader extends StatelessWidget {
   final String eyebrow;
   final String title;
   final String subtitle;
+  final Widget? subtitleContent;
   final Widget artwork;
   final Widget actions;
   final Widget? trailing;
@@ -16,6 +17,7 @@ class OrchidDetailHeader extends StatelessWidget {
     required this.eyebrow,
     required this.title,
     required this.subtitle,
+    this.subtitleContent,
     required this.artwork,
     required this.actions,
     this.trailing,
@@ -50,7 +52,7 @@ class OrchidDetailHeader extends StatelessWidget {
               fontWeight: FontWeight.w700,
             )),
           const SizedBox(height: 6),
-          Text(subtitle, maxLines: 3,
+          subtitleContent ?? Text(subtitle, maxLines: 3,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: Color(0xFFB7ABCA),
