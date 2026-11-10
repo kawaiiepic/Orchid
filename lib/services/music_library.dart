@@ -27,21 +27,46 @@ class SavedSong {
   );
 }
 
+class PlaylistFolder {
+  final String id;
+  String name;
+  PlaylistFolder({required this.id, required this.name});
+  Map<String, dynamic> toJson() => {'id': id, 'name': name};
+  factory PlaylistFolder.fromJson(Map<String, dynamic> json) =>
+      PlaylistFolder(id: json['id'].toString(), name: json['name'].toString());
+}
+
 class MusicPlaylist {
   final String id;
   String name;
   bool pinned;
+  String? folderId;
+  String creator;
+  DateTime createdAt;
+  DateTime updatedAt;
   final List<SavedSong> songs;
-  MusicPlaylist({required this.id, required this.name, this.pinned = false, List<SavedSong>? songs})
-      : songs = songs ?? [];
+  MusicPlaylist({
+    required this.id, required this.name, this.pinned = false,
+    this.folderId, this.creator = 'You',
+    DateTime? createdAt, DateTime? updatedAt, List<SavedSong>? songs,
+  }) : createdAt = createdAt ?? DateTime.now(),
+       updatedAt = updatedAt ?? DateTime.now(),
+       songs = songs ?? [];
   Map<String, dynamic> toJson() => {
     'id': id, 'name': name, 'pinned': pinned,
+    'folderId': folderId, 'creator': creator,
+    'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt.toIso8601String(),
     'songs': songs.map((s) => s.toJson()).toList(),
   };
   factory MusicPlaylist.fromJson(Map<String, dynamic> data) => MusicPlaylist(
     id: data['id'].toString(),
     name: data['name'].toString(),
     pinned: data['pinned'] == true,
+    folderId: data['folderId']?.toString(),
+    creator: (data['creator'] ?? 'You').toString(),
+    createdAt: DateTime.tryParse((data['createdAt'] ?? '').toString()),
+    updatedAt: DateTime.tryParse((data['updatedAt'] ?? '').toString()),
     songs: (data['songs'] as List? ?? [])
         .whereType<Map>()
         .map((s) => SavedSong.fromJson(Map<String, dynamic>.from(s)))
@@ -105,6 +130,7 @@ class MusicLibrary extends ChangeNotifier {
   }
   final List<SavedSong> favorites = [];
   final List<MusicPlaylist> playlists = [];
+  final List<PlaylistFolder> playlistFolders = [];
   final List<SavedSong> recentlyPlayed = [];
   /// Saved artists and playlists are explicit library entries.
   final Map<String, String?> savedArtists = {};
@@ -157,6 +183,7 @@ class MusicLibrary extends ChangeNotifier {
     final generation = ++_loadGeneration;
     favorites.clear();
     playlists.clear();
+    playlistFolders.clear();
     recentlyPlayed.clear();
     savedArtists.clear();
     savedPlaylistIds.clear();
@@ -182,6 +209,9 @@ class MusicLibrary extends ChangeNotifier {
         playlists.addAll((data['playlists'] as List? ?? [])
             .whereType<Map>()
             .map((p) => MusicPlaylist.fromJson(Map<String, dynamic>.from(p))));
+        playlistFolders.addAll((data['playlistFolders'] as List? ?? [])
+            .whereType<Map>()
+            .map((p) => PlaylistFolder.fromJson(Map<String, dynamic>.from(p))));
         final rawArtists = data['savedArtists'];
         if (rawArtists is Map) {
           for (final entry in rawArtists.entries) {
@@ -228,6 +258,7 @@ class MusicLibrary extends ChangeNotifier {
     final snapshot = <String, dynamic>{
       'favorites': favorites.map((v) => v.toJson()).toList(),
       'playlists': playlists.map((v) => v.toJson()).toList(),
+      'playlistFolders': playlistFolders.map((v) => v.toJson()).toList(),
       'savedArtists': savedArtists,
       'savedPlaylistIds': savedPlaylistIds.toList(),
     };
@@ -262,6 +293,44 @@ class MusicLibrary extends ChangeNotifier {
     await _save();
   }
 
+  Future<PlaylistFolder> createPlaylistFolder(String name) async {
+    final folder = PlaylistFolder(
+      id: 'folder_${DateTime.now().microsecondsSinceEpoch}_${_counter++}',
+      name: name.trim(),
+    );
+    playlistFolders.add(folder);
+    await _save();
+    return folder;
+  }
+
+  Future<void> movePlaylistToFolder(MusicPlaylist playlist, String? folderId) async {
+    if (playlist.id == libraryPlaylistId) return;
+    playlist.folderId = folderId;
+    playlist.updatedAt = DateTime.now();
+    await _save();
+  }
+
+  Future<void> reorderPlaylist(int oldIndex, int newIndex) async {
+    final visible = visiblePlaylists;
+    if (oldIndex < 0 || oldIndex >= visible.length ||
+        newIndex < 0 || newIndex >= visible.length) return;
+    final moving = visible[oldIndex];
+    final target = visible[newIndex];
+    final from = playlists.indexOf(moving);
+    final to = playlists.indexOf(target);
+    playlists.removeAt(from);
+    playlists.insert(to, moving);
+    await _save();
+  }
+
+  Future<void> deletePlaylistFolder(PlaylistFolder folder) async {
+    playlistFolders.removeWhere((f) => f.id == folder.id);
+    for (final p in visiblePlaylists) {
+      if (p.folderId == folder.id) p.folderId = null;
+    }
+    await _save();
+  }
+
   Future<MusicPlaylist> createPlaylist(String name) async {
     final playlist = MusicPlaylist(
       id: '${DateTime.now().microsecondsSinceEpoch}_${_counter++}',
@@ -275,6 +344,7 @@ class MusicLibrary extends ChangeNotifier {
   Future<void> renamePlaylist(MusicPlaylist list, String name) async {
     if (list.id == libraryPlaylistId) return;
     list.name = name.trim();
+    list.updatedAt = DateTime.now();
     await _save();
   }
 
@@ -299,13 +369,17 @@ class MusicLibrary extends ChangeNotifier {
       await addToLibrary(song);
       return;
     }
-    if (!contains(list, song)) list.songs.add(song);
+    if (!contains(list, song)) {
+      list.songs.add(song);
+      list.updatedAt = DateTime.now();
+    }
     _includeInLibrary(song);
     await _save();
   }
 
   Future<void> removeFromPlaylist(MusicPlaylist list, SavedSong song) async {
     list.songs.removeWhere((s) => s.key == song.key);
+    list.updatedAt = DateTime.now();
     await _save();
   }
 
