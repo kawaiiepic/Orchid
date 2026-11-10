@@ -16,6 +16,7 @@ import 'all_time_top_songs_screen.dart';
 import '../widgets/mini_player_bar.dart';
 import '../widgets/desktop_sidebar.dart';
 import '../widgets/orchid_style.dart';
+import '../widgets/content_drawer.dart';
 import 'orchid_home_screen.dart';
 import 'profile_screen.dart';
 import 'search_screen.dart';
@@ -30,7 +31,6 @@ class _ShellScreenState extends State<ShellScreen>{
  final _addonService=AddonService();
  final _account=OrchidAccount();
  final _library=MusicLibrary();
- final _contentNavigatorKey=GlobalKey<NavigatorState>();
  final _contentRevision=ValueNotifier<int>(0);
  String? _libraryUser;
  String? _addonsUser;
@@ -63,7 +63,7 @@ class _ShellScreenState extends State<ShellScreen>{
  }
  String? _selectedPlaylistId;
  void _selectPlaylist(String? id) {
-  _contentNavigatorKey.currentState?.popUntil((route) => route.isFirst);
+  orchidContentNavigatorKey.currentState?.popUntil((route) => route.isFirst);
   setState(() {
    _selectedPlaylistId = id;
    selected = const ValueKey(4);
@@ -73,7 +73,7 @@ class _ShellScreenState extends State<ShellScreen>{
   _contentRevision.value++;
  }
  void _selectTab(int index) {
-  _contentNavigatorKey.currentState?.popUntil((route) => route.isFirst);
+  orchidContentNavigatorKey.currentState?.popUntil((route) => route.isFirst);
   setState(() {
    selected=ValueKey(index);
    if (index == 4) _selectedPlaylistId = null;
@@ -488,7 +488,7 @@ class _ShellScreenState extends State<ShellScreen>{
     defaultTargetPlatform == TargetPlatform.android);
 
   final browsing = Navigator(
-    key: _contentNavigatorKey,
+    key: orchidContentNavigatorKey,
     onGenerateRoute: (_) => ShadcnPageRoute<void>(
       builder: (_) => ListenableBuilder(
         listenable: _contentRevision,
