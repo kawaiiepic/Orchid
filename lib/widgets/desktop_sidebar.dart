@@ -8,6 +8,7 @@ class DesktopSidebar extends StatelessWidget {
   final int selectedTab;
   final MusicLibrary library;
   final String accountName;
+  final String? avatarUrl;
   final VoidCallback onHome;
   final VoidCallback onSearch;
   final VoidCallback onDiscover;
@@ -24,6 +25,7 @@ class DesktopSidebar extends StatelessWidget {
     required this.selectedTab,
     required this.library,
     required this.accountName,
+    this.avatarUrl,
     required this.onHome,
     required this.onSearch,
     required this.onDiscover,
@@ -84,9 +86,9 @@ class DesktopSidebar extends StatelessWidget {
           _nav('Discover', LucideIcons.compass, onDiscover, selected: selectedTab == 3),
           _nav('Library', LucideIcons.library, onLibrary, selected: selectedTab == 2),
           _nav('Playlists', LucideIcons.listMusic, onPlaylists, selected: selectedTab == 4),
-          _nav('Replay', LucideIcons.audioLines, onReplay),
-          _nav('Radio', LucideIcons.radio, onRadio),
-          _nav('AI DJ', LucideIcons.bot, onAiDj),
+          _nav('Replay', LucideIcons.audioLines, onReplay, selected: selectedTab == 5),
+          _nav('Radio', LucideIcons.radio, onRadio, selected: selectedTab == 6),
+          _nav('AI DJ', LucideIcons.bot, onAiDj, selected: selectedTab == 7),
           const SizedBox(height: 17),
           const Padding(
             padding: EdgeInsets.fromLTRB(21, 0, 12, 9),
@@ -129,11 +131,16 @@ class DesktopSidebar extends StatelessWidget {
                       color: OrchidStyle.panelLight,
                       shape: BoxShape.circle,
                     ),
-                    child: Text(
-                      accountName.isNotEmpty ? accountName[0].toUpperCase() : '?',
-                      style: const TextStyle(color: OrchidStyle.lilac,
-                        fontSize: 15, fontWeight: FontWeight.w700),
-                    ),
+                    child: avatarUrl == null
+                      ? Text(
+                          accountName.isNotEmpty ? accountName[0].toUpperCase() : '?',
+                          style: const TextStyle(color: OrchidStyle.lilac,
+                            fontSize: 15, fontWeight: FontWeight.w700))
+                      : ClipOval(child: Image.network(avatarUrl!,
+                          fit: BoxFit.cover, width: 38, height: 38,
+                          errorBuilder: (_, __, ___) =>
+                            const Icon(LucideIcons.user,
+                              color: OrchidStyle.lilac))),
                   ),
                 ),
               ),
