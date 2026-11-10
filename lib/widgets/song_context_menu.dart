@@ -179,6 +179,7 @@ class _SongActionPanelState extends State<_SongActionPanel> {
   @override
   Widget build(BuildContext context) => OrchidGlassPanel(
     radius: 17,
+    transparentOnDesktop: false,
     child: Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: ListenableBuilder(
