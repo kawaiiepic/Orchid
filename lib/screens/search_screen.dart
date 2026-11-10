@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart' show EditableText, FocusNode, TextInputTyp
 import 'package:flutter/services.dart' show TextEditingValue;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import '../widgets/orchid_hover_zoom.dart';
 import '../widgets/orchid_adaptive_controls.dart';
 
 import '../models/addon.dart';
@@ -237,9 +238,10 @@ class _SearchScreenState extends State<SearchScreen> {
     required String subtitle, required VoidCallback onTap, Widget? trailing}) =>
     Padding(padding:const EdgeInsets.symmetric(vertical:2),child:
       GestureDetector(behavior:HitTestBehavior.opaque,onTap:onTap,
-        child:OrchidGlassPanel(
-          radius:10,
-          child:Padding(
+        child:OrchidHoverSurface(
+          child:OrchidGlassPanel(
+            radius:10,
+            child:Padding(
             padding:const EdgeInsets.symmetric(horizontal:10,vertical:4),
             child:Row(children:[
             artwork,
@@ -254,6 +256,7 @@ class _SearchScreenState extends State<SearchScreen> {
             )),
             trailing ?? const Icon(LucideIcons.chevronRight,size:18),
             ]),
+            ),
           ),
         ),
       ),
