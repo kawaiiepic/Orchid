@@ -1,4 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../widgets/orchid_hover_zoom.dart';
 import '../widgets/orchid_detail_header.dart';
 import '../widgets/orchid_adaptive_controls.dart';
@@ -211,112 +212,268 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
   @override
   void initState() {
     super.initState();
+    _refreshArtist();
+  }
+
+  void _refreshArtist({bool refresh = false}) {
     _catalog = widget.account == null
-        ? MusicCatalogService.instance.artist(widget.artist)
-        : MusicCatalogService.instance.appleArtist(widget.account!,widget.artist);
+        ? MusicCatalogService.instance.artist(widget.artist, refresh: refresh)
+        : MusicCatalogService.instance.appleArtist(widget.account!, widget.artist);
+  }
+
+  void _playArtist(List<TrackResult> tracks, {bool radio = false}) {
+    if (tracks.isEmpty) return;
+    final queue = [...tracks];
+    if (radio) queue.shuffle();
+    widget.player.setAddons(widget.addons);
+    widget.player.playTrack(queue.first, fromQueue: queue).catchError(
+      (Object error) => debugPrint('[Orchid Artist] Play failed: $error'),
+    );
+  }
+
+  Widget _releaseCards(List<MusicAlbum> items) {
+    if (items.isEmpty) return const Text('No releases available.').muted();
+    return Wrap(
+      spacing: 13,
+      runSpacing: 20,
+      children: [
+        for (final album in items)
+          SizedBox(
+            width: 148,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => openAlbumPage(context,
+                artist: album.artist, album: album.title,
+                artwork: album.artwork, collectionId: album.id,
+                player: widget.player, addonService: widget.addonService,
+                addons: widget.addons, library: widget.library),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _cover(context, album.artwork, size: 148),
+                  const SizedBox(height: 9),
+                  Text(album.title, maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 13,
+                      color: Color(0xFFF5EDFF), fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 3),
+                  Text(album.releaseType == 'single' ? 'Single' :
+                       album.releaseType == 'ep' ? 'EP' : 'Album')
+                    .small().muted(),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _popularTracks(List<TrackResult> songs) {
+    if (songs.isEmpty) {
+      return const Text('No popular tracks available yet.').muted();
+    }
+    final popular = songs.take(10).toList();
+    return LayoutBuilder(builder: (context, bounds) {
+      Widget tile(int index) => _trackTile(context, popular[index],
+        number: index + 1,
+        player: widget.player, addonService: widget.addonService,
+        addons: widget.addons, library: widget.library);
+      if (bounds.maxWidth < 680) {
+        return Column(children: [
+          for (var i = 0; i < popular.length; i++) tile(i),
+        ]);
+      }
+      final split = (popular.length + 1) ~/ 2;
+      return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Expanded(child: Column(children: [
+          for (var i = 0; i < split; i++) tile(i),
+        ])),
+        const SizedBox(width: 22),
+        Expanded(child: Column(children: [
+          for (var i = split; i < popular.length; i++) tile(i),
+        ])),
+      ]);
+    });
+  }
+
+  Widget _similarArtists(List<String> artists) {
+    if (artists.isEmpty) {
+      return const Text('Related artists are not available yet.').muted();
+    }
+    return Wrap(spacing: 20, runSpacing: 20, children: [
+      for (final artist in artists)
+        SizedBox(
+          width: 132,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => openArtistPage(context,
+              artist: artist, account: widget.account,
+              player: widget.player, addonService: widget.addonService,
+              addons: widget.addons, library: widget.library),
+            child: Column(children: [
+              ArtistArtwork(artist: artist, size: 122, radius: 61),
+              const SizedBox(height: 9),
+              Text(artist, textAlign: TextAlign.center,
+                maxLines: 2, overflow: TextOverflow.ellipsis).semiBold(),
+              const SizedBox(height: 2),
+              const Text('Artist').small().muted(),
+            ]),
+          ),
+        ),
+    ]);
+  }
+
+  Widget _musicVideos(List<ArtistMusicVideo> videos) {
+    if (videos.isEmpty) {
+      return const Text('No music videos available from the catalog.').muted();
+    }
+    return Wrap(spacing: 14, runSpacing: 18, children: [
+      for (final video in videos)
+        SizedBox(
+          width: 220,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: video.url == null ? null : () async {
+              final url = Uri.tryParse(video.url!);
+              if (url != null && url.scheme == 'https') {
+                await launchUrl(url, mode: LaunchMode.externalApplication);
+              }
+            },
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(11),
+                  child: SizedBox(
+                    width: 220, height: 124,
+                    child: Stack(fit: StackFit.expand, children: [
+                      if (video.artwork?.startsWith('https://') == true)
+                        Image.network(video.artwork!, fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                            const ColoredBox(color: OrchidStyle.panel))
+                      else
+                        const ColoredBox(color: OrchidStyle.panel),
+                      const Center(child: Icon(LucideIcons.play,
+                        size: 29, color: Color(0xFFF9F5FF))),
+                    ]),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(video.title, maxLines: 2,
+                  overflow: TextOverflow.ellipsis).semiBold(),
+                const SizedBox(height: 3),
+                const Text('Music video').small().muted(),
+              ],
+            ),
+          ),
+        ),
+    ]);
   }
 
   @override
   Widget build(BuildContext context) => FutureBuilder<ArtistCatalog>(
-      future: _catalog,
-      builder: (context, snapshot) {
-        final catalog = snapshot.data;
-        return ListView(
-          padding: const EdgeInsets.all(24),
-          children: [
-            _back(context),
-            const SizedBox(height: 12),
-            _musicHeader(context,
-              eyebrow:'Artist',
-              title:widget.artist,
-              subtitle:catalog==null
-                ? 'Explore the discography'
-                : '${catalog.albums.length} releases · ${catalog.songs.length} catalog tracks',
-              artwork:Center(child: ArtistArtwork(
-                artist:widget.artist,size:148,radius:74)),
-              actions:Column(
-                crossAxisAlignment:CrossAxisAlignment.start,
-                children:[
-                  _catalogActions(
-                    tracks:catalog?.songs??<TrackResult>[],
-                    player:widget.player,addons:widget.addons),
-                  const SizedBox(height:12),
-                  ListenableBuilder(
-                    listenable: widget.library,
-                    builder: (context, _) => OrchidAdaptiveControls.button(
-                      onPressed: () => widget.library.toggleArtistSaved(
-                        widget.artist, artwork: widget.artwork),
-                      child: Text(widget.library.isArtistSaved(widget.artist)
-                        ? 'Remove from Library' : 'Add artist to Library'),
-                    ),
-                  ),
-                ],
+    future: _catalog,
+    builder: (context, snapshot) {
+      final catalog = snapshot.data;
+      final tracks = catalog?.songs ?? <TrackResult>[];
+      final genres = catalog?.genres ?? <String>[];
+      final singlesAndEps = catalog?.albums.where(
+        (album) => album.releaseType != 'album').toList() ?? <MusicAlbum>[];
+      final albums = catalog?.albums.where(
+        (album) => album.releaseType == 'album').toList() ?? <MusicAlbum>[];
+      return ListView(
+        padding: EdgeInsets.fromLTRB(24, 24, 30,
+          28 + (MediaQuery.sizeOf(context).width >= 850 ? 104 : 0)),
+        children: [
+          _back(context),
+          const SizedBox(height: 12),
+          _musicHeader(context,
+            eyebrow: 'Artist',
+            title: widget.artist,
+            subtitle: [
+              if (genres.isNotEmpty) genres.join(' · ')
+              else 'Genres unavailable',
+              catalog?.monthlyListeners == null
+                ? 'Monthly listeners unavailable'
+                : '${catalog!.monthlyListeners} monthly listeners',
+            ].join('  •  '),
+            artwork: Center(child: ArtistArtwork(
+              artist: widget.artist, fallbackUrl: widget.artwork,
+              size: 148, radius: 74)),
+            actions: Wrap(spacing: 9, runSpacing: 9, children: [
+              OrchidAdaptiveControls.button(
+                prominent: true,
+                onPressed: tracks.isEmpty ? null : () => _playArtist(tracks),
+                child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(LucideIcons.play, size: 17),
+                  SizedBox(width: 7),
+                  Text('Play'),
+                ]),
               ),
-            ),
-            const SizedBox(height:28),
-            if (snapshot.connectionState != ConnectionState.done)
-              const Center(child: Text('Loading artist discography…'))
-            else if (snapshot.hasError)
-              Column(children: [
-                Text('Could not load artist: ${snapshot.error}').muted(),
-                const SizedBox(height: 12),
-                OrchidAdaptiveControls.button(onPressed: () => setState(() {
-                  _catalog = widget.account == null
-                      ? MusicCatalogService.instance.artist(widget.artist,
-                          refresh:true)
-                      : MusicCatalogService.instance.appleArtist(
-                          widget.account!,widget.artist);
-                }), child: const Text('Retry')),
-              ])
-            else if (catalog != null) ...[
-              OrchidSectionHeader(title: 'Albums', subtitle: '${catalog.albums.length} releases'),
-              const SizedBox(height: 12),
-              if (catalog.albums.isEmpty)
-                const Text('No albums found in the music catalog.').muted()
-              else
-                Wrap(
-                  spacing: 12, runSpacing: 18,
-                  children: catalog.albums.map((album) => SizedBox(
-                    width: 148,
-                    child: GestureDetector(
-                      onTap: () => openAlbumPage(context,
-                        artist: album.artist, album: album.title,
-                        artwork: album.artwork, collectionId: album.id,
-                        player: widget.player, addonService: widget.addonService,
-                        addons: widget.addons, library: widget.library),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _cover(context, album.artwork, size: 148),
-                          const SizedBox(height: 9),
-                          Text(album.title, maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 13,
-                              color: Color(0xFFF5EDFF),
-                              fontWeight: FontWeight.w600)),
-                          const SizedBox(height: 3),
-                          Text('${album.trackCount ?? '?'} tracks',
-                            maxLines: 1, overflow: TextOverflow.ellipsis)
-                            .small().muted(),
-                        ],
-                      ),
-                    ),
-                  )).toList(),
+              OrchidAdaptiveControls.button(
+                onPressed: tracks.isEmpty ? null :
+                  () => _playArtist(tracks, radio: true),
+                child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(LucideIcons.radio, size: 17),
+                  SizedBox(width: 7),
+                  Text('Play Radio'),
+                ]),
+              ),
+              ListenableBuilder(
+                listenable: widget.library,
+                builder: (context, _) => OrchidAdaptiveControls.button(
+                  onPressed: () => widget.library.toggleArtistSaved(
+                    widget.artist, artwork: widget.artwork),
+                  child: Text(widget.library.isArtistSaved(widget.artist)
+                    ? 'Following' : 'Follow'),
                 ),
-              const SizedBox(height: 28),
-              OrchidSectionHeader(title: 'Popular tracks', subtitle: '${catalog.songs.length} songs · ${_catalogDuration(catalog.songs)}'),
-              const SizedBox(height: 8),
-              if (catalog.songs.isEmpty)
-                const Text('No songs found in the music catalog.').muted()
-              else
-                ...catalog.songs.map((song) => _trackTile(context, song,
-                  player: widget.player, addonService: widget.addonService,
-                  addons: widget.addons, library: widget.library)),
-            ],
+              ),
+            ]),
+          ),
+          const SizedBox(height: 28),
+          if (snapshot.connectionState != ConnectionState.done)
+            const Center(child: Text('Loading artist discography…'))
+          else if (snapshot.hasError) ...[
+            Text('Could not load artist: ${snapshot.error}').muted(),
+            const SizedBox(height: 12),
+            OrchidAdaptiveControls.button(
+              onPressed: () => setState(() => _refreshArtist(refresh: true)),
+              child: const Text('Retry')),
+          ] else if (catalog != null) ...[
+            const OrchidSectionHeader(title: 'Popular tracks'),
+            const SizedBox(height: 8),
+            _popularTracks(tracks),
+            const SizedBox(height: 28),
+            OrchidSectionHeader(title: 'Singles & EPs',
+              subtitle: '${singlesAndEps.length} releases'),
+            const SizedBox(height: 12),
+            _releaseCards(singlesAndEps),
+            const SizedBox(height: 28),
+            const OrchidSectionHeader(title: 'Fans also like'),
+            const SizedBox(height: 12),
+            _similarArtists(catalog.similarArtists),
+            const SizedBox(height: 28),
+            const OrchidSectionHeader(title: 'Music videos'),
+            const SizedBox(height: 12),
+            _musicVideos(catalog.musicVideos),
+            const SizedBox(height: 28),
+            const OrchidSectionHeader(title: 'About'),
+            const SizedBox(height: 12),
+            if (catalog.biography?.trim().isNotEmpty == true)
+              Text(catalog.biography!, style: const TextStyle(
+                fontSize: 14, height: 1.5,
+                color: Color(0xFFD6CEE0)))
+            else
+              const Text('No artist biography is available yet.').muted(),
+            const SizedBox(height: 28),
+            OrchidSectionHeader(title: 'Albums',
+              subtitle: '${albums.length} releases'),
+            const SizedBox(height: 12),
+            _releaseCards(albums),
           ],
-        );
-      },
-    );
+        ],
+      );
+    },
+  );
 }
 
 class AlbumDetailPage extends StatefulWidget {
