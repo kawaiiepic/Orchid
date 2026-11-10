@@ -165,10 +165,14 @@ Widget _trackTile(BuildContext context, TrackResult song, {
   child: Padding(
     padding: const EdgeInsets.symmetric(vertical: 8),
     child: Row(children: [
-      if (number != null)
-        SizedBox(width: 32, child: Text('$number').muted())
-      else
-        _cover(context, song.artworkUrl, size: 42),
+      if (number != null) ...[
+        SizedBox(
+          width: 24,
+          child: Text('$number', textAlign: TextAlign.center).muted(),
+        ),
+        const SizedBox(width: 8),
+      ],
+      _cover(context, song.artworkUrl, size: 42),
       const SizedBox(width: 12),
       Expanded(child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -178,11 +182,19 @@ Widget _trackTile(BuildContext context, TrackResult song, {
             overflow: TextOverflow.ellipsis).small().muted(),
         ],
       )),
-      if (trackDurationLabel(song.duration) != null) ...[
-        Text(trackDurationLabel(song.duration)!).xSmall().muted(),
-        const SizedBox(width: 6),
-      ],
-
+      const SizedBox(width: 8),
+      SizedBox(
+        width: 49,
+        child: Text(
+          trackDurationLabel(song.duration) ?? '',
+          maxLines: 1,
+          textAlign: TextAlign.end,
+          overflow: TextOverflow.ellipsis,
+        ).xSmall().muted(),
+      ),
+      // SongContextMenu paints its hover ellipsis over this reserved area.
+      // Keep it separate from the duration and title so neither is covered.
+      const SizedBox(width: 44),
     ]),
   ),
     ),
@@ -332,7 +344,9 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
     if (artists.isEmpty) {
       return const Text('Related artists are not available yet.').muted();
     }
-    return Wrap(spacing: 20, runSpacing: 20, children: [
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(children: [
       for (final artist in artists)
         SizedBox(
           width: 132,
@@ -352,7 +366,9 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
             ]),
           ),
         ),
-    ]);
+        const SizedBox(width: 20),
+      ]),
+    );
   }
 
   Widget _musicVideos(List<ArtistMusicVideo> videos) {
