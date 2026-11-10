@@ -1,11 +1,12 @@
 import 'package:flutter/services.dart';
 import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:media_kit/media_kit.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart' as glass;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'app.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Release builds otherwise replace failed widget subtrees with a blank area.
   // Keep a visible diagnostic instead of an unexplained grey screen.
@@ -40,6 +41,8 @@ void main() {
       ),
     );
   };
+  // Preload Liquid Glass shaders before building the first frame.
+  await glass.LiquidGlassWidgets.initialize();
   MediaKit.ensureInitialized();
   JustAudioMediaKit.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(
@@ -51,5 +54,7 @@ void main() {
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
-  runApp(const OrchidApp());
+  runApp(glass.LiquidGlassWidgets.wrap(
+    child: const OrchidApp(), adaptiveQuality: true,
+  ));
 }
