@@ -571,6 +571,226 @@ class _SearchScreenState extends State<SearchScreen> {
     child:OrchidSectionHeader(title:title,subtitle:'$length results'),
   );
 
+  bool get _mobileSearch => MediaQuery.sizeOf(context).width < 850;
+
+  String _categoryLabel(SearchCategory category) => switch (category) {
+    SearchCategory.all => 'All',
+    SearchCategory.tracks => 'Tracks',
+    SearchCategory.albums => 'Albums',
+    SearchCategory.artists => 'Artists',
+    SearchCategory.playlists => 'Playlists',
+  };
+
+  IconData _categoryIcon(SearchCategory category) => switch (category) {
+    SearchCategory.all => LucideIcons.layoutGrid,
+    SearchCategory.tracks => LucideIcons.music2,
+    SearchCategory.albums => LucideIcons.library,
+    SearchCategory.artists => LucideIcons.user,
+    SearchCategory.playlists => LucideIcons.listMusic,
+  };
+
+  Widget _mobileSearchBar() => Padding(
+    padding: const EdgeInsets.fromLTRB(18, 12, 18, 10),
+    child: Row(children: [
+      Expanded(child: Container(
+        height: 52,
+        decoration: BoxDecoration(
+          color: const Color(0x665B4269),
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: const Color(0x556F597D)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 17),
+          child: Row(children: [
+            const Icon(LucideIcons.search, size: 22,
+              color: Color(0xFFF4E7FF)),
+            const SizedBox(width: 12),
+            Expanded(child: ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _controller,
+              builder: (context, value, _) => Stack(
+                alignment: Alignment.centerLeft,
+                children: [
+                  if (value.text.isEmpty)
+                    const IgnorePointer(child: Text('Search music…',
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 16,
+                        color: Color(0xFFC4AECF)))),
+                  EditableText(
+                    controller: _controller,
+                    focusNode: _searchFocus,
+                    style: const TextStyle(fontSize: 16,
+                      color: Color(0xFFF8EDFF), height: 1.25),
+                    cursorColor: OrchidStyle.pink,
+                    backgroundCursorColor: OrchidStyle.pink,
+                    selectionColor: const Color(0x665F4391),
+                    maxLines: 1,
+                    keyboardType: TextInputType.text,
+                    onChanged: _onQueryChanged,
+                    onSubmitted: (_) => _submitSearch(),
+                  ),
+                ],
+              ),
+            )),
+          ]),
+        ),
+      )),
+      const SizedBox(width: 11),
+      GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          if (_controller.text.isNotEmpty) {
+            _controller.clear();
+            _onQueryChanged('');
+          } else {
+            _searchFocus.unfocus();
+          }
+        },
+        child: Container(
+          width: 52, height: 52,
+          decoration: BoxDecoration(
+            color: const Color(0x665B4269),
+            shape: BoxShape.circle,
+            border: Border.all(color: const Color(0x556F597D)),
+          ),
+          child: const Icon(LucideIcons.x, size: 25,
+            color: Color(0xFFF8EDFF)),
+        ),
+      ),
+    ]),
+  );
+
+  Widget _mobileCategoryChips() => SizedBox(
+    height: 56,
+    child: ListView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+      children: [
+        for (final category in SearchCategory.values)
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _choose(category),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: category == _category
+                    ? const Color(0x664E344E)
+                    : const Color(0x445B4269),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: category == _category
+                      ? const Color(0xAAE48BBE)
+                      : const Color(0x335F496D),
+                  ),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(_categoryIcon(category), size: 15,
+                    color: category == _category
+                      ? OrchidStyle.pink
+                      : const Color(0xFFC7B7D0)),
+                  const SizedBox(width: 7),
+                  Text(_categoryLabel(category),
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: category == _category
+                        ? FontWeight.w600 : FontWeight.w500,
+                      color: category == _category
+                        ? OrchidStyle.pink
+                        : const Color(0xFFD2C3DC),
+                    )),
+                ]),
+              ),
+            ),
+          ),
+      ],
+    ),
+  );
+
+  Future<void> _removeRecentSearch(String term) async {
+    final next = _recentSearches.where((entry) => entry != term).toList();
+    setState(() => _recentSearches = next);
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setStringList(_recentKey, next);
+    } catch (error) {
+      debugPrint('[Orchid Search] Could not remove recent search: $error');
+    }
+  }
+
+  Widget _mobileRecentSearches() => Padding(
+    padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        const Expanded(child: Text('RECENT SEARCHES',
+          style: TextStyle(
+            fontSize: 13,
+            color: Color(0xFFBDA9C7),
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.5,
+          ))),
+        GestureDetector(
+          onTap: _clearSearches,
+          child: const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text('Clear', style: TextStyle(
+              fontSize: 13, color: OrchidStyle.pink,
+            )),
+          ),
+        ),
+      ]),
+      const SizedBox(height: 12),
+      Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: const Color(0x55473552),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0x335F496D)),
+        ),
+        child: Column(children: [
+          for (var i = 0; i < _recentSearches.length; i++) ...[
+            Row(children: [
+              Expanded(child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => _selectRecent(_recentSearches[i]),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 4, 14),
+                  child: Row(children: [
+                    Container(
+                      height: 36, width: 36,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Color(0x555F5067),
+                      ),
+                      child: const Icon(LucideIcons.history,
+                        size: 17, color: Color(0xFFC5B6D0)),
+                    ),
+                    const SizedBox(width: 13),
+                    Expanded(child: Text(_recentSearches[i],
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 15,
+                        color: Color(0xFFF2E8F8)))),
+                  ]),
+                ),
+              )),
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => _removeRecentSearch(_recentSearches[i]),
+                child: const Padding(
+                  padding: EdgeInsets.fromLTRB(12, 18, 18, 18),
+                  child: Icon(LucideIcons.x, size: 17,
+                    color: Color(0xFFC5B6D0)),
+                ),
+              ),
+            ]),
+            if (i < _recentSearches.length - 1)
+              const Divider(height: 1, color: Color(0x335F496D)),
+          ],
+        ]),
+      ),
+    ]),
+  );
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -579,146 +799,153 @@ class _SearchScreenState extends State<SearchScreen> {
         padding:EdgeInsets.only(top:MediaQuery.paddingOf(context).top,
           bottom:OrchidStyle.iosDockClearance(context) + (MediaQuery.sizeOf(context).width >= 850 ? 110 : 0)),
         children:[
-      widget.header,
-      const Padding(
-        padding:EdgeInsets.fromLTRB(20,20,20,14),
-        child:OrchidHero(
-          eyebrow:'Explore',title:'Find your next favorite.',
-          description:'Search tracks, albums, artists and your playlists.',
-          icon:LucideIcons.search,
+      if (_mobileSearch) ...[
+        _mobileSearchBar(),
+        if (_searchFocus.hasFocus) _mobileCategoryChips(),
+        if (_controller.text.trim().isEmpty && _recentSearches.isNotEmpty)
+          _mobileRecentSearches(),
+      ] else ...[
+        widget.header,
+        const Padding(
+          padding:EdgeInsets.fromLTRB(20,20,20,14),
+          child:OrchidHero(
+            eyebrow:'Explore',title:'Find your next favorite.',
+            description:'Search tracks, albums, artists and your playlists.',
+            icon:LucideIcons.search,
+          ),
         ),
-      ),
-      Padding(
-        padding:const EdgeInsets.fromLTRB(20,8,20,10),
-        child:Row(children:[
-          Expanded(
-            child: OrchidGlassPanel(
-              radius: 14,
-              transparentOnDesktop: false,
-              child: SizedBox(
-                height: 46,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(children: [
-                    const Icon(LucideIcons.search,
-                      size: 18, color: Color(0xFFCDBAE2)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ValueListenableBuilder<TextEditingValue>(
-                        valueListenable: _controller,
-                        builder: (context, value, _) => Stack(
-                          alignment: Alignment.centerLeft,
-                          children: [
-                            if (value.text.isEmpty)
-                              const IgnorePointer(
-                                child: Text('Search songs, artists, albums…',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Color(0xFFB8A9C6),
-                                  )),
+        Padding(
+          padding:const EdgeInsets.fromLTRB(20,8,20,10),
+          child:Row(children:[
+            Expanded(
+              child: OrchidGlassPanel(
+                radius: 14,
+                transparentOnDesktop: false,
+                child: SizedBox(
+                  height: 46,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(children: [
+                      const Icon(LucideIcons.search,
+                        size: 18, color: Color(0xFFCDBAE2)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ValueListenableBuilder<TextEditingValue>(
+                          valueListenable: _controller,
+                          builder: (context, value, _) => Stack(
+                            alignment: Alignment.centerLeft,
+                            children: [
+                              if (value.text.isEmpty)
+                                const IgnorePointer(
+                                  child: Text('Search songs, artists, albums…',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Color(0xFFB8A9C6),
+                                    )),
+                                ),
+                              EditableText(
+                                controller: _controller,
+                                focusNode: _searchFocus,
+                                style: const TextStyle(
+                                  color: Color(0xFFF7F0FF),
+                                  fontSize: 14,
+                                  height: 1.25,
+                                ),
+                                cursorColor: OrchidStyle.lilac,
+                                backgroundCursorColor: OrchidStyle.lilac,
+                                selectionColor: const Color(0x665F4391),
+                                maxLines: 1,
+                                keyboardType: TextInputType.text,
+                                onChanged: _onQueryChanged,
+                                onSubmitted: (_) => _submitSearch(),
                               ),
-                            EditableText(
-                              controller: _controller,
-                              focusNode: _searchFocus,
-                              style: const TextStyle(
-                                color: Color(0xFFF7F0FF),
-                                fontSize: 14,
-                                height: 1.25,
-                              ),
-                              cursorColor: OrchidStyle.lilac,
-                              backgroundCursorColor: OrchidStyle.lilac,
-                              selectionColor: const Color(0x665F4391),
-                              maxLines: 1,
-                              keyboardType: TextInputType.text,
-                              onChanged: _onQueryChanged,
-                              onSubmitted: (_) => _submitSearch(),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    ValueListenableBuilder<TextEditingValue>(
-                      valueListenable: _controller,
-                      builder: (context, value, _) => value.text.isEmpty
-                        ? const SizedBox.shrink()
-                        : GestureDetector(
-                            onTap: () {
-                              _controller.clear();
-                              _onQueryChanged('');
-                              _searchFocus.requestFocus();
-                            },
-                            child: const Padding(
-                              padding: EdgeInsets.all(6),
-                              child: Icon(LucideIcons.x,
-                                size: 16, color: Color(0xFFBEACC9)),
+                      ValueListenableBuilder<TextEditingValue>(
+                        valueListenable: _controller,
+                        builder: (context, value, _) => value.text.isEmpty
+                          ? const SizedBox.shrink()
+                          : GestureDetector(
+                              onTap: () {
+                                _controller.clear();
+                                _onQueryChanged('');
+                                _searchFocus.requestFocus();
+                              },
+                              child: const Padding(
+                                padding: EdgeInsets.all(6),
+                                child: Icon(LucideIcons.x,
+                                  size: 16, color: Color(0xFFBEACC9)),
+                              ),
                             ),
-                          ),
-                    ),
-                  ]),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width:8),
-          OrchidAdaptiveControls.button(prominent: true, onPressed:_searching?null:_submitSearch,
-            child:Text(_searching?'…':'Search')),
-        ]),
-      ),
-      if (_searchFocus.hasFocus)
-        SizedBox(height:58,child:ListView(
-        scrollDirection:Axis.horizontal,
-        padding:const EdgeInsets.symmetric(horizontal:18,vertical:7),
-        children:[
-          for(final category in SearchCategory.values)
-            Padding(padding:const EdgeInsets.only(right:8),
-              child:category==_category
-                ? OrchidAdaptiveControls.button(prominent: true, 
-                    onPressed:()=>_choose(category),
-                    child:Text(category.name == 'all'?'All':
-                      '${category.name[0].toUpperCase()}${category.name.substring(1)}'))
-                : OrchidAdaptiveControls.button(
-                    onPressed:()=>_choose(category),
-                    child:Text(category.name == 'all'?'All':
-                      '${category.name[0].toUpperCase()}${category.name.substring(1)}')),
-            ),
-        ],
-      )),
-      if (_controller.text.trim().isEmpty && _recentSearches.isNotEmpty)
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
-                const Expanded(child: Text('Recently searched',
-                  style: TextStyle(fontSize: 16,
-                    fontWeight: FontWeight.w600))),
-                OrchidAdaptiveControls.button(
-                  onPressed: _clearSearches,
-                  child: const Text('Clear'),
-                ),
-              ]),
-              const SizedBox(height: 10),
-              for (final term in _recentSearches)
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => _selectRecent(term),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Row(children: [
-                      const Icon(LucideIcons.history, size: 17,
-                        color: Color(0xFFB8A9C6)),
-                      const SizedBox(width: 13),
-                      Expanded(child: Text(term,
-                        maxLines: 1, overflow: TextOverflow.ellipsis)),
-                      const Icon(LucideIcons.arrowUpLeft, size: 16,
-                        color: Color(0xFFB8A9C6)),
+                      ),
                     ]),
                   ),
                 ),
-            ],
-          ),
+              ),
+            ),
+            const SizedBox(width:8),
+            OrchidAdaptiveControls.button(prominent: true, onPressed:_searching?null:_submitSearch,
+              child:Text(_searching?'…':'Search')),
+          ]),
         ),
+        if (_searchFocus.hasFocus)
+          SizedBox(height:58,child:ListView(
+          scrollDirection:Axis.horizontal,
+          padding:const EdgeInsets.symmetric(horizontal:18,vertical:7),
+          children:[
+            for(final category in SearchCategory.values)
+              Padding(padding:const EdgeInsets.only(right:8),
+                child:category==_category
+                  ? OrchidAdaptiveControls.button(prominent: true, 
+                      onPressed:()=>_choose(category),
+                      child:Text(category.name == 'all'?'All':
+                        '${category.name[0].toUpperCase()}${category.name.substring(1)}'))
+                  : OrchidAdaptiveControls.button(
+                      onPressed:()=>_choose(category),
+                      child:Text(category.name == 'all'?'All':
+                        '${category.name[0].toUpperCase()}${category.name.substring(1)}')),
+              ),
+          ],
+        )),
+        if (_controller.text.trim().isEmpty && _recentSearches.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  const Expanded(child: Text('Recently searched',
+                    style: TextStyle(fontSize: 16,
+                      fontWeight: FontWeight.w600))),
+                  OrchidAdaptiveControls.button(
+                    onPressed: _clearSearches,
+                    child: const Text('Clear'),
+                  ),
+                ]),
+                const SizedBox(height: 10),
+                for (final term in _recentSearches)
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => _selectRecent(term),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Row(children: [
+                        const Icon(LucideIcons.history, size: 17,
+                          color: Color(0xFFB8A9C6)),
+                        const SizedBox(width: 13),
+                        Expanded(child: Text(term,
+                          maxLines: 1, overflow: TextOverflow.ellipsis)),
+                        const Icon(LucideIcons.arrowUpLeft, size: 16,
+                          color: Color(0xFFB8A9C6)),
+                      ]),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+      ],
       if(_status!=null)
         Padding(padding:const EdgeInsets.symmetric(horizontal:20,vertical:6),
           child:Align(alignment:Alignment.centerLeft,
