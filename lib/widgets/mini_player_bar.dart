@@ -12,6 +12,48 @@ import 'orchid_style.dart';
 import 'queue_sheet.dart';
 import 'content_drawer.dart';
 
+/// Keep Liquid Glass blur and tint while cropping its built-in specular
+/// perimeter. A zero-width rim alone does not hide the fallback's sheen.
+class _BorderlessPlayerGlass extends StatelessWidget {
+  final double radius;
+  final Widget child;
+
+  const _BorderlessPlayerGlass({
+    required this.radius,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+    borderRadius: BorderRadius.circular(radius),
+    child: Stack(
+      children: [
+        Positioned.fill(
+          left: -5, top: -5, right: -5, bottom: -5,
+          child: IgnorePointer(
+            child: liquid.LiquidGlass(
+              shape: liquid.LiquidGlassShape.roundedRect(radius + 5),
+              style: liquid.LiquidGlassStyle.clear,
+              interactive: false,
+              interactionStrength: 0,
+              fallback: liquid.LiquidGlassFallback.frosted,
+              fallbackBlurSigma: 20,
+              tintColor: const Color(0xFF7954AB),
+              tintOpacity: 0.34,
+              brightness: liquid.LiquidGlassBrightness.dark,
+              opacity: 0.76,
+              rimColor: const Color(0x00000000),
+              rimWidth: 0,
+              child: const SizedBox.expand(),
+            ),
+          ),
+        ),
+        child,
+      ],
+    ),
+  );
+}
+
 class MiniPlayerBar extends StatelessWidget {
   final PlayerService player;
   final MusicLibrary? library;
@@ -41,19 +83,8 @@ class MiniPlayerBar extends StatelessWidget {
 
         return Padding(
           padding: EdgeInsets.fromLTRB(10, OrchidStyle.compact(context,6), 10, OrchidStyle.compact(context,5)),
-          child: liquid.LiquidGlass(
-            shape: const liquid.LiquidGlassShape.roundedRect(18),
-            style: liquid.LiquidGlassStyle.clear,
-            interactive: false,
-            interactionStrength: 0,
-            fallback: liquid.LiquidGlassFallback.frosted,
-            fallbackBlurSigma: 20,
-            tintColor: const Color(0xFF7954AB),
-            tintOpacity: 0.34,
-            brightness: liquid.LiquidGlassBrightness.dark,
-            opacity: 0.76,
-            rimColor: const Color(0x00000000),
-            rimWidth: 0,
+          child: _BorderlessPlayerGlass(
+            radius: 18,
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 14, vertical: OrchidStyle.compact(context,10)),
               child: Row(
@@ -309,19 +340,8 @@ class DesktopPlayerBar extends StatelessWidget {
       builder: (context, _) {
         final track = player.current;
         final playing = player.player.playing;
-        return liquid.LiquidGlass(
-          shape: const liquid.LiquidGlassShape.roundedRect(17),
-          style: liquid.LiquidGlassStyle.clear,
-            interactive: false,
-            interactionStrength: 0,
-          fallback: liquid.LiquidGlassFallback.frosted,
-          fallbackBlurSigma: 20,
-          tintColor: const Color(0xFF7954AB),
-          tintOpacity: 0.34,
-          brightness: liquid.LiquidGlassBrightness.dark,
-          opacity: 0.76,
-          rimColor: const Color(0x00000000),
-          rimWidth: 0,
+        return _BorderlessPlayerGlass(
+          radius: 17,
           child: SizedBox(
             height: 82,
             child: Padding(
