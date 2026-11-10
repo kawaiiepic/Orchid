@@ -2,7 +2,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:cupertino_ui/cupertino_ui.dart' as ios;
-import 'package:liquid_design/liquid_design.dart' as liquid;
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart' as glass;
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
 import '../screens/full_player_screen.dart';
@@ -14,45 +14,20 @@ import 'orchid_style.dart';
 import 'queue_sheet.dart';
 import 'content_drawer.dart';
 
-/// Keep Liquid Glass blur and tint while cropping its built-in specular
-/// perimeter. A zero-width rim alone does not hide the fallback's sheen.
+/// Cross-platform shader-backed glass surface for the mini-player.
 class _BorderlessPlayerGlass extends StatelessWidget {
   final double radius;
   final Widget child;
-
-  const _BorderlessPlayerGlass({
-    required this.radius,
-    required this.child,
-  });
+  const _BorderlessPlayerGlass({required this.radius, required this.child});
 
   @override
-  Widget build(BuildContext context) => ClipRRect(
-    borderRadius: BorderRadius.circular(radius),
-    child: Stack(
-      children: [
-        Positioned.fill(
-          left: -5, top: -5, right: -5, bottom: -5,
-          child: IgnorePointer(
-            child: liquid.LiquidGlass(
-              shape: liquid.LiquidGlassShape.roundedRect(radius + 5),
-              style: liquid.LiquidGlassStyle.clear,
-              interactive: false,
-              interactionStrength: 0,
-              fallback: liquid.LiquidGlassFallback.frosted,
-              fallbackBlurSigma: 18,
-              tintColor: const Color(0xFF392447),
-              tintOpacity: 0.42,
-              brightness: liquid.LiquidGlassBrightness.dark,
-              opacity: 0.78,
-              rimColor: const Color(0x00000000),
-              rimWidth: 0,
-              child: const SizedBox.expand(),
-            ),
-          ),
-        ),
-        child,
-      ],
-    ),
+  Widget build(BuildContext context) => glass.GlassContainer(
+    useOwnLayer: true,
+    quality: glass.GlassQuality.standard,
+    shape: glass.LiquidRoundedSuperellipse(borderRadius: radius),
+    color: const Color(0x30392447),
+    clipBehavior: Clip.antiAlias,
+    child: child,
   );
 }
 
@@ -175,7 +150,7 @@ class MiniPlayerBar extends StatelessWidget {
                 const SizedBox(width: 6),
                 SizedBox(
                   width: 104,
-                  child: liquid.LiquidGlassSlider(
+                  child: glass.GlassSlider(
                     value: player.volume.clamp(0.0, 1.0).toDouble(),
                     min: 0,
                     max: 1,
@@ -225,19 +200,12 @@ class IOSMiniPlayer extends StatelessWidget {
         final track = player.current;
         if (track == null) return const SizedBox.shrink();
         final artwork = track.artworkUrl;
-        return liquid.LiquidGlass(
-          shape: const liquid.LiquidGlassShape.capsule(),
-          style: liquid.LiquidGlassStyle.clear,
-          interactive: false,
-          interactionStrength: 0,
-          tintColor: const Color(0xFF392447),
-          tintOpacity: 0.42,
-          brightness: liquid.LiquidGlassBrightness.dark,
-          opacity: 0.78,
-          rimColor: const Color(0x00000000),
-          rimWidth: 0,
-          fallbackBlurSigma: 18,
-          fallback: liquid.LiquidGlassFallback.frosted,
+        return glass.GlassContainer(
+          useOwnLayer: true,
+          quality: glass.GlassQuality.standard,
+          shape: const glass.LiquidRoundedSuperellipse(borderRadius: 29),
+          color: const Color(0x30392447),
+          clipBehavior: Clip.antiAlias,
           child: Container(
               height: 58,
               padding: const EdgeInsets.symmetric(horizontal: 9),
