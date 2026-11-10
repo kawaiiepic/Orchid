@@ -28,6 +28,14 @@ abstract final class OrchidStyle {
   static const panel = Color(0xFF1B1927);
   static const panelLight = Color(0xFF292438);
 
+  /// Shared purple-tinted shader material for Orchid's floating chrome.
+  static const glassSettings = glass.LiquidGlassSettings(
+    glassColor: Color(0x55392447),
+    blur: 12,
+    thickness: 24,
+    chromaticAberration: 0.012,
+  );
+
   static BoxDecoration panelDecoration({double radius = 22}) =>
       BoxDecoration(
         color: panel,
@@ -151,7 +159,7 @@ class OrchidGlassPanel extends StatelessWidget {
       quality: glass.GlassQuality.standard,
       shape: glass.LiquidRoundedSuperellipse(borderRadius: radius),
       clipBehavior: Clip.antiAlias,
-      color: const Color(0x30392447),
+      settings: OrchidStyle.glassSettings,
       child: child,
     );
   }
