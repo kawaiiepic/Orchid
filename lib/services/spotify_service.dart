@@ -13,8 +13,9 @@ import 'music_library.dart';
 /// - Returns Spotify track ID (22 base62 chars) for lyrics lookup
 class SpotifyPlaylistImport {
   final String name;
+  final String creator;
   final List<SavedSong> songs;
-  const SpotifyPlaylistImport(this.name, this.songs);
+  const SpotifyPlaylistImport(this.name, this.songs, {this.creator = 'Spotify'});
 }
 
 class SpotifyService {
@@ -145,7 +146,11 @@ class SpotifyService {
     if (songs.isEmpty) {
       throw const FormatException('This playlist has no importable songs.');
     }
-    return SpotifyPlaylistImport(name, songs);
+    final owner = info['owner'];
+    final creator = owner is Map
+        ? (owner['display_name'] ?? owner['id'] ?? 'Spotify').toString()
+        : 'Spotify';
+    return SpotifyPlaylistImport(name, songs, creator: creator);
   }
 
   /// Search for tracks on Spotify
