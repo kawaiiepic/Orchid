@@ -8,7 +8,13 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 /// Retain shadcn for screens and controls that have not yet been migrated.
 abstract final class OrchidAdaptiveControls {
   static const _glassSettings = liquid.LiquidGlassSettings(
+    style: liquid.LiquidGlassStyle.regular,
+    brightness: liquid.LiquidGlassBrightness.dark,
+    tintColor: Color(0xFF7954AB),
+    tintOpacity: 0.24,
+    opacity: 0.88,
     fallback: liquid.LiquidGlassFallback.frosted,
+    fallbackBlurSigma: 20,
   );
 
   static Widget button({
