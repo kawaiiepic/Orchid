@@ -123,10 +123,14 @@ class _HoverMusicVideoArtworkState extends State<_HoverMusicVideoArtwork> {
 
 Widget _back(BuildContext context) => Align(
   alignment: Alignment.centerLeft,
-  child: IconButton.ghost(
-    onPressed: () => dismissContentDrawer(context),
-    icon: const Icon(LucideIcons.arrowLeft),
-  ),
+  child: MediaQuery.sizeOf(context).width < 850
+    ? OrchidBackButton(
+        onPressed: () => dismissContentDrawer(context),
+      )
+    : IconButton.ghost(
+        onPressed: () => dismissContentDrawer(context),
+        icon: const Icon(LucideIcons.arrowLeft),
+      ),
 );
 
 void _openTrack(BuildContext context, TrackResult track, {
