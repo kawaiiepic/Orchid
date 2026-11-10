@@ -196,56 +196,122 @@ Widget _trackTile(BuildContext context, TrackResult song, {
   required PlayerService player, required AddonService addonService,
   required List<InstalledAddon> addons, required MusicLibrary library,
   int? number,
-}) => OrchidHoverSurface(
-  child: SongContextMenu(
-    track: song, player: player, library: library,
-    addonService: addonService, addons: addons,
-    child: Button(
-  style: const ButtonStyle.ghost(),
-  onPressed: () {
-    player.setAddons(addons);
-    player.playTrack(song).catchError((Object e) {
-      debugPrint('[Orchid Catalog] Playback failed: $e');
-    });
-  },
-  child: Padding(
-    padding: const EdgeInsets.symmetric(vertical: 8),
-    child: Row(children: [
-      if (number != null) ...[
-        SizedBox(
-          width: 24,
-          child: Text('$number', textAlign: TextAlign.center).muted(),
-        ),
-        const SizedBox(width: 8),
-      ],
-      _cover(context, song.artworkUrl, size: 42),
-      const SizedBox(width: 12),
-      Expanded(child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(song.title, maxLines: 1, overflow: TextOverflow.ellipsis).semiBold(),
-          Text(song.artist, maxLines: 1,
-            overflow: TextOverflow.ellipsis).small().muted(),
-        ],
-      )),
-      const SizedBox(width: 8),
-      SizedBox(
-        width: 49,
-        child: Text(
-          trackDurationLabel(song.duration) ?? '',
-          maxLines: 1,
-          textAlign: TextAlign.end,
-          overflow: TextOverflow.ellipsis,
-        ).xSmall().muted(),
-      ),
-      // SongContextMenu paints its hover ellipsis over this reserved area.
-      // Keep it separate from the duration and title so neither is covered.
-      const SizedBox(width: 44),
-    ]),
-  ),
-    ),
-  ),
+}) => _CatalogTrackTile(
+  song: song,
+  player: player,
+  addonService: addonService,
+  addons: addons,
+  library: library,
+  number: number,
 );
+
+/// A single hover surface wraps the complete row, including the ellipsis.
+/// Avoid a ghost Button here: its independent hover highlight disappears
+/// when the pointer enters the context menu button.
+class _CatalogTrackTile extends StatefulWidget {
+  final TrackResult song;
+  final PlayerService player;
+  final AddonService addonService;
+  final List<InstalledAddon> addons;
+  final MusicLibrary library;
+  final int? number;
+
+  const _CatalogTrackTile({
+    required this.song,
+    required this.player,
+    required this.addonService,
+    required this.addons,
+    required this.library,
+    this.number,
+  });
+
+  @override
+  State<_CatalogTrackTile> createState() => _CatalogTrackTileState();
+}
+
+class _CatalogTrackTileState extends State<_CatalogTrackTile> {
+  bool _hovered = false;
+
+  void _play() {
+    widget.player.setAddons(widget.addons);
+    widget.player.playTrack(widget.song).catchError((Object error) {
+      debugPrint('[Orchid Catalog] Playback failed: $error');
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+    onEnter: (_) => setState(() => _hovered = true),
+    onExit: (_) => setState(() => _hovered = false),
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 160),
+      curve: Curves.easeOutCubic,
+      decoration: BoxDecoration(
+        color: _hovered
+            ? const Color(0x66332940)
+            : const Color(0x00000000),
+        borderRadius: BorderRadius.circular(9),
+      ),
+      child: SongContextMenu(
+        track: widget.song,
+        player: widget.player,
+        library: widget.library,
+        addonService: widget.addonService,
+        addons: widget.addons,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: _play,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8, vertical: 8),
+              child: Row(children: [
+                if (widget.number != null) ...[
+                  SizedBox(
+                    width: 24,
+                    child: Center(
+                      child: _hovered
+                          ? const Icon(LucideIcons.play,
+                              size: 12, color: OrchidStyle.lilac)
+                          : Text('${widget.number}',
+                              textAlign: TextAlign.center).muted(),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                _cover(context, widget.song.artworkUrl, size: 42),
+                const SizedBox(width: 12),
+                Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(widget.song.title, maxLines: 1,
+                      overflow: TextOverflow.ellipsis).semiBold(),
+                    Text(widget.song.artist, maxLines: 1,
+                      overflow: TextOverflow.ellipsis).small().muted(),
+                  ],
+                )),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 49,
+                  child: Text(
+                    trackDurationLabel(widget.song.duration) ?? '',
+                    maxLines: 1,
+                    textAlign: TextAlign.end,
+                    overflow: TextOverflow.ellipsis,
+                  ).xSmall().muted(),
+                ),
+                // The menu overlays this reserved area, without shifting
+                // or recoloring the rest of the song row.
+                const SizedBox(width: 44),
+              ]),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
 
 class ArtistDetailPage extends StatefulWidget {
   final String artist;
