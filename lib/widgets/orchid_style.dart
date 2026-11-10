@@ -103,84 +103,26 @@ class OrchidHero extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    if (MediaQuery.sizeOf(context).width < 850) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(0, 8, 0, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: const TextStyle(
-              color: Color(0xFFF9F5FF),
-              fontSize: 25, fontWeight: FontWeight.w700,
-            )),
-            const SizedBox(height: 7),
-            Text(description, style: const TextStyle(
-              color: Color(0xFFBCB0CA), fontSize: 12,
-            )),
-            if (action != null) ...[
-              const SizedBox(height: 12),
-              action!,
-            ],
-          ],
-        ),
-      );
-    }
-    return OrchidGlassPanel(
-    radius: 24,
-    child: SizedBox(
-    width: double.infinity,
-    child: Stack(
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(0, 8, 0, 12),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Positioned(
-          right: -54, top: -76,
-          child: Container(
-            width: OrchidStyle.compact(context, 240), height: OrchidStyle.compact(context, 240),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: OrchidStyle.violet.withValues(alpha: 0.11),
-            ),
-          ),
-        ),
-        Positioned(
-          right: 24, top: 18,
-          child: Icon(icon, size: OrchidStyle.compact(context, 102),
-            color: OrchidStyle.lilac.withValues(alpha: 0.12)),
-        ),
-        Padding(
-          padding: EdgeInsets.all(OrchidStyle.compact(context, 24)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(eyebrow.toUpperCase(),
-                style: const TextStyle(
-                  color: OrchidStyle.lilac, fontSize: 11,
-                  letterSpacing: 2, fontWeight: FontWeight.w700,
-                )),
-              SizedBox(height: OrchidStyle.compact(context, 14)),
-              Text(title, style: TextStyle(
-                fontSize: OrchidStyle.compact(context, 29), fontWeight: FontWeight.w700,
-                height: 1.08, color: Color(0xFFF9F5FF),
-              )),
-              const SizedBox(height: 9),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: Text(description, style: const TextStyle(
-                  fontSize: 13, color: Color(0xFFD1C5DF), height: 1.45,
-                )),
-              ),
-              if (action != null) ...[
-                SizedBox(height: OrchidStyle.compact(context, 20)),
-                action!,
-              ],
-            ],
-          ),
-        ),
+        Text(title, style: const TextStyle(
+          color: Color(0xFFF9F5FF),
+          fontSize: 26, fontWeight: FontWeight.w700,
+        )),
+        const SizedBox(height: 7),
+        Text(description, style: const TextStyle(
+          color: Color(0xFFBCB0CA), fontSize: 12,
+        )),
+        if (action != null) ...[
+          const SizedBox(height: 12),
+          action!,
+        ],
       ],
     ),
-    ),
   );
-  }
 }
 
 /// Shared dark Liquid Glass panel. Renders native glass on supported Apple
