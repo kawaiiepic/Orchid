@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/widgets.dart' show EditableText, FocusNode, TextInputAction, TextInputType;
+import 'package:flutter/services.dart' show TextEditingValue;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../widgets/orchid_adaptive_controls.dart';
@@ -565,19 +566,23 @@ class _SearchScreenState extends State<SearchScreen> {
                         ),
                       ),
                     ),
-                    if (_controller.text.isNotEmpty)
-                      GestureDetector(
-                        onTap: () {
-                          _controller.clear();
-                          _onQueryChanged('');
-                          _searchFocus.requestFocus();
-                        },
-                        child: const Padding(
-                          padding: EdgeInsets.all(6),
-                          child: Icon(LucideIcons.x,
-                            size: 16, color: Color(0xFFBEACC9)),
-                        ),
-                      ),
+                    ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: _controller,
+                      builder: (context, value, _) => value.text.isEmpty
+                        ? const SizedBox.shrink()
+                        : GestureDetector(
+                            onTap: () {
+                              _controller.clear();
+                              _onQueryChanged('');
+                              _searchFocus.requestFocus();
+                            },
+                            child: const Padding(
+                              padding: EdgeInsets.all(6),
+                              child: Icon(LucideIcons.x,
+                                size: 16, color: Color(0xFFBEACC9)),
+                            ),
+                          ),
+                    ),
                   ]),
                 ),
               ),
