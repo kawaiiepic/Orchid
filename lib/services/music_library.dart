@@ -8,19 +8,22 @@ class SavedSong {
   final String artist;
   final String? album;
   final String? artwork;
-  const SavedSong(this.title, this.artist, {this.album, this.artwork});
+  final int? duration;
+  const SavedSong(this.title, this.artist, {this.album, this.artwork, this.duration});
 
   String get key => '${artist.trim().toLowerCase()}|${title.trim().toLowerCase()}';
   Map<String, dynamic> toJson() => {
     'title': title, 'artist': artist,
     if (album != null) 'album': album,
     if (artwork != null) 'artwork': artwork,
+    if (duration != null && duration! > 0) 'duration': duration,
   };
   factory SavedSong.fromJson(Map<String, dynamic> data) => SavedSong(
     (data['title'] ?? '').toString(),
     (data['artist'] ?? '').toString(),
     album: data['album']?.toString(),
     artwork: data['artwork']?.toString(),
+    duration: data['duration'] is num ? (data['duration'] as num).toInt() : null,
   );
 }
 
