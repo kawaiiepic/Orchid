@@ -332,6 +332,13 @@ class PlayerService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Apply remote playback options without reshuffling a transferred queue.
+  void restoreRemoteOptions({required bool shuffle, required OrchidRepeatMode repeat}) {
+    shuffleEnabled=shuffle;
+    repeatMode=repeat;
+    notifyListeners();
+  }
+
   void cycleRepeatMode() {
     repeatMode = switch (repeatMode) {
       OrchidRepeatMode.off => OrchidRepeatMode.all,
