@@ -6,6 +6,8 @@ import 'package:liquid_design/liquid_design.dart' as liquid;
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
 import '../screens/full_player_screen.dart';
+import '../screens/music_detail_pages.dart';
+import '../models/addon.dart';
 import '../services/player_service.dart';
 import '../services/music_library.dart';
 import 'orchid_style.dart';
@@ -397,11 +399,13 @@ class _ThinPlayerSlider extends StatelessWidget {
 class DesktopPlayerBar extends StatelessWidget {
   final PlayerService player;
   final MusicLibrary library;
+  final List<InstalledAddon> addons;
 
   const DesktopPlayerBar({
     super.key,
     required this.player,
     required this.library,
+    required this.addons,
   });
 
   void _openFull(BuildContext context) {
@@ -503,11 +507,26 @@ class DesktopPlayerBar extends StatelessWidget {
                                       fontSize: 12, fontWeight: FontWeight.w600,
                                     )),
                                   const SizedBox(height: 3),
-                                  Text(track.artist,
-                                    maxLines: 1, overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Color(0xFFA9A0B9), fontSize: 11,
-                                    )),
+                                  MouseRegion(
+                                    cursor: SystemMouseCursors.click,
+                                    child: GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTap: () => openArtistPage(
+                                        context,
+                                        artist: track.artist,
+                                        player: player,
+                                        addonService: player.addonService,
+                                        addons: addons,
+                                        library: library,
+                                      ),
+                                      child: Text(track.artist,
+                                        maxLines: 1, overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Color(0xFFBDB1CE),
+                                          fontSize: 11,
+                                        )),
+                                    ),
+                                  ),
                                 ],
                               )),
                               const SizedBox(width: 3),
@@ -598,40 +617,53 @@ class DesktopPlayerBar extends StatelessWidget {
                               final elapsed = total > 0
                                 ? pos.inMilliseconds.clamp(0, total)
                                 : 0;
-                              return Row(children: [
-                                SizedBox(
-                                  width: 34,
-                                  child: Text(_time(Duration(milliseconds: elapsed)),
-                                    textAlign: TextAlign.right,
-                                    style: const TextStyle(
-                                      color: Color(0xFF968DA7), fontSize: 10,
-                                    )),
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Center(
-                                    child: LayoutBuilder(builder: (context, bounds) {
-                                      final width = bounds.maxWidth.clamp(0.0, narrow ? 150.0 : 240.0).toDouble();
-                                      return _ThinPlayerSlider(
+                              return LayoutBuilder(
+                                builder: (context, bounds) {
+                                  // Keep both timestamps directly beside the
+                                  // track, rather than at the row's far edges.
+                                  final width = (bounds.maxWidth - 80)
+                                    .clamp(0.0, narrow ? 150.0 : 240.0)
+                                    .toDouble();
+                                  return Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      SizedBox(
+                                        width: 34,
+                                        child: Text(
+                                          _time(Duration(milliseconds: elapsed)),
+                                          textAlign: TextAlign.right,
+                                          style: const TextStyle(
+                                            color: Color(0xFF968DA7),
+                                            fontSize: 10,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      _ThinPlayerSlider(
                                         width: width,
                                         value: total > 0 ? elapsed / total : 0,
                                         onChanged: active && total > 0
                                           ? (value) => player.seek(Duration(
-                                              milliseconds: (value * total).round()))
+                                              milliseconds:
+                                                (value * total).round()))
                                           : null,
-                                      );
-                                    }),
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                SizedBox(
-                                  width: 34,
-                                  child: Text(total > 0 ? _time(duration) : '0:00',
-                                    style: const TextStyle(
-                                      color: Color(0xFF968DA7), fontSize: 10,
-                                    )),
-                                ),
-                              ]);
+                                      ),
+                                      const SizedBox(width: 6),
+                                      SizedBox(
+                                        width: 34,
+                                        child: Text(
+                                          total > 0 ? _time(duration) : '0:00',
+                                          style: const TextStyle(
+                                            color: Color(0xFF968DA7),
+                                            fontSize: 10,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
                             },
                           ),
                         ],
