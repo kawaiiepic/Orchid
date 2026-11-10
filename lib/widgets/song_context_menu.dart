@@ -159,10 +159,11 @@ class _SongActionPanelState extends State<_SongActionPanel> {
   }
 
   @override
-  Widget build(BuildContext context) => Container(
-    decoration: OrchidStyle.panelDecoration(radius: 17),
-    padding: const EdgeInsets.symmetric(vertical: 8),
-    child: ListenableBuilder(
+  Widget build(BuildContext context) => OrchidGlassPanel(
+    radius: 17,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: ListenableBuilder(
       listenable: widget.library,
       builder: (context, _) => Column(
         mainAxisSize: MainAxisSize.min,
@@ -243,6 +244,7 @@ class _SongActionPanelState extends State<_SongActionPanel> {
             _action('Create new playlist', LucideIcons.plus,
               () => setState(() => _creating = true)),
         ],
+        ),
       ),
     ),
   );
