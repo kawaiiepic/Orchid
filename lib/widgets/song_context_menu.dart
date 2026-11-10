@@ -42,6 +42,7 @@ class SongContextMenu extends StatefulWidget {
 class _SongContextMenuState extends State<SongContextMenu> {
   OverlayEntry? _entry;
   bool _hovered = false;
+  bool _menuHovered = false;
 
   void _close() {
     _entry?.remove();
@@ -100,7 +101,7 @@ class _SongContextMenuState extends State<SongContextMenu> {
   @override
   Widget build(BuildContext context) => MouseRegion(
     onEnter: (_) { if (mounted) setState(() => _hovered = true); },
-    onExit: (_) { if (mounted) setState(() => _hovered = false); },
+    onExit: (_) { if (mounted) setState(() { _hovered = false; _menuHovered = false; }); },
     child: GestureDetector(
       behavior: HitTestBehavior.opaque,
       onSecondaryTapDown: (details) => _open(details.globalPosition),
@@ -119,14 +120,22 @@ class _SongContextMenuState extends State<SongContextMenu> {
                   child: Center(
                     child: MouseRegion(
                       cursor: SystemMouseCursors.click,
+                      onEnter: (_) => setState(() => _menuHovered = true),
+                      onExit: (_) => setState(() => _menuHovered = false),
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
                         onTap: _openBelowButton,
-                        child: const SizedBox(
+                        child: SizedBox(
                           width: 40,
                           height: 40,
                           child: Center(
-                            child: Icon(LucideIcons.ellipsis, size: 19),
+                            child: Icon(
+                              LucideIcons.ellipsis,
+                              size: 19,
+                              color: _menuHovered
+                                  ? const Color(0xFFF8F6FC)
+                                  : const Color(0xFF9E96AB),
+                            ),
                           ),
                         ),
                       ),
