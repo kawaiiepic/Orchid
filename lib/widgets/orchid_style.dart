@@ -160,8 +160,19 @@ class OrchidGlassPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (transparentOnDesktop && MediaQuery.sizeOf(context).width >= 850) {
-      return child;
+    final desktop = MediaQuery.sizeOf(context).width >= 850;
+    if (transparentOnDesktop && desktop) return child;
+    if (desktop) {
+      // On desktop the Linux/Windows lightweight shader blurs and
+      // downsamples whatever sits behind the panel. Use a crisp, tinted
+      // surface so the navigation text and background remain legible.
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: ColoredBox(
+          color: const Color(0xC044345A),
+          child: child,
+        ),
+      );
     }
     // The shader draws its specular edge even with rim/light settings at
     // zero. Oversize the glass backdrop and crop the perimeter away, leaving
