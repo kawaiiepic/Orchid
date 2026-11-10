@@ -29,6 +29,17 @@ else:
 manifest = root / "pubspec.yaml"
 script = root / "rust" / "build.rs"
 if not script.is_file() or not manifest.is_file():
+    print("Published package layout:")
+    for p in sorted(root.iterdir()):
+        print("  ", p.name, "(dir)" if p.is_dir() else "(file)")
+    print("Apple plugin build metadata:")
+    for p in sorted(root.rglob("*.podspec")):
+        print("  ", p.relative_to(root))
+        print(p.read_text()[:3500])
+    print("Candidate native source files:")
+    for p in sorted(root.rglob("*.c")):
+        if len(p.parts) - len(root.parts) <= 5:
+            print("  ", p.relative_to(root))
     raise SystemExit(f"Cannot find miniaudio native build.rs in {root}")
 if not any(line.strip() == "version: 3.0.2" for line in manifest.read_text().splitlines()):
     raise SystemExit("This patch was reviewed for miniaudio_player 3.0.2 only.")
