@@ -106,6 +106,40 @@ class MusicLibrary extends ChangeNotifier {
   final List<SavedSong> favorites = [];
   final List<MusicPlaylist> playlists = [];
   final List<SavedSong> recentlyPlayed = [];
+  /// Saved artists and playlists are explicit library entries.
+  final Map<String, String?> savedArtists = {};
+  final Set<String> savedPlaylistIds = {};
+
+  String? _savedArtistKey(String artist) {
+    final normalized = artist.trim().toLowerCase();
+    for (final key in savedArtists.keys) {
+      if (key.toLowerCase() == normalized) return key;
+    }
+    return null;
+  }
+  bool isArtistSaved(String artist) => _savedArtistKey(artist) != null;
+  Future<void> toggleArtistSaved(String artist, {String? artwork}) async {
+    final name = artist.trim();
+    if (name.isEmpty) return;
+    final existing = _savedArtistKey(name);
+    if (existing != null) {
+      savedArtists.remove(existing);
+    } else {
+      savedArtists[name] = artwork;
+    }
+    await _save();
+  }
+
+  bool isPlaylistSaved(MusicPlaylist playlist) =>
+      savedPlaylistIds.contains(playlist.id);
+  Future<void> togglePlaylistSaved(MusicPlaylist playlist) async {
+    if (!savedPlaylistIds.add(playlist.id)) savedPlaylistIds.remove(playlist.id);
+    await _save();
+  }
+
+  List<MusicPlaylist> get savedPlaylists =>
+      visiblePlaylists.where(isPlaylistSaved).toList();
+
   OrchidAccount? _client;
   String? _account;
   bool loaded = false;
@@ -124,6 +158,8 @@ class MusicLibrary extends ChangeNotifier {
     favorites.clear();
     playlists.clear();
     recentlyPlayed.clear();
+    savedArtists.clear();
+    savedPlaylistIds.clear();
     _revision = 0;
     loaded = false;
     _needsLibraryMigration = false;
@@ -146,6 +182,14 @@ class MusicLibrary extends ChangeNotifier {
         playlists.addAll((data['playlists'] as List? ?? [])
             .whereType<Map>()
             .map((p) => MusicPlaylist.fromJson(Map<String, dynamic>.from(p))));
+        final rawArtists = data['savedArtists'];
+        if (rawArtists is Map) {
+          for (final entry in rawArtists.entries) {
+            savedArtists[entry.key.toString()] = entry.value?.toString();
+          }
+        }
+        savedPlaylistIds.addAll((data['savedPlaylistIds'] as List? ?? [])
+            .map((id) => id.toString()));
         // Upgrade existing accounts once. After that, Library membership
         // is independent: removing a saved song must stay removed.
         final hadLibrary = playlists.any(
@@ -184,6 +228,8 @@ class MusicLibrary extends ChangeNotifier {
     final snapshot = <String, dynamic>{
       'favorites': favorites.map((v) => v.toJson()).toList(),
       'playlists': playlists.map((v) => v.toJson()).toList(),
+      'savedArtists': savedArtists,
+      'savedPlaylistIds': savedPlaylistIds.toList(),
     };
     final generation = _loadGeneration;
     final previous = _pendingSave;
@@ -241,6 +287,7 @@ class MusicLibrary extends ChangeNotifier {
   Future<void> deletePlaylist(MusicPlaylist list) async {
     if (list.id == libraryPlaylistId) return;
     playlists.removeWhere((p) => p.id == list.id);
+    savedPlaylistIds.remove(list.id);
     await _save();
   }
 
