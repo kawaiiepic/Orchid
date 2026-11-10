@@ -15,12 +15,14 @@ class OrchidHoverMenu extends StatefulWidget {
   final Widget child;
   final List<OrchidHoverAction> actions;
   final bool showHoverButton;
+  final bool openOnTap;
 
   const OrchidHoverMenu({
     super.key,
     required this.child,
     required this.actions,
     this.showHoverButton = true,
+    this.openOnTap = false,
   });
 
   @override
@@ -101,6 +103,7 @@ class _OrchidHoverMenuState extends State<OrchidHoverMenu> {
     child: GestureDetector(
       behavior: HitTestBehavior.translucent,
       onLongPress: () => _open(),
+      onTap: widget.openOnTap ? () => _open() : null,
       onSecondaryTapDown: (details) => _open(at: details.globalPosition),
       child: Stack(children: [
         widget.child,
