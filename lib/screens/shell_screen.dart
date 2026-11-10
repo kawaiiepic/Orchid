@@ -22,6 +22,7 @@ import '../widgets/content_drawer.dart';
 import 'orchid_home_screen.dart';
 import 'profile_screen.dart';
 import 'search_screen.dart';
+import 'discover_screen.dart';
 import 'settings_screen.dart';
 
 class ShellScreen extends StatefulWidget {
@@ -470,6 +471,18 @@ class _ShellScreenState extends State<ShellScreen>{
       addons:_addons,
       openExplore:()=>_selectTab(1),
      ) else const SizedBox.shrink(),
+     if(_initializedTabs.contains(3)) DiscoverScreen(
+       header:desktop ? const SizedBox.shrink() : _topBar(context),
+       account:_account,player:_player,addonService:_addonService,
+       addons:_addons,library:_library,
+     ) else const SizedBox.shrink(),
+     if(_initializedTabs.contains(4)) LibraryScreen(
+       header:desktop ? const SizedBox.shrink() : _topBar(context),
+       library:_library,account:_account,player:_player,
+       addonService:_addonService,addons:_addons,
+       openExplore:()=>_selectTab(3),
+       playlistsOnly:true,
+     ) else const SizedBox.shrink(),
 
       ],
     ),
@@ -509,6 +522,8 @@ class _ShellScreenState extends State<ShellScreen>{
             accountName:_account.username ?? _account.email ?? 'Account',
             onHome:()=>_selectTab(0),
             onSearch:()=>_selectTab(1),
+            onDiscover:()=>_selectTab(3),
+            onPlaylists:()=>_selectTab(4),
             onLibrary:()=>_selectTab(2),
             onReplay:()=>_openFeatureSheet('Replay',ReplayScreen(account:_account)),
             onRadio:()=>_openFeatureSheet('Radio',
