@@ -1,0 +1,121 @@
+import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'orchid_style.dart';
+
+/// A contextual ellipsis for media cards. It stays invisible until a mouse
+/// hovers the card, while touch users can open the same menu by long-pressing.
+class OrchidHoverAction {
+  final String label;
+  final IconData icon;
+  final VoidCallback onSelected;
+
+  const OrchidHoverAction(this.label, this.icon, this.onSelected);
+}
+
+class OrchidHoverMenu extends StatefulWidget {
+  final Widget child;
+  final List<OrchidHoverAction> actions;
+
+  const OrchidHoverMenu({
+    super.key,
+    required this.child,
+    required this.actions,
+  });
+
+  @override
+  State<OrchidHoverMenu> createState() => _OrchidHoverMenuState();
+}
+
+class _OrchidHoverMenuState extends State<OrchidHoverMenu> {
+  bool _hovered = false;
+  OverlayEntry? _entry;
+
+  void _close() {
+    _entry?.remove();
+    _entry?.dispose();
+    _entry = null;
+  }
+
+  void _open() {
+    if (widget.actions.isEmpty) return;
+    _close();
+    final object = context.findRenderObject();
+    if (object is! RenderBox) return;
+    final origin = object.localToGlobal(Offset.zero);
+    final screen = MediaQuery.sizeOf(context);
+    const width = 212.0;
+    final left = (origin.dx + object.size.width - width)
+      .clamp(8.0, (screen.width - width - 8).clamp(8.0, double.infinity))
+      .toDouble();
+    final height = widget.actions.length * 43.0 + 16.0;
+    final top = (origin.dy + 40)
+      .clamp(8.0, (screen.height - height - 8).clamp(8.0, double.infinity))
+      .toDouble();
+    _entry = OverlayEntry(builder: (context) => Stack(children: [
+      Positioned.fill(child: GestureDetector(
+        behavior: HitTestBehavior.opaque, onTap: _close)),
+      Positioned(
+        left: left, top: top, width: width,
+        child: OrchidGlassPanel(
+          radius: 14,
+          transparentOnDesktop: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              for (final action in widget.actions)
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    _close();
+                    action.onSelected();
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 11),
+                    child: Row(children: [
+                      Icon(action.icon, size: 17, color: OrchidStyle.lilac),
+                      const SizedBox(width: 12),
+                      Expanded(child: Text(action.label).small()),
+                    ]),
+                  ),
+                ),
+            ]),
+          ),
+        ),
+      ),
+    ]));
+    Overlay.of(context).insert(_entry!);
+  }
+
+  @override
+  void dispose() {
+    _close();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+    onEnter: (_) { if (mounted) setState(() => _hovered = true); },
+    onExit: (_) { if (mounted) setState(() => _hovered = false); },
+    child: GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onLongPress: _open,
+      child: Stack(children: [
+        widget.child,
+        Positioned(
+          right: 4, top: 4,
+          child: IgnorePointer(
+            ignoring: !_hovered,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 150),
+              opacity: _hovered ? 1 : 0,
+              child: IconButton.ghost(
+                onPressed: _open,
+                icon: const Icon(LucideIcons.ellipsis, size: 19),
+              ),
+            ),
+          ),
+        ),
+      ]),
+    ),
+  );
+}
