@@ -1,4 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import '../widgets/orchid_hover_zoom.dart';
 import '../widgets/orchid_adaptive_controls.dart';
 
 import '../models/addon.dart';
@@ -60,9 +61,11 @@ Widget _cover(BuildContext context, String? artwork, {double size = 128}) {
   }
   return ClipRRect(
     borderRadius: BorderRadius.circular(10),
-    child: Image.network(
-      artwork, width: size, height: size, fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => _cover(context, null, size: size),
+    child: OrchidHoverZoom(
+      child: Image.network(
+        artwork, width: size, height: size, fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _cover(context, null, size: size),
+      ),
     ),
   );
 }
