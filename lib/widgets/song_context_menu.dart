@@ -117,9 +117,19 @@ class _SongContextMenuState extends State<SongContextMenu> {
                   opacity: _hovered ? 1 : 0,
                   duration: const Duration(milliseconds: 140),
                   child: Center(
-                    child: IconButton.ghost(
-                      onPressed: _openBelowButton,
-                      icon: const Icon(LucideIcons.ellipsis, size: 19),
+                    child: MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: _openBelowButton,
+                        child: const SizedBox(
+                          width: 40,
+                          height: 40,
+                          child: Center(
+                            child: Icon(LucideIcons.ellipsis, size: 19),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
