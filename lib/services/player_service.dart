@@ -81,6 +81,8 @@ class PlayerService extends ChangeNotifier {
 
   TrackResult? current;
   String? playingVia;
+  String? streamQuality;
+  String? streamCodec;
   LyricsResult? lyrics;
   bool lyricsLoading = false;
   bool resolving = false;
@@ -381,6 +383,8 @@ class PlayerService extends ChangeNotifier {
   Future<void> _loadAndPlay(TrackResult track) async {
     resolving = true;
     playingVia = null;
+    streamQuality = null;
+    streamCodec = null;
     error = null;
     lyrics = null;
     lyricsLoading = true;
@@ -394,6 +398,8 @@ class PlayerService extends ChangeNotifier {
           .timeout(const Duration(seconds: 50));
       if (generation != lyricsGeneration) return;
       playingVia = _sourceName(stream.via ?? stream.quality, stream, track);
+      streamQuality = stream.quality;
+      streamCodec = stream.format;
       await player.setUrl(stream.url).timeout(const Duration(seconds: 20));
       if (generation != lyricsGeneration) return;
       await player.setVolume(volume);
