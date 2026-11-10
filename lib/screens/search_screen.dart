@@ -683,8 +683,9 @@ class _SearchScreenState extends State<SearchScreen> {
           ]),
         ),
       )),
-      const SizedBox(width: 11),
-      GestureDetector(
+      if (_searchFocus.hasFocus || _controller.text.isNotEmpty) ...[
+        const SizedBox(width: 11),
+        GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () {
           if (_controller.text.isNotEmpty) {
@@ -705,6 +706,7 @@ class _SearchScreenState extends State<SearchScreen> {
             color: Color(0xFFF8EDFF)),
         ),
       ),
+      ],
     ]),
   );
 
@@ -853,7 +855,8 @@ class _SearchScreenState extends State<SearchScreen> {
         _mobileSearchBar(),
         if (_searchFocus.hasFocus || _controller.text.trim().isNotEmpty)
           _mobileCategoryChips(),
-        if (_controller.text.trim().isEmpty && _recentSearches.isNotEmpty)
+        if (_searchFocus.hasFocus && _controller.text.trim().isEmpty &&
+            _recentSearches.isNotEmpty)
           _mobileRecentSearches(),
       ] else ...[
         widget.header,
