@@ -590,57 +590,68 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
               onPressed: () => setState(() => _refreshArtist(refresh: true)),
               child: const Text('Retry')),
           ] else if (catalog != null) ...[
-            const OrchidSectionHeader(title: 'Popular tracks'),
-            const SizedBox(height: 8),
-            _popularTracks(tracks),
-            const SizedBox(height: 28),
-            OrchidSectionHeader(title: 'Singles & EPs',
-              subtitle: '${singlesAndEps.length} releases'),
-            const SizedBox(height: 12),
-            _releaseCards(singlesAndEps),
-            const SizedBox(height: 28),
-            const OrchidSectionHeader(title: 'Fans also like'),
-            const SizedBox(height: 12),
-            _similarArtists(catalog.similarArtists),
-            const SizedBox(height: 28),
-            const OrchidSectionHeader(title: 'Music videos'),
-            const SizedBox(height: 12),
-            _musicVideos(catalog.musicVideos),
-            const SizedBox(height: 28),
-            const OrchidSectionHeader(title: 'About'),
-            const SizedBox(height: 12),
-            if (catalog.biography?.trim().isNotEmpty == true)
-              Text(catalog.biography!, style: const TextStyle(
-                fontSize: 14, height: 1.5,
-                color: Color(0xFFD6CEE0)))
-            else
-              const Text('No artist biography is available yet.').muted(),
-            const SizedBox(height: 16),
-            if (catalog.genres.isNotEmpty)
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final genre in catalog.genres)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: OrchidStyle.panelLight,
-                        borderRadius: BorderRadius.circular(16),
+            if (tracks.isNotEmpty) ...[
+              const OrchidSectionHeader(title: 'Popular tracks'),
+              const SizedBox(height: 8),
+              _popularTracks(tracks),
+              const SizedBox(height: 28),
+            ],
+            if (singlesAndEps.isNotEmpty) ...[
+              OrchidSectionHeader(title: 'Singles & EPs',
+                subtitle: '${singlesAndEps.length} releases'),
+              const SizedBox(height: 12),
+              _releaseCards(singlesAndEps),
+              const SizedBox(height: 28),
+            ],
+            if (catalog.similarArtists.isNotEmpty) ...[
+              const OrchidSectionHeader(title: 'Fans also like'),
+              const SizedBox(height: 12),
+              _similarArtists(catalog.similarArtists),
+              const SizedBox(height: 28),
+            ],
+            if (catalog.musicVideos.isNotEmpty) ...[
+              const OrchidSectionHeader(title: 'Music videos'),
+              const SizedBox(height: 12),
+              _musicVideos(catalog.musicVideos),
+              const SizedBox(height: 28),
+            ],
+            if (catalog.biography?.trim().isNotEmpty == true ||
+                catalog.genres.isNotEmpty) ...[
+              const OrchidSectionHeader(title: 'About'),
+              const SizedBox(height: 12),
+              if (catalog.biography?.trim().isNotEmpty == true) ...[
+                Text(catalog.biography!, style: const TextStyle(
+                  fontSize: 14, height: 1.5,
+                  color: Color(0xFFD6CEE0))),
+                if (catalog.genres.isNotEmpty)
+                  const SizedBox(height: 16),
+              ],
+              if (catalog.genres.isNotEmpty)
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final genre in catalog.genres)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: OrchidStyle.panelLight,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(genre, style: const TextStyle(
+                          fontSize: 12, color: OrchidStyle.lilac)),
                       ),
-                      child: Text(genre, style: const TextStyle(
-                        fontSize: 12, color: OrchidStyle.lilac)),
-                    ),
-                ],
-              )
-            else
-              const Text('Genres unavailable').small().muted(),
-            const SizedBox(height: 28),
-            OrchidSectionHeader(title: 'Albums',
-              subtitle: '${albums.length} releases'),
-            const SizedBox(height: 12),
-            _releaseCards(albums),
+                  ],
+                ),
+              const SizedBox(height: 28),
+            ],
+            if (albums.isNotEmpty) ...[
+              OrchidSectionHeader(title: 'Albums',
+                subtitle: '${albums.length} releases'),
+              const SizedBox(height: 12),
+              _releaseCards(albums),
+            ],
           ],
         ],
       );
