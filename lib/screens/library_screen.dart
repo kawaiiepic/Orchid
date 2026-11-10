@@ -1073,7 +1073,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
       final selectedTitle = id == 'favorites'
         ? 'Favorites' : activePlaylist?.name ?? 'Playlists';
       return ListView(
-        padding: EdgeInsets.fromLTRB(24, 24, 30,
+        padding: EdgeInsets.fromLTRB(24,
+          24 + MediaQuery.paddingOf(context).top, 30,
           28 + OrchidStyle.iosDockClearance(context) +
           (MediaQuery.sizeOf(context).width >= 850 ? 104 : 0)),
         children: [
