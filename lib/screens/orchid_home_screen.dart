@@ -832,27 +832,6 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     );
   }
 
-  Widget _stat(String title, dynamic count) {
-    return _clickable(
-      onTap:_refresh,
-      child:SizedBox(
-      width: OrchidStyle.compact(context,138),
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(_count(count)).x2Large().semiBold(),
-              const SizedBox(height: 4),
-              Text(title).small().muted(),
-            ],
-          ),
-        ),
-      ),
-    ));
-  }
-
   Widget _recentRow(Map<String, dynamic> track) {
     final artist = track['artist']?.toString() ?? '';
     final title = track['title']?.toString() ?? 'Unknown track';
