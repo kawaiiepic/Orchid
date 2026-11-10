@@ -185,10 +185,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: GestureDetector(
         onTap: open,
-        child: Container(
-          decoration: OrchidStyle.panelDecoration(radius: 18),
-          padding: const EdgeInsets.all(18),
-          child: Row(children: [
+        child: OrchidGlassPanel(
+          radius: 18,
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Row(children: [
             Container(
               width: 52, height: 52,
               decoration: BoxDecoration(
@@ -211,7 +212,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
             )),
             const Icon(LucideIcons.chevronRight,
               color: OrchidStyle.lilac, size: 18),
-          ]),
+            ]),
+          ),
         ),
       ),
     );
