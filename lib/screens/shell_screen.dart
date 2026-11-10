@@ -351,6 +351,15 @@ class _ShellScreenState extends State<ShellScreen>{
    ),
   );
  }
+ Widget _mobileHomeHeader()=>Column(
+  crossAxisAlignment:CrossAxisAlignment.start,
+  children:[
+   _topBar(context),
+   const SizedBox(height:12),
+   _desktopGreeting(),
+  ],
+ );
+
  Widget _featurePage(Widget page, bool desktop) {
   if (desktop) return page;
   return Column(children:[
@@ -409,7 +418,7 @@ class _ShellScreenState extends State<ShellScreen>{
       index:page.clamp(0,9),
       children:[
      OrchidHomeScreen(
-      header:desktop ? _desktopGreeting() : _topBar(context),
+      header:desktop ? _desktopGreeting() : _mobileHomeHeader(),
       player:_player,addonService:_addonService,addons:_addons,account:_account,
       openExplore:()=>_selectTab(3),
       openProfile:_openProfile,
