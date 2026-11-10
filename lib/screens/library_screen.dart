@@ -1,4 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import '../widgets/orchid_hover_zoom.dart';
 import '../widgets/orchid_adaptive_controls.dart';
 
 import '../models/addon.dart';
@@ -123,7 +124,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
       onExit: (_) => updateHover(() => hovered = false),
       child: Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
-      child: SongContextMenu(
+      child: OrchidHoverSurface(
+        child: SongContextMenu(
         track: _track(song), player: widget.player,
         library: widget.library, playlist: playlist,
         child: GestureDetector(
@@ -171,6 +173,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               const SizedBox(width: 38),
             ]),
           ),
+        ),
         ),
       ),
     )));
