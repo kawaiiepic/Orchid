@@ -145,7 +145,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 album: song.album, fallbackUrl: song.artwork,
                 size: 42, radius: 7),
               const SizedBox(width: 12),
-              Expanded(flex: 4, child: Column(
+              Expanded(child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(song.title, maxLines: 1,
@@ -158,10 +158,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     maxLines: 1, overflow: TextOverflow.ellipsis).small().muted(),
                 ],
               )),
-              if (MediaQuery.sizeOf(context).width >= 720)
-                Expanded(flex: 3, child: Text(
+              if (MediaQuery.sizeOf(context).width >= 720) ...[
+                const SizedBox(width: 14),
+                SizedBox(width: 180, child: Text(
                   song.album?.isNotEmpty == true ? song.album! : 'Unknown album',
                   maxLines: 1, overflow: TextOverflow.ellipsis).small().muted()),
+                const SizedBox(width: 14),
+              ],
               SizedBox(width: 64, child: Text(
                 trackDurationLabel(song.duration) ?? '—',
                 textAlign: TextAlign.end).small().muted()),
@@ -708,9 +711,22 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         Icon(LucideIcons.play, size: 17),
                         SizedBox(width: 7), Text('Play all')]),
                     ),
-                    if (activePlaylist != null)
+                    if (selected)
                       OrchidHoverMenu(
+                        showHoverButton: false,
+                        openOnTap: true,
                         actions: [
+                          if (id == 'favorites')
+                            OrchidHoverAction('Play all favorites', LucideIcons.play,
+                              () => _playCollection(widget.library.favorites)),
+                          if (id == 'favorites')
+                            OrchidHoverAction('Add favorites to queue', LucideIcons.listMusic,
+                              () {
+                                for (final song in widget.library.favorites) {
+                                  widget.player.addToQueue(_track(song));
+                                }
+                              }),
+                          if (activePlaylist != null) ...[
                           OrchidHoverAction(
                             widget.library.isPlaylistSaved(activePlaylist)
                               ? 'Remove from Library' : 'Add to Library',
@@ -726,6 +742,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                               await widget.library.deletePlaylist(activePlaylist!);
                               widget.onPlaylistSelected?.call(null);
                             }),
+                          ],
                         ],
                         child: const SizedBox(width: 42, height: 42,
                           child: Center(child: Icon(LucideIcons.ellipsis))),
