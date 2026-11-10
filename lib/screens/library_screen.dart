@@ -114,7 +114,45 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Future<void> _showPlaylistError(Object error) async {
-    await _askName('Spotify import failed: $error', hint: 'Dismiss');
+    final result = Completer<void>();
+    late OverlayEntry entry;
+    void close() {
+      if (result.isCompleted) return;
+      entry.remove();
+      entry.dispose();
+      result.complete();
+    }
+    entry = OverlayEntry(builder: (context) => Stack(children: [
+      Positioned.fill(child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: close,
+        child: const ColoredBox(color: Color(0x99000000)),
+      )),
+      Center(child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: OrchidGlassPanel(
+          radius: 18, transparentOnDesktop: false,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Spotify import unavailable').large().semiBold(),
+              const SizedBox(height: 12),
+              Text('$error').small(),
+              const SizedBox(height: 18),
+              Align(alignment: Alignment.centerRight,
+                child: OrchidAdaptiveControls.button(
+                  prominent: true,
+                  onPressed: close,
+                  child: const Text('OK')),
+              ),
+            ]),
+          ),
+        ),
+      )),
+    ]));
+    Overlay.of(context).insert(entry);
+    await result.future;
   }
 
   Future<void> _newPlaylist() async {
