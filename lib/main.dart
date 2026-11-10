@@ -49,7 +49,13 @@ Future<void> main() async {
   JustAudioMediaKit.ensureInitialized();
   if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS ||
       defaultTargetPlatform == TargetPlatform.android)) {
-    await OrchidBackgroundAudio.initialize();
+    try {
+      await OrchidBackgroundAudio.initialize();
+    } catch (error, stack) {
+      // A media-service failure must not prevent Orchid from opening.
+      debugPrint('[Orchid Audio] Media service initialization failed: $error');
+      debugPrintStack(stackTrace: stack);
+    }
   }
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
