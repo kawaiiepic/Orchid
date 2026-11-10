@@ -30,9 +30,6 @@ jobs:
       - name: Resolve Flutter packages
         run: flutter pub get
 
-      - name: Fix miniaudio_player 3.0.2 iOS native build
-        run: python3 scripts/patch_miniaudio_ios.py
-
       - name: Analyze Dart source
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
