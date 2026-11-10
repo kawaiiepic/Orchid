@@ -1,5 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import 'package:liquid_design/liquid_design.dart' as liquid;
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart' as glass;
 import '../widgets/orchid_adaptive_controls.dart';
 
 import '../models/addon.dart';
@@ -111,7 +111,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
           ),
-          liquid.LiquidGlassSwitch(
+          glass.GlassSwitch(
             value: value,
             activeColor: const Color(0xFF9369BE),
             onChanged: onChanged,
@@ -143,7 +143,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   .muted(),
             ],
           ),
-          liquid.LiquidGlassSlider(
+          glass.GlassSlider(
             value: value.clamp(min, max).toDouble(),
             min: min,
             max: max,
