@@ -12,7 +12,79 @@ import 'lyrics_service.dart';
 enum OrchidRepeatMode { off, all, one }
 
 class PlayerService extends ChangeNotifier {
-  final AudioPlayer player = AudioPlayer();
+  final AndroidEqualizer _equalizer=AndroidEqualizer();
+  final AndroidLoudnessEnhancer _loudness=AndroidLoudnessEnhancer();
+  late final AudioPlayer player=AudioPlayer(
+    audioPipeline: AudioPipeline(androidAudioEffects:[
+      _equalizer,_loudness,
+    ]),
+  );
+  bool eqEnabled=false;
+  bool normalizationEnabled=false;
+  String eqPreset='Flat';
+  List<AndroidEqualizerBand> eqBands=[];
+  double crossfadeSeconds=0;
+  bool get supportsHardwareEq=>!kIsWeb&&defaultTargetPlatform==TargetPlatform.android;
+  String? streamUrl;
+  static const Map<String,List<double>> eqPresets={
+    'Flat':[0,0,0,0,0],
+    'Bass Boost':[6,4,1,0,0],
+    'Vocal':[-3,-1,3,3,1],
+    'Treble Boost':[-1,0,1,4,6],
+    'Warm':[3,2,1,-1,-2],
+    'Bright':[-2,0,1,3,4],
+  };
+  Future<void> _restoreAudioPipeline() async {
+    try {
+      final prefs=await SharedPreferences.getInstance();
+      if(_disposed)return;
+      eqPreset=prefs.getString('orchid_eq_preset')??'Flat';
+      eqEnabled=prefs.getBool('orchid_eq_enabled')??false;
+      normalizationEnabled=prefs.getBool('orchid_normalization')??false;
+      crossfadeSeconds=(prefs.getDouble('orchid_crossfade_seconds')??0).clamp(0,12);
+      if(supportsHardwareEq){
+        final settings=await _equalizer.parameters;
+        eqBands=settings.bands;
+        await _equalizer.setEnabled(eqEnabled);
+        await _loudness.setEnabled(normalizationEnabled);
+        await _loudness.setTargetGain(3);
+        await _applyEqPreset();
+      }
+      notifyListeners();
+    }catch(e){debugPrint('[Orchid Audio] Effects unavailable: $e');}
+  }
+  Future<void> _applyEqPreset() async {
+    final gains=eqPresets[eqPreset]??eqPresets['Flat']!;
+    if(eqBands.isEmpty)return;
+    for(var i=0;i<eqBands.length;i++){
+      final index=eqBands.length==1?0:((i*4)/(eqBands.length-1)).round();
+      await eqBands[i].setGain(gains[index].clamp(-10,10));
+    }
+  }
+  Future<void> setEqPreset(String preset) async{
+    if(!eqPresets.containsKey(preset))return;
+    eqPreset=preset;
+    if(supportsHardwareEq)await _applyEqPreset();
+    notifyListeners();
+    (await SharedPreferences.getInstance()).setString('orchid_eq_preset',preset);
+  }
+  Future<void> setEqEnabled(bool enabled) async{
+    if(!supportsHardwareEq)return;
+    await _equalizer.setEnabled(enabled);
+    eqEnabled=enabled;notifyListeners();
+    (await SharedPreferences.getInstance()).setBool('orchid_eq_enabled',enabled);
+  }
+  Future<void> setNormalization(bool enabled) async{
+    if(!supportsHardwareEq)return;
+    await _loudness.setEnabled(enabled);
+    normalizationEnabled=enabled;notifyListeners();
+    (await SharedPreferences.getInstance()).setBool('orchid_normalization',enabled);
+  }
+  Future<void> setCrossfade(double seconds) async{
+    crossfadeSeconds=seconds.clamp(0,12);
+    notifyListeners();
+    (await SharedPreferences.getInstance()).setDouble('orchid_crossfade_seconds',crossfadeSeconds);
+  }
   final AddonService addonService;
   final LyricsService lyricsService;
   StreamSubscription<PlayerState>? _stateSubscription;
@@ -104,6 +176,7 @@ class PlayerService extends ChangeNotifier {
     LyricsService? lyricsService,
   }) : lyricsService = lyricsService ?? LyricsService() {
     unawaited(_restoreKeepPlaying());
+    unawaited(_restoreAudioPipeline());
     _stateSubscription = player.playerStateStream.listen((state) {
       if (_disposed) return;
       notifyListeners();
@@ -418,6 +491,7 @@ class PlayerService extends ChangeNotifier {
     playingVia = null;
     streamQuality = null;
     streamCodec = null;
+    streamUrl=null;
     error = null;
     lyrics = null;
     lyricsLoading = true;
@@ -434,6 +508,7 @@ class PlayerService extends ChangeNotifier {
       streamQuality = stream.quality;
       streamCodec = stream.format;
       await player.setUrl(stream.url).timeout(const Duration(seconds: 20));
+      streamUrl=stream.url;
       if (generation != lyricsGeneration) return;
       await player.setVolume(volume);
       unawaited(player.play().catchError((Object e) {
