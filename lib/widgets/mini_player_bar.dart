@@ -39,11 +39,17 @@ class MiniPlayerBar extends StatelessWidget {
         final compact = MediaQuery.sizeOf(context).width < 610;
         final nativeIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
-        return Container(
-          margin: EdgeInsets.fromLTRB(10, OrchidStyle.compact(context,6), 10, OrchidStyle.compact(context,5)),
-          padding: EdgeInsets.symmetric(horizontal: 14, vertical: OrchidStyle.compact(context,10)),
-          decoration: OrchidStyle.panelDecoration(radius: 18),
-          child: Row(
+        return Padding(
+          padding: EdgeInsets.fromLTRB(10, OrchidStyle.compact(context,6), 10, OrchidStyle.compact(context,5)),
+          child: liquid.LiquidGlass(
+            shape: const liquid.LiquidGlassShape.roundedRect(18),
+            style: liquid.LiquidGlassStyle.regular,
+            fallback: liquid.LiquidGlassFallback.frosted,
+            tintColor: const Color(0xFF332342),
+            tintOpacity: 0.22,
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 14, vertical: OrchidStyle.compact(context,10)),
+              child: Row(
             children: [
               Expanded(
                 child: GestureDetector(
@@ -139,6 +145,8 @@ class MiniPlayerBar extends StatelessWidget {
                 ),
               ],
             ],
+              ),
+            ),
           ),
         );
       },
@@ -287,18 +295,18 @@ class DesktopPlayerBar extends StatelessWidget {
       builder: (context, _) {
         final track = player.current;
         final playing = player.player.playing;
-        return Container(
-          height: 82,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
-          decoration: BoxDecoration(
-            color: const Color(0xEF18152C),
-            borderRadius: BorderRadius.circular(17),
-            border: Border.all(color: const Color(0xFF4B3E5B), width: .8),
-            boxShadow: const [BoxShadow(
-              color: Color(0x66000000), blurRadius: 22, offset: Offset(0, 7),
-            )],
-          ),
-          child: Row(children: [
+        return liquid.LiquidGlass(
+          shape: const liquid.LiquidGlassShape.roundedRect(17),
+          style: liquid.LiquidGlassStyle.regular,
+          fallback: liquid.LiquidGlassFallback.frosted,
+          fallbackBlurSigma: 18,
+          tintColor: const Color(0xFF332342),
+          tintOpacity: 0.22,
+          child: SizedBox(
+            height: 82,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+              child: Row(children: [
             SizedBox(
               width: MediaQuery.sizeOf(context).width < 1250 ? 155 : 245,
               child: track == null
@@ -412,7 +420,9 @@ class DesktopPlayerBar extends StatelessWidget {
                 ],
               ),
             ),
-          ]),
+              ]),
+            ),
+          ),
         );
       },
     );
