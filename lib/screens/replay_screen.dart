@@ -63,15 +63,20 @@ class _ReplayScreenState extends State<ReplayScreen> {
   }
 
   Widget _metric(String title,String number,IconData icon){
-    return Container(
-      width:164,height:105,padding:const EdgeInsets.all(14),
-      decoration:OrchidStyle.panelDecoration(radius:16),
-      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+    return OrchidGlassPanel(
+      radius:16,
+      child:SizedBox(
+        width:164,height:105,
+        child:Padding(
+          padding:const EdgeInsets.all(14),
+          child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         Icon(icon,size:19,color:OrchidStyle.lilac),
         const Spacer(),
         Text(number).large().semiBold(),
         Text(title).xSmall().muted(),
-      ]),
+          ]),
+        ),
+      ),
     );
   }
 
@@ -80,8 +85,8 @@ class _ReplayScreenState extends State<ReplayScreen> {
       Text(title).large().semiBold(),
       const SizedBox(height:10),
       if(items.isEmpty)const Text('No listening data for this period.').muted()
-      else Container(
-        decoration:OrchidStyle.panelDecoration(radius:16),
+      else OrchidGlassPanel(
+        radius:16,
         child:Column(children:[
           for(var i=0;i<items.length;i++)Padding(
             padding:const EdgeInsets.symmetric(horizontal:14,vertical:11),
@@ -167,16 +172,18 @@ class _ReplayScreenState extends State<ReplayScreen> {
         if(!isAnnual)...[
           const Text('Compared with the previous month').large().semiBold(),
           const SizedBox(height:10),
-          Container(
-            padding:const EdgeInsets.all(16),
-            decoration:OrchidStyle.panelDecoration(radius:16),
-            child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          OrchidGlassPanel(
+            radius:16,
+            child:Padding(
+              padding:const EdgeInsets.all(16),
+              child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
               Text(difference==0?'No change':difference>0?'More listening time':'Less listening time').semiBold(),
               const SizedBox(height:4),
               Text('${difference>0?'+':''}${(difference/3600).toStringAsFixed(1)} estimated hours').large(),
               Text('Previous month: ${(previousSeconds/3600).toStringAsFixed(1)} h · Selected month: ${(seconds/3600).toStringAsFixed(1)} h').small().muted(),
               if(previousSeconds>0)Text('${difference>=0?'+':''}${(difference*100/previousSeconds).toStringAsFixed(1)}% versus last month').small().muted(),
-            ]),
+              ]),
+            ),
           ),
           const SizedBox(height:25),
         ],
