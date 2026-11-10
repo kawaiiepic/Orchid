@@ -79,7 +79,7 @@ class _RadioScreenState extends State<RadioScreen>{
   @override Widget build(BuildContext context)=>ListView(
     padding:EdgeInsets.fromLTRB(24,
       24 + MediaQuery.paddingOf(context).top, 24,
-      24 + OrchidStyle.iosDockClearance(context)),children:
+      24 + OrchidStyle.iosDockClearance(context)),children: [
       const OrchidHero(eyebrow:'Made for You',title:'Radio',
         description:'Choose a vibe. Orchid keeps the music flowing.',
         icon:LucideIcons.radio),
