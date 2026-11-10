@@ -346,6 +346,13 @@ class MusicLibrary extends ChangeNotifier {
     await _save();
   }
 
+  Future<void> renamePlaylistFolder(
+      PlaylistFolder folder, String name) async {
+    if (!playlistFolders.contains(folder) || name.trim().isEmpty) return;
+    folder.name = name.trim();
+    await _save();
+  }
+
   Future<void> deletePlaylistFolder(PlaylistFolder folder) async {
     playlistFolders.removeWhere((f) => f.id == folder.id);
     for (final p in visiblePlaylists) {
