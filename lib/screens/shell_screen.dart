@@ -385,7 +385,7 @@ class _ShellScreenState extends State<ShellScreen>{
   final browsing=NotificationListener<ScrollNotification>(
     onNotification:_onContentScroll,
     child:IndexedStack(
-      index:page.clamp(0,4),
+      index:page.clamp(0,9),
       children:[
      OrchidHomeScreen(
       header:desktop ? _desktopGreeting() : _topBar(context),
@@ -393,47 +393,12 @@ class _ShellScreenState extends State<ShellScreen>{
       openExplore:()=>_selectTab(1),
       openProfile:_openProfile,
       openLibrary:()=>_selectTab(2),
-      openAiDj:()=>showContentDrawer(
-       context,
-       builder:(sheetContext)=>Scaffold(
-        child:Column(children:[
-         Padding(
-          padding:const EdgeInsets.fromLTRB(16,12,16,2),
-          child:Row(children:[
-           const Icon(LucideIcons.bot,color:OrchidStyle.lilac),
-           const SizedBox(width:10),
-           const Text('AI DJ').large().semiBold(),
-           const Spacer(),
-           IconButton.ghost(
-            onPressed:()=>dismissContentDrawer(sheetContext),
-            icon:const Icon(LucideIcons.x),
-           ),
-          ]),
-         ),
-         Expanded(child:AiDjScreen(account:_account)),
-        ]),
-       ),
-      ),
-      openRadio:()=>_openFeatureSheet(
-       'Radio',
-       RadioScreen(account:_account,player:_player,addons:_addons),
-      ),
-      openTopSongs:()=>_openFeatureSheet(
-       'All-Time Top Songs',
-       AllTimeTopSongsScreen(account:_account,player:_player,addons:_addons),
-      ),
-      openReplay:()=>_openFeatureSheet(
-       'Replay',
-       ReplayScreen(account:_account),
-      ),
-      openDailyMixes:(index)=>_openFeatureSheet(
-       'Daily Mixes',
-       DailyMixesScreen(
-        initialMixIndex:index,
-        account:_account,library:_library,player:_player,
-        addonService:_addonService,addons:_addons,
-       ),
-      ),
+      openAiDj:()=>_selectTab(7),
+      openRadio:()=>_selectTab(6),
+      openTopSongs:()=>_selectTab(8),
+      openReplay:()=>_selectTab(5),
+      // Mix cards remain playable, but their old detail page is gone.
+      openDailyMixes:(index)=>_selectTab(3),
       library:_library,
      ),
      if(_initializedTabs.contains(1))
@@ -460,6 +425,28 @@ class _ShellScreenState extends State<ShellScreen>{
        openExplore:()=>_selectTab(3),
        playlistsOnly:true,
      ) else const SizedBox.shrink(),
+     if(_initializedTabs.contains(5))
+      ReplayScreen(account:_account)
+     else const SizedBox.shrink(),
+     if(_initializedTabs.contains(6))
+      RadioScreen(account:_account,player:_player,addons:_addons)
+     else const SizedBox.shrink(),
+     if(_initializedTabs.contains(7))
+      AiDjScreen(account:_account)
+     else const SizedBox.shrink(),
+     if(_initializedTabs.contains(8))
+      AllTimeTopSongsScreen(account:_account,player:_player,addons:_addons)
+     else const SizedBox.shrink(),
+     if(_initializedTabs.contains(9))
+      SettingsScreen(
+       account:_account,addonService:_addonService,addons:_addons,
+       onAddonsChanged:(list) {
+        if(!mounted)return;
+        setState(()=>_addons=list);
+        _player.setAddons(list);
+       },
+      )
+     else const SizedBox.shrink(),
 
       ],
     ),
@@ -502,10 +489,10 @@ class _ShellScreenState extends State<ShellScreen>{
             onDiscover:()=>_selectTab(3),
             onPlaylists:()=>_selectTab(4),
             onLibrary:()=>_selectTab(2),
-            onReplay:()=>_openFeatureSheet('Replay',ReplayScreen(account:_account)),
+            onReplay:()=>_selectTab(5),
             onRadio:()=>_openFeatureSheet('Radio',
               RadioScreen(account:_account,player:_player,addons:_addons)),
-            onAiDj:()=>_openFeatureSheet('AI DJ',AiDjScreen(account:_account)),
+            onAiDj:()=>_selectTab(7),
             onSettings:_openSettings,
             onProfile:_openProfile,
           ),
