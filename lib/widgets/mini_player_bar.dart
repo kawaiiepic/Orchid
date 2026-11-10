@@ -44,6 +44,8 @@ class MiniPlayerBar extends StatelessWidget {
           child: liquid.LiquidGlass(
             shape: const liquid.LiquidGlassShape.roundedRect(18),
             style: liquid.LiquidGlassStyle.regular,
+            interactive: false,
+            interactionStrength: 0,
             fallback: liquid.LiquidGlassFallback.frosted,
             fallbackBlurSigma: 20,
             tintColor: const Color(0xFF7954AB),
@@ -195,6 +197,8 @@ class IOSMiniPlayer extends StatelessWidget {
         return liquid.LiquidGlass(
           shape: const liquid.LiquidGlassShape.capsule(),
           style: liquid.LiquidGlassStyle.regular,
+          interactive: false,
+          interactionStrength: 0,
           tintColor: const Color(0xFF7954AB),
           tintOpacity: 0.24,
           brightness: liquid.LiquidGlassBrightness.dark,
@@ -308,6 +312,8 @@ class DesktopPlayerBar extends StatelessWidget {
         return liquid.LiquidGlass(
           shape: const liquid.LiquidGlassShape.roundedRect(17),
           style: liquid.LiquidGlassStyle.regular,
+            interactive: false,
+            interactionStrength: 0,
           fallback: liquid.LiquidGlassFallback.frosted,
           fallbackBlurSigma: 20,
           tintColor: const Color(0xFF7954AB),
