@@ -70,9 +70,8 @@ class DesktopSidebar extends StatelessWidget {
     return Container(
       width: 236,
       decoration: BoxDecoration(
-        color: const Color(0xEE171529),
+        color: const Color(0xED21182F),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFF423853), width: .8),
         boxShadow: const [BoxShadow(
           color: Color(0x55000000), blurRadius: 26, offset: Offset(0, 9),
         )],
