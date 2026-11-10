@@ -979,7 +979,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     final charts = _items('charts');
     final recent = _uniqueRecent();
     return ListView(
-      padding: const EdgeInsets.fromLTRB(28, 28, 30, 42),
+      padding: const EdgeInsets.fromLTRB(28, 28, 30, 138),
       children: [
         widget.header,
         _desktopShortcuts(),
