@@ -155,6 +155,18 @@ class PlayerService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Insert a track immediately after the current track without
+  /// interrupting playback.
+  void addNextToQueue(TrackResult track) {
+    if (queue.isEmpty && current != null) {
+      queue = [current!];
+      queueIndex = 0;
+    }
+    final nextIndex = (queueIndex + 1).clamp(0, queue.length);
+    queue.insert(nextIndex, track);
+    notifyListeners();
+  }
+
   String _trackIdentity(TrackResult t) =>
       '${t.artist.trim().toLowerCase()}|${t.title.trim().toLowerCase()}';
 
