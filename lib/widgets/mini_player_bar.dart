@@ -558,6 +558,7 @@ class DesktopPlayerBar extends StatelessWidget {
                                     track.title, track.artist,
                                     album: track.album,
                                     artwork: track.artworkUrl,
+                                    duration: track.duration,
                                   );
                                   final liked = library.isFavorite(saved);
                                   return MouseRegion(
