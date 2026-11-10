@@ -687,6 +687,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
           const SizedBox(height: 12),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
+          padding: EdgeInsets.symmetric(horizontal: _desktop ? 0 : 16),
             child: Row(
               children: [
                 for (final playlist in playlists) ...[
@@ -769,6 +770,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
       ];
       return SingleChildScrollView(
         scrollDirection: Axis.horizontal,
+          padding: EdgeInsets.symmetric(horizontal: _desktop ? 0 : 16),
         child: Row(
           children: [
             for (var i = 0; i < titles.length; i++) ...[
@@ -907,6 +909,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
   Widget _recentCards(List<Map<String, dynamic>> tracks) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
+          padding: EdgeInsets.symmetric(horizontal: _desktop ? 0 : 16),
       child: Row(
         children: [
           for (final track in tracks) ...[
@@ -1089,6 +1092,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     }
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
+          padding: EdgeInsets.symmetric(horizontal: _desktop ? 0 : 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1126,6 +1130,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
         _homeInset(_desktopSection('Made For You')),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
+          padding: EdgeInsets.symmetric(horizontal: _desktop ? 0 : 16),
           child: Row(children: [
             _madeForYouCard(),
             const SizedBox(width: 13),
