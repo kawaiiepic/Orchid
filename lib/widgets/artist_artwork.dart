@@ -17,7 +17,7 @@ class ArtistArtwork extends StatelessWidget {
     required this.size,
     this.fallbackUrl,
     this.radius = 12,
-    this.zoomOnHover = true,
+    this.zoomOnHover = false,
   });
 
   @override
