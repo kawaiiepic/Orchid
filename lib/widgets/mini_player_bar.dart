@@ -45,8 +45,13 @@ class MiniPlayerBar extends StatelessWidget {
             shape: const liquid.LiquidGlassShape.roundedRect(18),
             style: liquid.LiquidGlassStyle.regular,
             fallback: liquid.LiquidGlassFallback.frosted,
-            tintColor: const Color(0xFF332342),
-            tintOpacity: 0.22,
+            fallbackBlurSigma: 20,
+            tintColor: const Color(0xFF7954AB),
+            tintOpacity: 0.24,
+            brightness: liquid.LiquidGlassBrightness.dark,
+            opacity: 0.88,
+            rimColor: const Color(0x00000000),
+            rimWidth: 0,
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 14, vertical: OrchidStyle.compact(context,10)),
               child: Row(
@@ -190,8 +195,13 @@ class IOSMiniPlayer extends StatelessWidget {
         return liquid.LiquidGlass(
           shape: const liquid.LiquidGlassShape.capsule(),
           style: liquid.LiquidGlassStyle.regular,
-          tintColor: const Color(0xFF57406C),
-          tintOpacity: 0.22,
+          tintColor: const Color(0xFF7954AB),
+          tintOpacity: 0.24,
+          brightness: liquid.LiquidGlassBrightness.dark,
+          opacity: 0.88,
+          rimColor: const Color(0x00000000),
+          rimWidth: 0,
+          fallbackBlurSigma: 20,
           fallback: liquid.LiquidGlassFallback.frosted,
           child: Container(
               height: 58,
@@ -299,9 +309,13 @@ class DesktopPlayerBar extends StatelessWidget {
           shape: const liquid.LiquidGlassShape.roundedRect(17),
           style: liquid.LiquidGlassStyle.regular,
           fallback: liquid.LiquidGlassFallback.frosted,
-          fallbackBlurSigma: 18,
-          tintColor: const Color(0xFF332342),
-          tintOpacity: 0.22,
+          fallbackBlurSigma: 20,
+          tintColor: const Color(0xFF7954AB),
+          tintOpacity: 0.24,
+          brightness: liquid.LiquidGlassBrightness.dark,
+          opacity: 0.88,
+          rimColor: const Color(0x00000000),
+          rimWidth: 0,
           child: SizedBox(
             height: 82,
             child: Padding(
