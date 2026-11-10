@@ -21,6 +21,30 @@ Orchid currently updates original queue state separately from the native mixer q
 
 The existing video playback uses media_kit and stays unchanged. Chromecast discovery is not included.
 
+## iOS native build fix (miniaudio_player 3.0.2)
+
+The published miniaudio_player 3.0.2 Cargo build script passes its iOS
+`miniaudio_device_bridge.c` to the C compiler unchanged. Upstream miniaudio
+requires Objective-C for iOS; otherwise clang reports invalid Foundation
+declarations (`NSObjCRuntime.h`, `NSString`). Orchid carries a narrowly
+version-checked, idempotent hotfix in
+`scripts/patch_miniaudio_ios.py` until the package is fixed upstream.
+
+After `flutter pub get`, run the patch **before any local iOS build**:
+
+```sh
+python3 scripts/patch_miniaudio_ios.py
+flutter build ios --release --no-codesign
+```
+
+The script patches only the resolved package's `rust/build.rs` (not Apple's
+SDK), passing `-x objective-c` to the `cc` builder on iOS and linking
+Foundation. CI and TestFlight run it automatically. Re-run it after
+`flutter pub cache repair`, updating the package version, or clearing
+Flutter dependencies. Because it patches a dependency cache, this is a
+temporary workaround rather than an upstream fix; remove it once a newer
+package release fixes the native build.
+
 ## Local verification
 
 ```sh
