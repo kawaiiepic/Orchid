@@ -139,8 +139,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 children: [
                   Text(song.title, maxLines: 1,
                     overflow: TextOverflow.ellipsis).semiBold(),
-                  Text(song.artist, maxLines: 1,
-                    overflow: TextOverflow.ellipsis).small().muted(),
+                  Text(
+                    MediaQuery.sizeOf(context).width < 720 &&
+                        song.album?.isNotEmpty == true
+                      ? '${song.artist} · ${song.album}'
+                      : song.artist,
+                    maxLines: 1, overflow: TextOverflow.ellipsis).small().muted(),
                 ],
               )),
               if (MediaQuery.sizeOf(context).width >= 720)
