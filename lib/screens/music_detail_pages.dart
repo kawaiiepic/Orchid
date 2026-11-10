@@ -71,6 +71,52 @@ Widget _cover(BuildContext context, String? artwork, {double size = 128}) {
   );
 }
 
+/// Only reveal the video play overlay while the artwork is hovered.
+class _HoverMusicVideoArtwork extends StatefulWidget {
+  final String? artwork;
+
+  const _HoverMusicVideoArtwork({this.artwork});
+
+  @override
+  State<_HoverMusicVideoArtwork> createState() =>
+      _HoverMusicVideoArtworkState();
+}
+
+class _HoverMusicVideoArtworkState extends State<_HoverMusicVideoArtwork> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+    onEnter: (_) => setState(() => _hovered = true),
+    onExit: (_) => setState(() => _hovered = false),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(11),
+      child: SizedBox(
+        width: 220,
+        height: 124,
+        child: Stack(fit: StackFit.expand, children: [
+          if (widget.artwork?.startsWith('https://') == true)
+            Image.network(widget.artwork!, fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) =>
+                  const ColoredBox(color: OrchidStyle.panel))
+          else
+            const ColoredBox(color: OrchidStyle.panel),
+          IgnorePointer(
+            child: AnimatedOpacity(
+              opacity: _hovered ? 1 : 0,
+              duration: const Duration(milliseconds: 160),
+              child: const Center(
+                child: Icon(LucideIcons.play,
+                  size: 29, color: Color(0xFFF9F5FF)),
+              ),
+            ),
+          ),
+        ]),
+      ),
+    ),
+  );
+}
+
 Widget _back(BuildContext context) => Align(
   alignment: Alignment.centerLeft,
   child: IconButton.ghost(
@@ -393,22 +439,7 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
             },
             child: Column(crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(11),
-                  child: SizedBox(
-                    width: 220, height: 124,
-                    child: Stack(fit: StackFit.expand, children: [
-                      if (video.artwork?.startsWith('https://') == true)
-                        Image.network(video.artwork!, fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) =>
-                            const ColoredBox(color: OrchidStyle.panel))
-                      else
-                        const ColoredBox(color: OrchidStyle.panel),
-                      const Center(child: Icon(LucideIcons.play,
-                        size: 29, color: Color(0xFFF9F5FF))),
-                    ]),
-                  ),
-                ),
+                _HoverMusicVideoArtwork(artwork: video.artwork),
                 const SizedBox(height: 8),
                 Text(video.title, maxLines: 2,
                   overflow: TextOverflow.ellipsis).semiBold(),
