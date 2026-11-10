@@ -359,6 +359,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
           OrchidHoverAction(playlist.pinned ? 'Unpin from Home' : 'Pin to Home',
             LucideIcons.pin, () => widget.library.setPlaylistPinned(
               playlist, !playlist.pinned)),
+        if (playlist != null && playlist.folderId != null)
+          OrchidHoverAction('Remove from folder', LucideIcons.folderMinus,
+            () => widget.library.movePlaylistToFolder(playlist, null)),
+        if (playlist != null)
+          for (final folder in widget.library.playlistFolders)
+            OrchidHoverAction('Move to ${folder.name}', LucideIcons.folder,
+              () => widget.library.movePlaylistToFolder(playlist, folder.id)),
       ],
       child: MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -684,7 +691,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   List<MusicPlaylist> _sortedPlaylists(List<MusicPlaylist> playlists) {
-    final result = playlists.where((p) => p.folderId == _playlistFolderId).toList();
+    final result = playlists.where((p) =>
+      _playlistFolderId == null || p.folderId == _playlistFolderId).toList();
     switch (_playlistSort) {
       case 'Recently Added':
         result.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -724,8 +732,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
             if (newIndex > oldIndex) newIndex--;
             if (oldIndex == newIndex) return;
             final moving = filtered[oldIndex];
-            final target = filtered[newIndex];
-            widget.library.movePlaylistBefore(moving, target);
+            final reordered = [...filtered]..removeAt(oldIndex);
+            reordered.insert(newIndex, moving);
+            widget.library.applyPlaylistOrder(reordered);
           },
           itemBuilder: (context, index) {
             final p = filtered[index];
