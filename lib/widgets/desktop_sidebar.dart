@@ -71,16 +71,11 @@ class DesktopSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 236,
-      decoration: BoxDecoration(
-        color: const Color(0xED21182F),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: const [BoxShadow(
-          color: Color(0x55000000), blurRadius: 26, offset: Offset(0, 9),
-        )],
-      ),
-      child: Column(
+    return OrchidGlassPanel(
+      radius: 18,
+      child: SizedBox(
+        width: 236,
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: 20),
@@ -145,6 +140,7 @@ class DesktopSidebar extends StatelessWidget {
             ),
           ),
         ],
+        ),
       ),
     );
   }
