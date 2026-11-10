@@ -142,6 +142,7 @@ class _SongActionPanel extends StatefulWidget {
 class _SongActionPanelState extends State<_SongActionPanel> {
   final _name = TextEditingController();
   bool _creating = false;
+  OverlayEntry? _playlistSubmenu;
 
   SavedSong get _saved => SavedSong(widget.track.title, widget.track.artist,
     album: widget.track.album, artwork: widget.track.artworkUrl,
@@ -149,6 +150,7 @@ class _SongActionPanelState extends State<_SongActionPanel> {
 
   @override
   void dispose() {
+    _closePlaylistSubmenu();
     _name.dispose();
     super.dispose();
   }
@@ -159,6 +161,58 @@ class _SongActionPanelState extends State<_SongActionPanel> {
     final playlist = await widget.library.createPlaylist(name);
     await widget.library.addToPlaylist(playlist, _saved);
     if (mounted) widget.dismiss();
+  }
+
+  void _closePlaylistSubmenu() {
+    _playlistSubmenu?.remove();
+    _playlistSubmenu?.dispose();
+    _playlistSubmenu = null;
+  }
+
+  void _openPlaylistSubmenu() {
+    _closePlaylistSubmenu();
+    final box = context.findRenderObject();
+    if (box is! RenderBox) return;
+    final origin = box.localToGlobal(Offset.zero);
+    final screen = MediaQuery.sizeOf(context);
+    const width = 248.0;
+    final left = origin.dx + box.size.width + width + 8 < screen.width
+        ? origin.dx + box.size.width + 4
+        : (origin.dx - width - 4).clamp(8.0, screen.width - width - 8.0);
+    final top = origin.dy.clamp(
+      8.0, (screen.height - 290).clamp(8.0, double.infinity));
+    _playlistSubmenu = OverlayEntry(builder: (_) => Positioned(
+      left: left.toDouble(), top: top.toDouble(), width: width,
+      child: OrchidGlassPanel(
+        radius: 14, transparentOnDesktop: false,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 290),
+          child: ListenableBuilder(
+            listenable: widget.library,
+            builder: (_, __) => SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                for (final playlist in widget.library.visiblePlaylists)
+                  _action(
+                    playlist.name,
+                    widget.library.contains(playlist, _saved)
+                      ? LucideIcons.check : LucideIcons.plus,
+                    () {
+                      widget.library.addToPlaylist(playlist, _saved);
+                      _closePlaylistSubmenu();
+                      widget.dismiss();
+                    },
+                  ),
+                _action('New playlist', LucideIcons.plus, () {
+                  _closePlaylistSubmenu();
+                  setState(() => _creating = true);
+                }),
+              ]),
+            ),
+          ),
+        ),
+      ),
+    ));
+    Overlay.of(context).insert(_playlistSubmenu!);
   }
 
   Widget _action(String label, IconData icon, VoidCallback callback) {
@@ -227,27 +281,8 @@ class _SongActionPanelState extends State<_SongActionPanel> {
               widget.dismiss();
             }),
           const Divider(),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 5, 14, 5),
-            child: const Text('Add to playlist').small().muted(),
-          ),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 145),
-            child: SingleChildScrollView(
-              child: Column(children: [
-                for (final playlist in widget.library.visiblePlaylists)
-                  _action(
-                    playlist.name,
-                    widget.library.contains(playlist, _saved)
-                        ? LucideIcons.check : LucideIcons.plus,
-                    () {
-                      widget.library.addToPlaylist(playlist, _saved);
-                      widget.dismiss();
-                    },
-                  ),
-              ]),
-            ),
-          ),
+          _action('Add to playlist', LucideIcons.listPlus,
+            _openPlaylistSubmenu),
           if (_creating)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -264,9 +299,7 @@ class _SongActionPanelState extends State<_SongActionPanel> {
                 ),
               ]),
             )
-          else
-            _action('Create new playlist', LucideIcons.plus,
-              () => setState(() => _creating = true)),
+          
         ],
         ),
       ),
