@@ -37,11 +37,11 @@ class _BorderlessPlayerGlass extends StatelessWidget {
               interactive: false,
               interactionStrength: 0,
               fallback: liquid.LiquidGlassFallback.frosted,
-              fallbackBlurSigma: 4,
+              fallbackBlurSigma: 20,
               tintColor: const Color(0xFF7954AB),
-              tintOpacity: 0.06,
+              tintOpacity: 0.34,
               brightness: liquid.LiquidGlassBrightness.dark,
-              opacity: 0.18,
+              opacity: 0.76,
               rimColor: const Color(0x00000000),
               rimWidth: 0,
               child: const SizedBox.expand(),
@@ -321,17 +321,46 @@ class IOSMiniPlayer extends StatelessWidget {
 }
 
 
-/// Full-width desktop player with transport and volume controls.
+/// Floating desktop player styled after Eclipse's compact transport deck.
 class DesktopPlayerBar extends StatelessWidget {
   final PlayerService player;
   final MusicLibrary library;
-  const DesktopPlayerBar({super.key, required this.player, required this.library});
+
+  const DesktopPlayerBar({
+    super.key,
+    required this.player,
+    required this.library,
+  });
 
   void _openFull(BuildContext context) {
     if (player.current == null) return;
-    showContentDrawer(context, preferredWidth: 950,
-      builder: (_) => FullPlayerScreen(player: player, library: library));
+    showContentDrawer(
+      context,
+      preferredWidth: 950,
+      builder: (_) => FullPlayerScreen(player: player, library: library),
+    );
   }
+
+  String _time(Duration position) {
+    final seconds = position.inSeconds < 0 ? 0 : position.inSeconds;
+    final minutes = (seconds ~/ 60).toString();
+    final remainder = (seconds % 60).toString().padLeft(2, '0');
+    if (seconds >= 3600) {
+      return '${seconds ~/ 3600}:${(seconds % 3600 ~/ 60).toString().padLeft(2, '0')}:$remainder';
+    }
+    return '$minutes:$remainder';
+  }
+
+  Widget _control(
+    IconData icon,
+    VoidCallback? action, {
+    Color color = const Color(0xFFB4ACC4),
+    double size = 17,
+  }) => IconButton.ghost(
+    onPressed: action,
+    icon: Icon(icon, size: size, color: action == null
+        ? const Color(0xFF61586D) : color),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -339,131 +368,195 @@ class DesktopPlayerBar extends StatelessWidget {
       listenable: player,
       builder: (context, _) {
         final track = player.current;
-        final playing = player.player.playing;
-        return _BorderlessPlayerGlass(
-          radius: 17,
-          child: SizedBox(
-            height: 82,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
-              child: Row(children: [
-            SizedBox(
-              width: MediaQuery.sizeOf(context).width < 1250 ? 155 : 245,
-              child: track == null
-                ? const Align(alignment: Alignment.centerLeft,
-                    child: Text('Nothing playing', style: TextStyle(
-                      color: Color(0xFFAAA1BA), fontSize: 12)))
-                : GestureDetector(
-                    onTap: () => _openFull(context),
-                    behavior: HitTestBehavior.opaque,
-                    child: Row(children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: track.artworkUrl == null
-                          ? const SizedBox(width: 53, height: 53,
-                              child: ColoredBox(color: OrchidStyle.panel,
-                                child: Icon(LucideIcons.music2, size: 21)))
-                          : CachedNetworkImage(
-                              imageUrl: track.artworkUrl!,
-                              width: 53, height: 53, fit: BoxFit.cover,
-                              errorWidget: (_, __, ___) =>
-                                const SizedBox(width: 53, height: 53,
-                                  child: Icon(LucideIcons.music2)),
-                            ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(track.title, maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Color(0xFFFAF5FF),
-                              fontSize: 13, fontWeight: FontWeight.w600)),
-                          const SizedBox(height: 3),
-                          Text(track.artist, maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Color(0xFFA9A1BB),
-                              fontSize: 11)),
-                        ],
-                      )),
-                    ]),
-                  ),
-            ),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      IconButton.ghost(
-                        onPressed: track == null ? null : player.playPrevious,
-                        icon: const Icon(LucideIcons.skipBack, size: 17),
-                      ),
-                      IconButton.ghost(
-                        onPressed: track == null ? null : player.togglePlayPause,
-                        icon: Icon(playing ? LucideIcons.pause : LucideIcons.play,
-                          color: const Color(0xFFF7EBFF), size: 21),
-                      ),
-                      IconButton.ghost(
-                        onPressed: track == null || !player.hasNext
-                          ? null : player.playNext,
-                        icon: const Icon(LucideIcons.skipForward, size: 17),
-                      ),
-                      IconButton.ghost(
-                        onPressed: track == null
-                          ? null : () => showQueueSheet(context, player),
-                        icon: const Icon(LucideIcons.listMusic, size: 17),
-                      ),
-                    ],
-                  ),
-                  SizedBox(
-                    width: MediaQuery.sizeOf(context).width < 1250 ? 165 : 340,
-                    child: StreamBuilder<Duration>(
-                      stream: player.player.positionStream,
-                      builder: (context, snapshot) {
-                        final duration = player.player.duration ?? Duration.zero;
-                        final total = duration.inMilliseconds;
-                        final value = snapshot.data?.inMilliseconds ?? 0;
-                        return Slider(
-                          value: SliderValue.single(
-                            total > 0 ? (value / total).clamp(0.0, 1.0) : 0),
-                          min: 0,
-                          max: 1,
-                          onChanged: track == null || total <= 0
-                            ? null
-                            : (v) => player.seek(Duration(
-                                milliseconds: (v.value * total).round())),
-                        );
-                      },
+        final active = track != null;
+        return LayoutBuilder(builder: (context, constraints) {
+          final narrow = constraints.maxWidth < 800;
+          final sideWidth = narrow ? 156.0 : 235.0;
+          final volumeWidth = narrow ? 68.0 : 110.0;
+          return _BorderlessPlayerGlass(
+            radius: 17,
+            child: SizedBox(
+              height: 82,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 8, 14, 7),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: sideWidth,
+                      child: active
+                        ? GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () => _openFull(context),
+                            child: Row(children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: track.artworkUrl == null
+                                  ? const SizedBox(
+                                      width: 52, height: 52,
+                                      child: ColoredBox(
+                                        color: OrchidStyle.panel,
+                                        child: Icon(LucideIcons.music2, size: 19),
+                                      ),
+                                    )
+                                  : CachedNetworkImage(
+                                      imageUrl: track.artworkUrl!,
+                                      width: 52, height: 52,
+                                      fit: BoxFit.cover,
+                                      errorWidget: (_, __, ___) =>
+                                        const SizedBox(
+                                          width: 52, height: 52,
+                                          child: Icon(LucideIcons.music2),
+                                        ),
+                                    ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(track.title,
+                                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Color(0xFFF9F4FF),
+                                      fontSize: 12, fontWeight: FontWeight.w600,
+                                    )),
+                                  const SizedBox(height: 3),
+                                  Text(track.artist,
+                                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Color(0xFFA9A0B9), fontSize: 11,
+                                    )),
+                                ],
+                              )),
+                            ]),
+                          )
+                        : const Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text('Nothing playing',
+                              style: TextStyle(
+                                color: Color(0xFFA9A0B9), fontSize: 12,
+                              )),
+                          ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            height: 33,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                _control(LucideIcons.shuffle,
+                                  active ? player.toggleShuffle : null,
+                                  color: player.shuffleEnabled
+                                    ? OrchidStyle.lilac
+                                    : const Color(0xFFAAA3B9),
+                                  size: 15),
+                                _control(LucideIcons.skipBack,
+                                  active ? player.playPrevious : null),
+                                _control(
+                                  player.player.playing
+                                    ? LucideIcons.pause
+                                    : LucideIcons.play,
+                                  active ? player.togglePlayPause : null,
+                                  color: const Color(0xFFF7F1FF), size: 22,
+                                ),
+                                _control(LucideIcons.skipForward,
+                                  active && player.hasNext
+                                    ? player.playNext : null),
+                                _control(LucideIcons.repeat,
+                                  active ? player.cycleRepeatMode : null,
+                                  color: player.repeatMode != OrchidRepeatMode.off
+                                    ? OrchidStyle.lilac
+                                    : const Color(0xFFAAA3B9),
+                                  size: 15),
+                              ],
+                            ),
+                          ),
+                          StreamBuilder<Duration>(
+                            stream: player.player.positionStream,
+                            builder: (context, snapshot) {
+                              final duration = player.player.duration ??
+                                (track?.duration != null
+                                  ? Duration(seconds: track!.duration!)
+                                  : Duration.zero);
+                              final total = duration.inMilliseconds;
+                              final pos = snapshot.data ?? Duration.zero;
+                              final elapsed = total > 0
+                                ? pos.inMilliseconds.clamp(0, total)
+                                : 0;
+                              return Row(children: [
+                                SizedBox(
+                                  width: 34,
+                                  child: Text(_time(Duration(milliseconds: elapsed)),
+                                    textAlign: TextAlign.right,
+                                    style: const TextStyle(
+                                      color: Color(0xFF968DA7), fontSize: 10,
+                                    )),
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Slider(
+                                    value: SliderValue.single(total > 0
+                                      ? elapsed / total : 0),
+                                    min: 0,
+                                    max: 1,
+                                    onChanged: active && total > 0
+                                      ? (value) => player.seek(Duration(
+                                          milliseconds: (value.value * total).round()))
+                                      : null,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                SizedBox(
+                                  width: 34,
+                                  child: Text(total > 0 ? _time(duration) : '0:00',
+                                    style: const TextStyle(
+                                      color: Color(0xFF968DA7), fontSize: 10,
+                                    )),
+                                ),
+                              ]);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    SizedBox(
+                      width: narrow ? 106 : 168,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          const Icon(LucideIcons.volume2,
+                            color: Color(0xFFB9AFCB), size: 16),
+                          const SizedBox(width: 4),
+                          SizedBox(
+                            width: volumeWidth,
+                            child: Slider(
+                              value: SliderValue.single(player.volume),
+                              min: 0,
+                              max: 1,
+                              onChanged: (value) =>
+                                player.setVolume(value.value),
+                            ),
+                          ),
+                          if (!narrow)
+                            _control(
+                              LucideIcons.listMusic,
+                              active ? () => showQueueSheet(context, player) : null,
+                              size: 16,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            SizedBox(
-              width: MediaQuery.sizeOf(context).width < 1250 ? 95 : 160,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  const Icon(LucideIcons.volume2, size: 16,
-                    color: Color(0xFFBEB0D0)),
-                  const SizedBox(width: 10),
-                  SizedBox(width: MediaQuery.sizeOf(context).width < 1250 ? 55 : 108,
-                    child: Slider(
-                      value: SliderValue.single(player.volume),
-                      min: 0,
-                      max: 1,
-                      onChanged: (v) => player.setVolume(v.value),
-                    )),
-                ],
-              ),
-            ),
-              ]),
-            ),
-          ),
-        );
+          );
+        });
       },
     );
   }
