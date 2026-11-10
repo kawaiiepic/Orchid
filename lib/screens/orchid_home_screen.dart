@@ -265,6 +265,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     double? height,
     bool desktopLandscape = false,
     bool desktopCircle = false,
+    bool zoomCard = true,
   }) {
     final desktop = _desktop;
     if (desktop && desktopLandscape) {
@@ -474,6 +475,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     }
     return _clickable(
       onTap: onTap,
+      zoomCard: zoomCard,
       child: SizedBox(
         width: cardWidth,
         height: cardHeight,
@@ -688,7 +690,9 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
             child: Row(
               children: [
                 for (final playlist in playlists) ...[
-                  _coverTile(
+                  OrchidHoverBrighten(
+                    child: _coverTile(
+                      zoomCard: false,
                     title: playlist.name,
                     subtitle: '${playlist.songs.length} songs',
                     badge: LucideIcons.pin,
@@ -718,6 +722,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                           debugPrint('[Orchid] Cannot play pinned playlist: $e');
                         });
                     },
+                    ),
                   ),
                   const SizedBox(width: 10),
                 ],
