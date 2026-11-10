@@ -249,9 +249,24 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
                 : '${catalog.albums.length} releases · ${catalog.songs.length} catalog tracks',
               artwork:ArtistArtwork(
                 artist:widget.artist,size:190,radius:95),
-              actions:_catalogActions(
-                tracks:catalog?.songs??<TrackResult>[],
-                player:widget.player,addons:widget.addons),
+              actions:Column(
+                crossAxisAlignment:CrossAxisAlignment.start,
+                children:[
+                  _catalogActions(
+                    tracks:catalog?.songs??<TrackResult>[],
+                    player:widget.player,addons:widget.addons),
+                  const SizedBox(height:12),
+                  ListenableBuilder(
+                    listenable: widget.library,
+                    builder: (context, _) => OrchidAdaptiveControls.button(
+                      onPressed: () => widget.library.toggleArtistSaved(
+                        widget.artist, artwork: widget.artwork),
+                      child: Text(widget.library.isArtistSaved(widget.artist)
+                        ? 'Remove from Library' : 'Add artist to Library'),
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height:28),
             if (snapshot.connectionState != ConnectionState.done)
