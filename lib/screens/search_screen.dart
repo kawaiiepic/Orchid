@@ -281,10 +281,7 @@ class _SearchScreenState extends State<SearchScreen> {
           Text(trackDurationLabel(t.duration)!).xSmall().muted(),
           const SizedBox(width:4),
         ],
-        IconButton.ghost(
-          onPressed:()=>_songDetails(t),
-          icon:const Icon(LucideIcons.info,size:16),
-        ),
+        const SizedBox(width:38),
       ]),
     ),
   );
