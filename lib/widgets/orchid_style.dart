@@ -1,4 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:liquid_design/liquid_design.dart' as liquid;
 import 'package:sizer/sizer.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
@@ -30,7 +31,6 @@ abstract final class OrchidStyle {
       BoxDecoration(
         color: panel,
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: const Color(0xFF58466F).withValues(alpha: 0.24)),
       );
 
   static BoxDecoration gradientDecoration({double radius = 24}) =>
@@ -154,5 +154,47 @@ class OrchidHero extends StatelessWidget {
         ),
       ],
     ),
+  );
+}
+
+/// Shared dark Liquid Glass panel. Renders native glass on supported Apple
+/// releases and a Flutter frosted fallback on Linux, Android, and Windows.
+class OrchidGlassPanel extends StatelessWidget {
+  final Widget child;
+  final double radius;
+  final double blur;
+  const OrchidGlassPanel({
+    super.key,
+    required this.child,
+    this.radius = 16,
+    this.blur = 16,
+  });
+
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+    borderRadius: BorderRadius.circular(radius),
+    child: Stack(children: [
+      Positioned.fill(
+        left: -4, top: -4, right: -4, bottom: -4,
+        child: IgnorePointer(
+          child: liquid.LiquidGlass(
+            shape: liquid.LiquidGlassShape.roundedRect(radius + 4),
+            style: liquid.LiquidGlassStyle.clear,
+            interactive: false,
+            interactionStrength: 0,
+            fallback: liquid.LiquidGlassFallback.frosted,
+            fallbackBlurSigma: blur,
+            brightness: liquid.LiquidGlassBrightness.dark,
+            tintColor: const Color(0xFF392447),
+            tintOpacity: 0.36,
+            opacity: 0.76,
+            rimColor: const Color(0x00000000),
+            rimWidth: 0,
+            child: const SizedBox.expand(),
+          ),
+        ),
+      ),
+      child,
+    ]),
   );
 }
