@@ -714,48 +714,53 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
           const SizedBox(height: 30),
           OrchidSectionHeader(title: 'More by ${widget.artist}'),
           const SizedBox(height: 12),
-          // Albums, EPs and singles all appear in one vertically stacked list.
-          for (final release in releases)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: OrchidHoverSurface(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => openAlbumPage(context,
-                    artist: release.artist,
-                    album: release.title,
-                    artwork: release.artwork,
-                    collectionId: release.id,
-                    player: widget.player,
-                    addonService: widget.addonService,
-                    addons: widget.addons,
-                    library: widget.library),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 6),
-                    child: Row(children: [
-                      _cover(context, release.artwork, size: 60, zoomOnHover: true),
-                      const SizedBox(width: 14),
-                      Expanded(child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(release.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis).semiBold(),
-                          const SizedBox(height: 4),
-                          Text(release.releaseType == 'single' ? 'Single' :
-                            release.releaseType == 'ep' ? 'EP' : 'Album')
-                            .small().muted(),
-                        ],
-                      )),
-                      const SizedBox(width: 8),
-                      const Icon(LucideIcons.chevronRight,
-                        size: 16, color: Color(0xFFB7ABCA)),
-                    ]),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final release in releases)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: SizedBox(
+                      width: 148,
+                      child: MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => openAlbumPage(context,
+                            artist: release.artist,
+                            album: release.title,
+                            artwork: release.artwork,
+                            collectionId: release.id,
+                            player: widget.player,
+                            addonService: widget.addonService,
+                            addons: widget.addons,
+                            library: widget.library),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _cover(context, release.artwork,
+                                size: 148, zoomOnHover: true),
+                              const SizedBox(height: 9),
+                              Text(release.title,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis).semiBold(),
+                              const SizedBox(height: 4),
+                              Text(release.releaseType == 'single'
+                                  ? 'Single'
+                                  : release.releaseType == 'ep'
+                                      ? 'EP'
+                                      : 'Album').small().muted(),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ),
+              ],
             ),
+          ),
         ],
       );
     },
