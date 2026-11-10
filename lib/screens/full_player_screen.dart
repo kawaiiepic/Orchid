@@ -27,6 +27,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
   // Two views only: animated/static artwork or lyrics.
   int _viewMode = 1;
   bool _showVolume = false;
+  bool _mobileLyrics = false;
   bool _animatedEnabled = true;
   bool _animationFailed = false;
   static const _animatedPreferenceKey = 'orchid_animated_artwork_enabled';
@@ -479,6 +480,339 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
     );
   }
 
+
+  // iOS-style mobile now playing. Desktop retains the original player.
+  Widget _mobileNowPlaying(BuildContext context) {
+    final track = widget.player.current;
+    final media = MediaQuery.sizeOf(context);
+    const foreground = Color(0xFFF9F5F8);
+    const secondary = Color(0xD9F0E7EE);
+    return Scaffold(
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(34),
+          bottom: Radius.circular(26),
+        ),
+        child: Stack(fit: StackFit.expand, children: [
+          LiquidArtworkBackground(
+            imageUrl: track?.artworkUrl,
+            intensity: 0.95,
+            child: const SizedBox.expand(),
+          ),
+          Positioned.fill(child: DecoratedBox(
+            decoration: BoxDecoration(gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                const Color(0xFFB28A68).withValues(alpha: .19),
+                const Color(0xFF7E3D2B).withValues(alpha: .10),
+                const Color(0xFF080609).withValues(alpha: .24),
+              ],
+            )),
+          )),
+          SafeArea(
+            child: LayoutBuilder(builder: (context, constraints) {
+              final coverSize = (constraints.maxWidth - 52)
+                  .clamp(0.0, constraints.maxHeight * .44).toDouble();
+              final compact = constraints.maxHeight < 690;
+              return SingleChildScrollView(
+                physics: const ClampingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(26, 12, 26, 20),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight:
+                      (constraints.maxHeight - 32).clamp(0.0, double.infinity)),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(children: [
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => Navigator.of(context).maybePop(),
+                          child: const SizedBox(
+                            width: 42, height: 48,
+                            child: Icon(LucideIcons.chevronDown,
+                              size: 30, color: foreground),
+                          ),
+                        ),
+                        Expanded(child: Column(children: [
+                          Text('PLAYING FROM',
+                            style: TextStyle(
+                              color: foreground.withValues(alpha: .66),
+                              fontSize: 11, letterSpacing: 2.1,
+                              fontWeight: FontWeight.w700)),
+                          const SizedBox(height: 4),
+                          Text(
+                            track?.album?.trim().isNotEmpty == true
+                                ? track!.album! : 'Now Playing',
+                            textAlign: TextAlign.center,
+                            maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: foreground, fontSize: 15,
+                              fontWeight: FontWeight.w600)),
+                        ])),
+                        const SizedBox(width: 42),
+                      ]),
+                      SizedBox(height: compact ? 16 : 22),
+                      SizedBox.square(
+                        dimension: coverSize,
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 320),
+                          child: _mobileLyrics
+                              ? ClipRRect(
+                                  key: const ValueKey('lyrics'),
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: _lyricsBody(),
+                                )
+                              : ClipRRect(
+                                  key: ValueKey(track?.artworkUrl ?? 'no-art'),
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: track?.artworkUrl?.startsWith('https://') == true
+                                      ? CachedNetworkImage(
+                                          imageUrl: track!.artworkUrl!,
+                                          fit: BoxFit.cover,
+                                          width: coverSize,
+                                          height: coverSize,
+                                          errorWidget: (_, __, ___) =>
+                                              _mobileEmptyArtwork(),
+                                        )
+                                      : _mobileEmptyArtwork(),
+                                ),
+                        ),
+                      ),
+                      SizedBox(height: compact ? 20 : 30),
+                      Row(children: [
+                        Expanded(child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(track?.title ?? 'No track playing',
+                              maxLines: 2, overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: foreground, fontSize: 26,
+                                height: 1.1, fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 8),
+                            Text(track?.artist ?? '',
+                              maxLines: 1, overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: secondary, fontSize: 18)),
+                          ],
+                        )),
+                        if (track != null && widget.library != null) ...[
+                          ListenableBuilder(
+                            listenable: widget.library!,
+                            builder: (context, _) {
+                              final saved = SavedSong(track.title, track.artist,
+                                album: track.album, artwork: track.artworkUrl,
+                                duration: track.duration);
+                              final liked = widget.library!.isFavorite(saved);
+                              return GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () => widget.library!.toggleFavorite(saved),
+                                child: SizedBox(
+                                  width: 46, height: 50,
+                                  child: Icon(LucideIcons.star,
+                                    size: 30,
+                                    color: liked
+                                        ? const Color(0xFFF4D98B) : secondary),
+                                ),
+                              );
+                            },
+                          ),
+                          SongContextMenu(
+                            track: track,
+                            player: widget.player,
+                            library: widget.library!,
+                            openOnTap: true,
+                            showMenuButton: false,
+                            child: const SizedBox(
+                              width: 40, height: 50,
+                              child: Icon(LucideIcons.ellipsis,
+                                size: 27, color: secondary),
+                            ),
+                          ),
+                        ] else
+                          GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: _showOptions,
+                            child: const SizedBox(
+                              width: 42, height: 50,
+                              child: Icon(LucideIcons.ellipsis,
+                                size: 27, color: secondary)),
+                          ),
+                      ]),
+                      SizedBox(height: compact ? 12 : 20),
+                      _mobileProgress(),
+                      SizedBox(height: compact ? 16 : 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _mobileTransport(
+                            LucideIcons.skipBack,
+                            () => widget.player.playPrevious(), 43),
+                          _mobileTransport(
+                            widget.player.player.playing
+                                ? LucideIcons.pause : LucideIcons.play,
+                            widget.player.togglePlayPause, 58),
+                          _mobileTransport(
+                            LucideIcons.skipForward,
+                            widget.player.hasNext
+                                ? () => widget.player.playNext() : null, 43),
+                        ],
+                      ),
+                      SizedBox(height: compact ? 17 : 26),
+                      _mobileVolume(),
+                      SizedBox(height: compact ? 16 : 25),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _mobileBottomAction(
+                            _mobileLyrics ? LucideIcons.image : LucideIcons.mic,
+                            () => setState(() => _mobileLyrics = !_mobileLyrics),
+                            active: _mobileLyrics),
+                          _mobileBottomAction(LucideIcons.shuffle,
+                            widget.player.toggleShuffle,
+                            active: widget.player.shuffleEnabled),
+                          _mobileBottomAction(LucideIcons.listMusic,
+                            () => showQueueSheet(context, widget.player)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _mobileEmptyArtwork() => const ColoredBox(
+    color: Color(0x44201825),
+    child: Center(child: Icon(LucideIcons.music2,
+      color: Color(0x88FFFFFF), size: 64)),
+  );
+
+  Widget _mobileTransport(IconData icon, VoidCallback? action, double size) =>
+      GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: action,
+        child: SizedBox(
+          width: size + 28, height: 74,
+          child: Center(child: Icon(icon, size: size,
+            color: action == null
+                ? const Color(0x77FFFFFF) : const Color(0xFFF9F5F8))),
+        ),
+      );
+
+  Widget _mobileBottomAction(IconData icon, VoidCallback action,
+      {bool active = false}) => GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: action,
+        child: SizedBox(
+          width: 58, height: 48,
+          child: Center(child: Icon(icon, size: 26,
+            color: active
+                ? const Color(0xFFBFE8C1) : const Color(0xD9F0E7EE))),
+        ),
+      );
+
+  Widget _mobileProgress() => StreamBuilder<Duration>(
+    stream: widget.player.player.positionStream,
+    initialData: widget.player.player.position,
+    builder: (context, snapshot) {
+      final duration = widget.player.player.duration ?? Duration.zero;
+      final maxMs = duration.inMilliseconds;
+      final position = snapshot.data ?? Duration.zero;
+      final fraction = maxMs > 0
+          ? (position.inMilliseconds / maxMs).clamp(0.0, 1.0).toDouble()
+          : 0.0;
+      return Column(children: [
+        LayoutBuilder(builder: (context, bounds) => GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapDown: maxMs > 0
+              ? (details) => _mobileSeek(details.localPosition.dx,
+                  bounds.maxWidth, maxMs) : null,
+          onHorizontalDragUpdate: maxMs > 0
+              ? (details) => _mobileSeek(details.localPosition.dx,
+                  bounds.maxWidth, maxMs) : null,
+          child: SizedBox(height: 28, child: Center(
+            child: Stack(alignment: Alignment.centerLeft, children: [
+              Container(height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0x4CFFFFFF),
+                  borderRadius: BorderRadius.circular(8))),
+              FractionallySizedBox(
+                widthFactor: fraction,
+                child: Container(height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1D5E9),
+                    borderRadius: BorderRadius.circular(8)))),
+              Align(alignment: Alignment(
+                (fraction * 2 - 1).clamp(-1.0, 1.0), 0),
+                child: const DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Color(0xFFFFFFFF),
+                    shape: BoxShape.circle),
+                  child: SizedBox.square(dimension: 14)),
+              ),
+            ]),
+          )),
+        )),
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text(_fmt(position), style: const TextStyle(
+            color: Color(0xCCFFFFFF), fontSize: 12)),
+          Text('-${_fmt(Duration(milliseconds:
+              (maxMs - position.inMilliseconds).clamp(0, maxMs))) }',
+              style: const TextStyle(
+                color: Color(0xCCFFFFFF), fontSize: 12)),
+        ]),
+      ]);
+    },
+  );
+
+  void _mobileSeek(double x, double width, int durationMs) {
+    if (width <= 0 || durationMs <= 0) return;
+    final at = (x / width).clamp(0.0, 1.0);
+    widget.player.seek(Duration(milliseconds: (at * durationMs).round()));
+  }
+
+  Widget _mobileVolume() => Row(children: [
+    const Icon(LucideIcons.volume1, size: 18,
+      color: Color(0xBFFFFFFF)),
+    const SizedBox(width: 12),
+    Expanded(child: LayoutBuilder(builder: (context, bounds) =>
+      GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (d) => _mobileSetVolume(
+          d.localPosition.dx, bounds.maxWidth),
+        onHorizontalDragUpdate: (d) => _mobileSetVolume(
+          d.localPosition.dx, bounds.maxWidth),
+        child: SizedBox(height: 38,
+          child: Center(child: Stack(children: [
+            Container(height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0x4CFFFFFF),
+                borderRadius: BorderRadius.circular(8))),
+            FractionallySizedBox(
+              widthFactor: widget.player.volume.clamp(0.0, 1.0),
+              child: Container(height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xCFFFFFFF),
+                  borderRadius: BorderRadius.circular(8)))),
+          ])),
+        ),
+      ),
+    )),
+    const SizedBox(width: 12),
+    const Icon(LucideIcons.volume2, size: 20,
+      color: Color(0xBFFFFFFF)),
+  ]);
+
+  void _mobileSetVolume(double x, double width) {
+    if (width <= 0) return;
+    widget.player.setVolume((x / width).clamp(0.0, 1.0));
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -486,6 +820,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
     return ListenableBuilder(
       listenable: widget.player,
       builder: (context, _) {
+        if (isMobile) return _mobileNowPlaying(context);
         final track = widget.player.current;
         final mobileAnimated = isMobile &&
             _animatedEnabled && _appleArtwork != null && !_animationFailed;
