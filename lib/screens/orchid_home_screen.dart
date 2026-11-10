@@ -595,15 +595,12 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
           return GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: widget.openLibrary,
-            child: Container(
-              width: width,
-              height: 60,
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                color: const Color(0xFF34243A),
-                borderRadius: BorderRadius.circular(9),
-              ),
-              child: Row(children: [
+            child: OrchidGlassPanel(
+              radius: 9,
+              child: SizedBox(
+                width: width,
+                height: 60,
+                child: Row(children: [
                 if (song != null && artist != null)
                   AppleCover(artist: artist, name: song,
                     fallbackUrl: artwork, size: 60, radius: 0)
@@ -634,7 +631,8 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                   ],
                 )),
                 const SizedBox(width: 8),
-              ]),
+                ]),
+              ),
             ),
           );
         }
