@@ -1094,23 +1094,8 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     );
   }
 
-  Widget _desktopSection(String title, {String? subtitle}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Row(children: [
-        Text(title, style: const TextStyle(
-          fontSize: 19, fontWeight: FontWeight.w700,
-          color: Color(0xFFF8F2FF),
-        )),
-        if (subtitle != null) ...[
-          const SizedBox(width: 12),
-          Expanded(child: Text(subtitle, maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Color(0xFF9E91B2), fontSize: 11))),
-        ],
-      ]),
-    );
-  }
+  Widget _desktopSection(String title, {String? subtitle}) =>
+      OrchidSectionHeader(title: title, subtitle: subtitle);
 
   Widget _desktopHome(Map<String, dynamic> stats) {
     const gap = SizedBox(height: 31);
