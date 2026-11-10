@@ -54,6 +54,8 @@ class OrchidHomeScreen extends StatefulWidget {
 
 class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
   Map<String, dynamic>? _history;
+  Map<String, dynamic>? _monthlyStats;
+  DateTime? _monthlyPeriod;
   List<List<SavedSong>> _homeMixes = [];
   bool _loading = false;
   String? _error;
@@ -92,6 +94,8 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     _homeAccount = user;
     _requestId++;
     _history = null;
+    _monthlyStats = null;
+    _monthlyPeriod = null;
     _homeMixes = [];
     _error = null;
     if (user != null) {
@@ -114,6 +118,8 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
       final result = await widget.account.orchidHome();
       if (!mounted || requestId != _requestId) return;
       setState(() => _history = result);
+      // Load this month's personal listening metrics independently of Home.
+      _loadMonthlyStats(requestId);
       // The home cards show the same D1-generated mixes as the detail page.
       _loadHomeMixes(requestId);
     } catch (error) {
@@ -124,6 +130,69 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
         setState(() => _loading = false);
       }
     }
+  }
+
+  Future<void> _loadMonthlyStats(int requestId) async {
+    final now = DateTime.now();
+    try {
+      final response = await widget.account.replay(
+        year: now.year, month: now.month);
+      if (!mounted || requestId != _requestId) return;
+      final raw = response['stats'];
+      setState(() {
+        _monthlyPeriod = now;
+        _monthlyStats = raw is Map
+          ? Map<String, dynamic>.from(raw)
+          : <String, dynamic>{};
+      });
+    } catch (error) {
+      debugPrint('[Orchid Home] Monthly listening stats unavailable: $error');
+      if (!mounted || requestId != _requestId) return;
+      setState(() {
+        _monthlyPeriod = now;
+        _monthlyStats = null;
+      });
+    }
+  }
+
+  Widget _monthlyListening() {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+    final period = _monthlyPeriod ?? DateTime.now();
+    final header = '${months[period.month - 1]} ${period.year}';
+    final stats = _monthlyStats;
+    if (stats == null) {
+      return Text(
+        _loading ? 'Loading this month’s listening…'
+          : 'This month’s listening data is unavailable.',
+        style: const TextStyle(fontSize: 13, color: Color(0xFFA99BB7)),
+      );
+    }
+    final plays = _count(stats['plays']);
+    final songs = _count(stats['songs']);
+    final artists = _count(stats['artists']);
+    final seconds = (stats['seconds'] as num?)?.toInt() ?? 0;
+    final hours = (seconds / 3600).toStringAsFixed(1);
+    return Wrap(
+      spacing: 20,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Text(header, style: const TextStyle(
+          fontSize: 13, color: Color(0xFFC7B8D8),
+          fontWeight: FontWeight.w600)),
+        Text('$plays plays', style: const TextStyle(
+          fontSize: 13, color: Color(0xFFF3EAFB))),
+        Text('$songs songs', style: const TextStyle(
+          fontSize: 13, color: Color(0xFFF3EAFB))),
+        Text('$artists artists', style: const TextStyle(
+          fontSize: 13, color: Color(0xFFF3EAFB))),
+        Text('$hours hours', style: const TextStyle(
+          fontSize: 13, color: Color(0xFFF3EAFB))),
+      ],
+    );
   }
 
   Future<void> _loadHomeMixes(int requestId) async {
@@ -284,7 +353,8 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
           width: cardWidth,
           height: cardHeight,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: desktopCircle
+              ? CrossAxisAlignment.center : CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: ClipRRect(
@@ -344,12 +414,14 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
               ),
               const SizedBox(height: 7),
               Text(title, maxLines: 1,
+                textAlign: desktopCircle ? TextAlign.center : TextAlign.start,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 13, fontWeight: FontWeight.w600,
                   color: Color(0xFFF5EDFF))),
               const SizedBox(height: 2),
               Text(subtitle, maxLines: 1,
+                textAlign: desktopCircle ? TextAlign.center : TextAlign.start,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 11, color: Color(0xFFA99BB7))),
@@ -668,6 +740,8 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     ],
     onTap: widget.openReplay,
     desktopLandscape: true,
+    width: _desktop ? 274 : null,
+    height: _desktop ? 158 : null,
   );
 
   Widget _personalCard(
@@ -683,6 +757,8 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     colors: colors,
     onTap: onTap,
     desktopLandscape: true,
+    width: _desktop ? 274 : null,
+    height: _desktop ? 158 : null,
   );
 
   String _count(dynamic value) {
@@ -1045,16 +1121,8 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
           gap,
         ],
         if (_history != null) ...[
-          _desktopSection('Your Listening'),
-          Wrap(
-            spacing: 10, runSpacing: 10,
-            children: [
-              _stat('Listens', stats['scrobbles']),
-              _stat('Artists', stats['artists']),
-              _stat('Albums', stats['albums']),
-              _stat('Tracks', stats['tracks']),
-            ],
-          ),
+          _desktopSection('This Month’s Listening'),
+          _monthlyListening(),
           gap,
         ],
         if (_error != null) ...[
@@ -1166,17 +1234,9 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
             if (_loading && _history == null)
               const Text('Loading your music home…').muted(),
             if (_history != null) ...[
-              const OrchidSectionHeader(title: 'By the numbers'),
+              const OrchidSectionHeader(title: 'This month’s stats'),
               const SizedBox(height: 10),
-              Wrap(
-                spacing: 10, runSpacing: 10,
-                children: [
-                  _stat('Listens', stats['scrobbles']),
-                  _stat('Artists', stats['artists']),
-                  _stat('Albums', stats['albums']),
-                  _stat('Tracks', stats['tracks']),
-                ],
-              ),
+              _monthlyListening(),
               const SizedBox(height: 24),
               const OrchidSectionHeader(title:'Recently played'),
               const SizedBox(height:10),
