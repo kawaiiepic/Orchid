@@ -269,7 +269,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
           else ...[
             const OrchidSectionHeader(title: 'Recently added'),
             const SizedBox(height: 10),
-            ...widget.library.librarySongs.reversed.take(30).map(
+            ...widget.library.librarySongs.take(30).map(
               (song) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: SongContextMenu(
