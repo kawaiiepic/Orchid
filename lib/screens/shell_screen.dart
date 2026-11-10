@@ -7,6 +7,7 @@ import '../services/addon_service.dart';
 import '../services/lyrics_appearance.dart';
 import '../services/orchid_account.dart';
 import '../services/player_service.dart';
+import '../services/orchid_connect.dart';
 import '../services/orchid_audio_handler.dart';
 import '../services/music_library.dart';
 import 'library_screen.dart';
@@ -36,6 +37,7 @@ class _ShellScreenState extends State<ShellScreen>{
  String? _libraryUser;
  String? _addonsUser;
  late final PlayerService _player;
+ late final OrchidConnect _connect;
  StreamSubscription<Duration>? _positionSubscription;
  Key? selected=const ValueKey(0);
  final Set<int> _initializedTabs={0};
@@ -95,6 +97,9 @@ class _ShellScreenState extends State<ShellScreen>{
   _library.configure(_account);
   _addonService.configure(_account);
   _player=PlayerService(addonService:_addonService);
+  _connect=OrchidConnect(_account,_player);
+  OrchidConnect.active=_connect;
+  unawaited(_connect.start());
   OrchidBackgroundAudio.attach(_player);
   _player.addListener(_trackChanged);
   _positionSubscription=_player.player.positionStream.listen(_positionChanged);
@@ -183,7 +188,8 @@ class _ShellScreenState extends State<ShellScreen>{
   _positionSubscription?.cancel();_player.removeListener(_trackChanged);
   _contentRevision.dispose();
   OrchidBackgroundAudio.detach();
-  _player.dispose();_library.dispose();_account.removeListener(_accountChanged);_account.dispose();super.dispose();
+  if(identical(OrchidConnect.active,_connect))OrchidConnect.active=null;
+  _connect.dispose();_player.dispose();_library.dispose();_account.removeListener(_accountChanged);_account.dispose();super.dispose();
  }
  void _openProfile()=>_openSettings();
 
