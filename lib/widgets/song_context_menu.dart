@@ -384,10 +384,9 @@ class _SongActionPanelState extends State<_SongActionPanel> {
         tracks.replaceRange(1, tracks.length, rest);
       }
       widget.player.setAddons(widget.addons);
-      await widget.player.startRadio(tracks, () async {
-        final next = await catalog.searchTracks(widget.track.artist);
-        return next..shuffle();
-      });
+      await widget.player.playTrack(
+        tracks.first, fromQueue: tracks,
+      );
     } catch (error) {
       debugPrint('[Orchid Drawer] Could not start radio: $error');
     }
