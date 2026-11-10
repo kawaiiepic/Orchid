@@ -84,49 +84,58 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
   Widget _tracks() {
     final tracks = _items('charts');
-    if (tracks.isEmpty) return const Text('New recommendations will appear here soon.').muted();
-    return Column(children: [
-      for (final item in tracks.take(16))
-        SongContextMenu(
-          track: TrackResult(
-            id: (item['id'] ?? '${item['artist']}|${item['title']}').toString(),
-            title: (item['title'] ?? '').toString(),
-            artist: (item['artist'] ?? '').toString(),
-            album: item['album']?.toString(),
-            artworkUrl: (item['image'] ?? item['artwork'])?.toString(),
-            sourceId: 'orchid-discover',
-            sourceName: 'Discover',
-          ),
-          player: widget.player,
-          library: widget.library,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => _play(item),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 7),
-              child: Row(children: [
-                AppleCover(
-                  artist: (item['artist'] ?? '').toString(),
-                  name: (item['title'] ?? '').toString(),
-                  fallbackUrl: (item['image'] ?? item['artwork'])?.toString(),
-                  size: 46, radius: 8,
+    if (tracks.isEmpty) {
+      return const Text('New recommendations will appear here soon.').muted();
+    }
+    return SizedBox(
+      height: 194,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          for (final item in tracks.take(20))
+            SizedBox(
+              width: 150,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: SongContextMenu(
+                  track: TrackResult(
+                    id: (item['id'] ?? '${item['artist']}|${item['title']}').toString(),
+                    title: (item['title'] ?? '').toString(),
+                    artist: (item['artist'] ?? '').toString(),
+                    album: item['album']?.toString(),
+                    artworkUrl: (item['image'] ?? item['artwork'])?.toString(),
+                    sourceId: 'orchid-discover',
+                    sourceName: 'Discover',
+                  ),
+                  player: widget.player,
+                  library: widget.library,
+                  showMenuButton: true,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => _play(item),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        AppleCover(
+                          artist: (item['artist'] ?? '').toString(),
+                          name: (item['title'] ?? '').toString(),
+                          fallbackUrl: (item['image'] ?? item['artwork'])?.toString(),
+                          size: 130, radius: 11,
+                        ),
+                        const SizedBox(height: 7),
+                        Text((item['title'] ?? '').toString(),
+                          maxLines: 1, overflow: TextOverflow.ellipsis).semiBold(),
+                        Text((item['artist'] ?? '').toString(),
+                          maxLines: 1, overflow: TextOverflow.ellipsis).small().muted(),
+                      ],
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text((item['title'] ?? '').toString(),
-                      maxLines: 1, overflow: TextOverflow.ellipsis).semiBold(),
-                    Text((item['artist'] ?? '').toString(),
-                      maxLines: 1, overflow: TextOverflow.ellipsis).small().muted(),
-                  ],
-                )),
-                const Icon(LucideIcons.play, size: 17),
-              ]),
+              ),
             ),
-          ),
-        ),
-    ]);
+        ],
+      ),
+    );
   }
 
   Widget _artists() {
