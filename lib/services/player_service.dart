@@ -421,13 +421,16 @@ class PlayerService extends ChangeNotifier {
     shuffleEnabled = !shuffleEnabled;
     if (shuffleEnabled) _shuffleUpcoming();
     notifyListeners();
+    unawaited(_schedulePrefetch());
   }
 
   /// Apply remote playback options without reshuffling a transferred queue.
   void restoreRemoteOptions({required bool shuffle, required OrchidRepeatMode repeat}) {
     shuffleEnabled=shuffle;
     repeatMode=repeat;
+    unawaited(player.setRepeatOne(repeat==OrchidRepeatMode.one));
     notifyListeners();
+    unawaited(_schedulePrefetch());
   }
 
   void cycleRepeatMode() {
@@ -436,7 +439,9 @@ class PlayerService extends ChangeNotifier {
       OrchidRepeatMode.all => OrchidRepeatMode.one,
       OrchidRepeatMode.one => OrchidRepeatMode.off,
     };
+    unawaited(player.setRepeatOne(repeatMode==OrchidRepeatMode.one));
     notifyListeners();
+    unawaited(_schedulePrefetch());
   }
 
   void _shuffleUpcoming() {
@@ -562,7 +567,7 @@ class PlayerService extends ChangeNotifier {
   /// Resolve only the imminent next track. This is essential for seamless
   /// overlap because Eclipse addons return stream URLs asynchronously.
   Future<void> _schedulePrefetch() async{
-    if(_disposed||resolving||!hasQueuedNext)return;
+    if(_disposed||resolving||!hasQueuedNext||repeatMode==OrchidRepeatMode.one)return;
     final revision=++_prefetchRevision;
     final next=queue[queueIndex+1];
     final key=_trackKey(next);
