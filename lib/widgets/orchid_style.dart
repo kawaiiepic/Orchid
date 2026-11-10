@@ -163,13 +163,29 @@ class OrchidGlassPanel extends StatelessWidget {
     if (transparentOnDesktop && MediaQuery.sizeOf(context).width >= 850) {
       return child;
     }
-    return glass.GlassContainer(
-      useOwnLayer: true,
-      quality: glass.GlassQuality.standard,
-      shape: glass.LiquidRoundedSuperellipse(borderRadius: radius),
-      clipBehavior: Clip.antiAlias,
-      settings: OrchidStyle.glassSettings,
-      child: child,
+    // The shader draws its specular edge even with rim/light settings at
+    // zero. Oversize the glass backdrop and crop the perimeter away, leaving
+    // only the tinted, refracted center visible.
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      child: Stack(
+        children: [
+          Positioned.fill(
+            left: -8, top: -8, right: -8, bottom: -8,
+            child: IgnorePointer(
+              child: glass.GlassContainer(
+                useOwnLayer: true,
+                quality: glass.GlassQuality.standard,
+                shape: glass.LiquidRoundedSuperellipse(
+                  borderRadius: radius + 8),
+                settings: OrchidStyle.glassSettings,
+                child: const SizedBox.expand(),
+              ),
+            ),
+          ),
+          child,
+        ],
+      ),
     );
   }
 }
