@@ -21,7 +21,20 @@ class _BorderlessPlayerGlass extends StatelessWidget {
   const _BorderlessPlayerGlass({required this.radius, required this.child});
 
   @override
-  Widget build(BuildContext context) => ClipRRect(
+  Widget build(BuildContext context) {
+    if (MediaQuery.sizeOf(context).width >= 850) {
+      // The Linux/Windows lightweight glass pass can downsample and blur
+      // the scrolling song titles underneath this floating player.
+      // A translucent, borderless desktop surface stays pixel-sharp.
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: ColoredBox(
+          color: const Color(0xD02C203B),
+          child: child,
+        ),
+      );
+    }
+    return ClipRRect(
     borderRadius: BorderRadius.circular(radius),
     child: Stack(
       children: [
@@ -43,7 +56,8 @@ class _BorderlessPlayerGlass extends StatelessWidget {
         child,
       ],
     ),
-  );
+    );
+  }
 }
 
 class MiniPlayerBar extends StatelessWidget {
