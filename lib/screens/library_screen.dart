@@ -266,7 +266,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       child: OrchidHoverSurface(
         child: SongContextMenu(
         track: _track(song), player: widget.player,
-        library: widget.library, playlist: playlist,
+        library: widget.library, addonService: widget.addonService, addons: widget.addonsy, playlist: playlist,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () {
