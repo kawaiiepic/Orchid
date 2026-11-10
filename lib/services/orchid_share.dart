@@ -1,4 +1,5 @@
 import 'package:share_plus/share_plus.dart';
+import 'package:flutter/widgets.dart';
 
 import '../models/addon.dart';
 
@@ -60,15 +61,26 @@ abstract final class OrchidShare {
     'music.apple.com', '/us/search', {'term': artist},
   );
 
-  static Future<void> song(TrackResult track) async {
-    await Share.share(songUrl(track).toString());
+  static Rect? _shareOrigin(BuildContext? context) {
+    if (context == null) return null;
+    final render = context.findRenderObject();
+    if (render is! RenderBox || !render.hasSize) return null;
+    return render.localToGlobal(Offset.zero) & render.size;
   }
 
-  static Future<void> album(int? id, String artist, String album) async {
-    await Share.share(albumUrl(id, artist, album).toString());
+  static Future<void> song(TrackResult track, {BuildContext? context}) async {
+    await Share.share(songUrl(track).toString(),
+      sharePositionOrigin: _shareOrigin(context));
   }
 
-  static Future<void> artist(String artist) async {
-    await Share.share(artistSearchUrl(artist).toString());
+  static Future<void> album(int? id, String artist, String album,
+      {BuildContext? context}) async {
+    await Share.share(albumUrl(id, artist, album).toString(),
+      sharePositionOrigin: _shareOrigin(context));
+  }
+
+  static Future<void> artist(String artist, {BuildContext? context}) async {
+    await Share.share(artistSearchUrl(artist).toString(),
+      sharePositionOrigin: _shareOrigin(context));
   }
 }
