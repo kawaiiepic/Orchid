@@ -874,7 +874,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     return SongContextMenu(
       track: result,
       player: widget.player,
-      library: widget.library,
+      library: widget.library, addonService: widget.addonService, addons: widget.addonsy,
       child: _coverTile(
         title: title,
         subtitle: artist,
@@ -963,7 +963,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     return SongContextMenu(
       track: song,
       player: widget.player,
-      library: widget.library,
+      library: widget.library, addonService: widget.addonService, addons: widget.addonsy,
       showMenuButton: true,
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
