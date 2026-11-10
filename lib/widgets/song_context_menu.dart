@@ -13,6 +13,7 @@ class SongContextMenu extends StatefulWidget {
   final PlayerService player;
   final MusicLibrary library;
   final bool openOnTap;
+  final bool showMenuButton;
 
   const SongContextMenu({
     super.key,
@@ -21,6 +22,7 @@ class SongContextMenu extends StatefulWidget {
     required this.player,
     required this.library,
     this.openOnTap = false,
+    this.showMenuButton = false,
   });
 
   @override
@@ -71,17 +73,35 @@ class _SongContextMenuState extends State<SongContextMenu> {
     super.dispose();
   }
 
+  void _openBelowButton() {
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final position = box.localToGlobal(
+      Offset(box.size.width - 12, box.size.height),
+    );
+    _open(position);
+  }
+
   @override
   Widget build(BuildContext context) => GestureDetector(
     behavior: HitTestBehavior.opaque,
     onSecondaryTapDown: (details) => _open(details.globalPosition),
     onLongPressStart: (details) => _open(details.globalPosition),
-    onTap: widget.openOnTap ? () {
-      final box = context.findRenderObject() as RenderBox?;
-      if (box == null) return;
-      _open(box.localToGlobal(Offset(box.size.width / 2, box.size.height)));
-    } : null,
-    child: widget.child,
+    onTap: widget.openOnTap ? _openBelowButton : null,
+    child: widget.showMenuButton
+      ? Stack(children: [
+          widget.child,
+          Positioned(
+            right: 0, top: 0, bottom: 0,
+            child: Center(
+              child: IconButton.ghost(
+                onPressed: _openBelowButton,
+                icon: const Icon(LucideIcons.ellipsis, size: 19),
+              ),
+            ),
+          ),
+        ])
+      : widget.child,
   );
 }
 
