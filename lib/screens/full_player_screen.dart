@@ -28,6 +28,8 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
   int _viewMode = 1;
   bool _showVolume = false;
   bool _mobileLyrics = false;
+  bool _mobileVideoReady = false;
+  bool _mobileControlsHidden = false;
   bool _animatedEnabled = true;
   bool _animationFailed = false;
   static const _animatedPreferenceKey = 'orchid_animated_artwork_enabled';
@@ -56,6 +58,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
     setState(() {
       _appleArtwork = null;
       _animationFailed = false;
+      _mobileVideoReady = false;
     });
     if (!canSearch) return;
     AnimatedArtworkService.instance.fetch(
@@ -95,6 +98,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
     setState(() {
       _animatedEnabled = enabled;
       if (enabled) _animationFailed = false;
+      _mobileVideoReady = false;
     });
     _closeOptions();
     try {
@@ -155,7 +159,10 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
 
   void _artworkFailed() {
     if (mounted && !_animationFailed) {
-      setState(() => _animationFailed = true);
+      setState(() {
+        _animationFailed = true;
+        _mobileVideoReady = false;
+      });
     }
   }
 
@@ -512,6 +519,11 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                     url: _appleArtwork!.url,
                     fallbackArtworkUrl: track?.artworkUrl,
                     onFailure: _artworkFailed,
+                    onReady: () {
+                      if (!mounted || !_animatedEnabled ||
+                          _animationFailed || _mobileVideoReady) return;
+                      setState(() => _mobileVideoReady = true);
+                    },
                   ),
                 ),
               ),
@@ -531,8 +543,19 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
               )),
             ),
           )),
-          SafeArea(
-            child: LayoutBuilder(builder: (context, constraints) {
+          if (_mobileControlsHidden)
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => setState(() => _mobileControlsHidden = false),
+                child: const SizedBox.expand(),
+              ),
+            )
+          else SafeArea(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: () => setState(() => _mobileControlsHidden = true),
+              child: LayoutBuilder(builder: (context, constraints) {
               final coverSize = (constraints.maxWidth - 52)
                   .clamp(0.0, constraints.maxHeight * .44).toDouble();
               final compact = constraints.maxHeight < 690;
@@ -584,6 +607,11 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                                   borderRadius: BorderRadius.circular(12),
                                   child: _lyricsBody(),
                                 )
+                              : _mobileVideoReady && _animatedEnabled &&
+                                  !_animationFailed
+                                  ? const SizedBox.expand(
+                                      key: ValueKey('animated-background'),
+                                    )
                               : ClipRRect(
                                   key: ValueKey(track?.artworkUrl ?? 'no-art'),
                                   borderRadius: BorderRadius.circular(12),
@@ -701,6 +729,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                 ),
               );
             }),
+            ),
           ),
         ]),
       ),
