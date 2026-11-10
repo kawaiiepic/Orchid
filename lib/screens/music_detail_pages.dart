@@ -133,11 +133,11 @@ Widget _musicHeader(BuildContext context, {
   required String subtitle,
   required Widget artwork,
   required Widget actions,
-}) => Container(
-  width:double.infinity,
-  padding:const EdgeInsets.all(18),
-  decoration:OrchidStyle.gradientDecoration(radius:22),
-  child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+}) => OrchidGlassPanel(
+  radius:22,
+  child:Padding(
+    padding:const EdgeInsets.all(18),
+    child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
     Center(child:artwork),
     const SizedBox(height:20),
     Text(eyebrow.toUpperCase(),style:const TextStyle(
@@ -151,7 +151,8 @@ Widget _musicHeader(BuildContext context, {
     Text(subtitle).small().muted(),
     const SizedBox(height:20),
     actions,
-  ]),
+    ]),
+  ),
 );
 
 Widget _trackTile(BuildContext context, TrackResult song, {
@@ -282,10 +283,11 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
                         artwork: album.artwork, collectionId: album.id,
                         player: widget.player, addonService: widget.addonService,
                         addons: widget.addons, library: widget.library),
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: OrchidStyle.panelDecoration(radius: 17),
-                        child: Column(
+                      child: OrchidGlassPanel(
+                        radius: 17,
+                        child: Padding(
+                          padding: const EdgeInsets.all(10),
+                          child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _cover(context, album.artwork, size: 128),
@@ -294,7 +296,8 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
                               overflow: TextOverflow.ellipsis).semiBold(),
                             const SizedBox(height: 4),
                             Text('${album.trackCount ?? '?'} tracks').small().muted(),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
