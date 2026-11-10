@@ -70,6 +70,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       artist: song.artist,
       album: song.album,
       artworkUrl: song.artwork,
+      duration: song.duration,
       sourceId: 'orchid-library',
       sourceName: 'Library',
     )).toList();
@@ -82,7 +83,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   TrackResult _track(SavedSong song) => TrackResult(
     id: song.key, title: song.title, artist: song.artist,
-    album: song.album, artworkUrl: song.artwork,
+    album: song.album, artworkUrl: song.artwork, duration: song.duration,
     sourceId: 'orchid-library', sourceName: 'Library',
   );
 
