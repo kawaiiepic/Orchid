@@ -49,7 +49,10 @@ void openAlbumPage(BuildContext context, {
   ));
 }
 
-Widget _cover(BuildContext context, String? artwork, {double size = 128}) {
+Widget _cover(BuildContext context, String? artwork, {
+  double size = 128,
+  bool zoomOnHover = false,
+}) {
   if (artwork == null || !artwork.startsWith('https://')) {
     return Container(
       width: size, height: size,
@@ -62,12 +65,13 @@ Widget _cover(BuildContext context, String? artwork, {double size = 128}) {
   }
   return ClipRRect(
     borderRadius: BorderRadius.circular(12),
-    child: OrchidHoverZoom(
-      child: Image.network(
+    child: Builder(builder: (context) {
+      final image = Image.network(
         artwork, width: size, height: size, fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => _cover(context, null, size: size),
-      ),
-    ),
+      );
+      return zoomOnHover ? OrchidHoverZoom(child: image) : image;
+    }),
   );
 }
 
@@ -408,7 +412,7 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _cover(context, album.artwork, size: 148),
+                  _cover(context, album.artwork, size: 148, zoomOnHover: true),
                   const SizedBox(height: 9),
                   Text(album.title, maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -551,7 +555,7 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
             ].join('  •  '),
             artwork: Center(child: ArtistArtwork(
               artist: widget.artist, fallbackUrl: widget.artwork,
-              size: 148, radius: 74)),
+              size: 148, radius: 74, zoomOnHover: false)),
             actions: Wrap(spacing: 9, runSpacing: 9, children: [
               OrchidAdaptiveControls.button(
                 prominent: true,
@@ -730,7 +734,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8, vertical: 6),
                     child: Row(children: [
-                      _cover(context, release.artwork, size: 60),
+                      _cover(context, release.artwork, size: 60, zoomOnHover: true),
                       const SizedBox(width: 14),
                       Expanded(child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
