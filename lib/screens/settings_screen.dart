@@ -31,7 +31,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _urlController = TextEditingController();
   bool _adding = false;
-  int _section = 0;
+  int _section = -1;
   String? _status;
   final _appearance = LyricsAppearance.instance;
 
@@ -173,20 +173,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Wrap(
-          spacing: 8, runSpacing: 8,
-          children: [
-            for (var i = 0; i < 4; i++)
-              OrchidAdaptiveControls.button(
-                onPressed: () => setState(() => _section = i),
-                prominent: _section == i,
-                child: Text(const [
-                  'Account', 'Connections', 'Lyrics', 'Sources',
-                ][i]),
+        if (_section == -1) ...[
+          const Text('Settings').x2Large().semiBold(),
+          const SizedBox(height: 8),
+          const Text('Manage your Orchid experience.').muted(),
+          const SizedBox(height: 24),
+          for (var i = 0; i < 4; i++)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => setState(() => _section = i),
+                  child: OrchidGlassPanel(
+                    radius: 15,
+                    child: Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Row(children: [
+                        Icon(const [
+                          LucideIcons.user,
+                          LucideIcons.link,
+                          LucideIcons.music2,
+                          LucideIcons.radio,
+                        ][i], color: OrchidStyle.lilac, size: 20),
+                        const SizedBox(width: 15),
+                        Expanded(child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(const [
+                              'Account', 'Connections', 'Lyrics', 'Sources',
+                            ][i]).semiBold(),
+                            const SizedBox(height: 4),
+                            Text(const [
+                              'Profile and sign-in details',
+                              'Linked music services',
+                              'Lyrics appearance and timing',
+                              'Built-in sources and installed addons',
+                            ][i]).small().muted(),
+                          ],
+                        )),
+                        const Icon(LucideIcons.chevronRight,
+                          color: OrchidStyle.lilac, size: 18),
+                      ]),
+                    ),
+                  ),
+                ),
               ),
-          ],
-        ),
-        const SizedBox(height: 24),
+            ),
+        ] else ...[
+          Row(children: [
+            IconButton.ghost(
+              onPressed: () => setState(() => _section = -1),
+              icon: const Icon(LucideIcons.arrowLeft),
+            ),
+            const SizedBox(width: 12),
+            Text(const [
+              'Account', 'Connections', 'Lyrics', 'Sources',
+            ][_section]).large().semiBold(),
+          ]),
+          const SizedBox(height: 22),
         if (_section == 0)
           ProfileScreen(account: widget.account,
             embedded: true, section: 'account'),
@@ -418,6 +464,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             );
           }),
+        ],
         ],
       ],
     );
