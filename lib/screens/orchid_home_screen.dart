@@ -23,7 +23,6 @@ class OrchidHomeScreen extends StatefulWidget {
   final OrchidAccount account;
   final VoidCallback openExplore;
   final VoidCallback openLibrary;
-  final ValueChanged<int?> openDailyMixes;
   final VoidCallback openReplay;
   final VoidCallback openRadio;
   final VoidCallback openTopSongs;
@@ -40,7 +39,6 @@ class OrchidHomeScreen extends StatefulWidget {
     required this.account,
     required this.openExplore,
     required this.openLibrary,
-    required this.openDailyMixes,
     required this.openReplay,
     required this.openRadio,
     required this.openTopSongs,
@@ -684,6 +682,28 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     },
   );
 
+  void _playHomeMix(int index) {
+    if (index < 0 || index >= _homeMixes.length ||
+        _homeMixes[index].isEmpty) {
+      widget.openExplore();
+      return;
+    }
+    final tracks = _homeMixes[index].map((song) => TrackResult(
+      id: song.key,
+      title: song.title,
+      artist: song.artist,
+      album: song.album,
+      artworkUrl: song.artwork,
+      sourceId: 'orchid-daily-mix',
+      sourceName: 'Daily Mix',
+    )).toList();
+    widget.player.setAddons(widget.addons);
+    widget.player.playTrack(tracks.first, fromQueue: tracks)
+      .catchError((Object e) {
+        debugPrint('[Orchid Home] Could not play mix: $e');
+      });
+  }
+
   Widget _dailyMixCards() => ListenableBuilder(
     listenable: widget.library,
     builder: (context, _) {
@@ -718,7 +738,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                         radius: 0,
                       )
                     : null,
-                onTap: () => widget.openDailyMixes(i),
+                onTap: () => _playHomeMix(i),
               ),
               const SizedBox(width: 10),
             ],
@@ -856,6 +876,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
 
   /// Dense desktop track rows, keeping the iOS artwork shelf unchanged.
   Widget _desktopSongList(List<Map<String, dynamic>> tracks) {
+    if (!_desktop) return _recentCards(tracks.take(12).toList());
     final visible = tracks.take(12).toList();
     // Show two equally sized song columns on desktop, with reading order
     // moving left to right. Each cell retains its own context menu and play.
@@ -1055,7 +1076,8 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     final charts = _items('charts');
     final recent = _uniqueRecent();
     return ListView(
-      padding: const EdgeInsets.fromLTRB(28, 28, 30, 138),
+      padding: EdgeInsets.fromLTRB(_desktop ? 28 : 16,
+        _desktop ? 28 : 12, _desktop ? 30 : 16, 0),
       children: [
         widget.header,
         _desktopShortcuts(),
