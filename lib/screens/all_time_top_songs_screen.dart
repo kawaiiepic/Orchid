@@ -44,7 +44,7 @@ class _AllTimeTopSongsScreenState extends State<AllTimeTopSongsScreen>{
       const OrchidHero(eyebrow:'Made for You',title:'All-Time Top Songs',
         description:'The songs you keep coming back to.',icon:LucideIcons.trophy),
       const SizedBox(height:20),
-      if(loading)const Center(child:CircularProgressIndicator())
+      if(loading)const Center(child:Text('Loading…'))
       else if(error!=null)...[
         Text(error!).muted(),OrchidAdaptiveControls.button(onPressed:_load,child:const Text('Retry')),
       ]else if(songs.isEmpty)
