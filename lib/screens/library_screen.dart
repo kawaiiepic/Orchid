@@ -178,13 +178,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
     try {
       final imported = await SpotifyService().importPublicPlaylist(link);
       if (!mounted) return;
-      final playlist = await widget.library.createPlaylist(imported.name);
-      for (final song in imported.songs) {
-        await widget.library.addToPlaylist(playlist, song);
-      }
-      if (_playlistFolderId != null) {
-        await widget.library.movePlaylistToFolder(playlist, _playlistFolderId);
-      }
+      await widget.library.importPlaylist(
+        imported.name, imported.songs,
+        creator: imported.creator, folderId: _playlistFolderId);
     } catch (error) {
       if (!mounted) return;
       await _showPlaylistError(error);
