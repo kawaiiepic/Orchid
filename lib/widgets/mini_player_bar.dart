@@ -125,7 +125,7 @@ class MiniPlayerBar extends StatelessWidget {
                             Text(track.title, maxLines: 1,
                               overflow: TextOverflow.ellipsis).semiBold(),
                             Text(
-                              [track.artist, if (!player.resolving && player.playingVia != null) player.sourceLabel].join(' · '),
+                              [track.artist, if (!player.resolving && player.qualityLabel != null) player.qualityLabel!].join(' · '),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ).small().muted(),
@@ -288,7 +288,9 @@ class IOSMiniPlayer extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                track.artist,
+                                [track.artist,
+                                  if (!player.resolving && player.qualityLabel != null)
+                                    player.qualityLabel!].join(' · '),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
@@ -531,14 +533,11 @@ class DesktopPlayerBar extends StatelessWidget {
                                     ),
                                   ),
                                   if (!player.resolving &&
-                                      player.streamQuality?.isNotEmpty == true)
+                                      player.qualityLabel?.isNotEmpty == true)
                                     Padding(
                                       padding: const EdgeInsets.only(top: 2),
                                       child: Text(
-                                        player.streamQuality!
-                                          .replaceAll('_', ' ')
-                                          .replaceAll('-', ' ')
-                                          .toUpperCase(),
+                                        player.qualityLabel!,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(
