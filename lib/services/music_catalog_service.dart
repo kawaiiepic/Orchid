@@ -11,9 +11,10 @@ class MusicAlbum {
   final String artist;
   final String? artwork;
   final int? trackCount;
+  final String releaseType;
   const MusicAlbum({
     required this.id, required this.title, required this.artist,
-    this.artwork, this.trackCount,
+    this.artwork, this.trackCount, this.releaseType = 'album',
   });
 }
 
@@ -21,9 +22,23 @@ class ArtistCatalog {
   final String name;
   final List<MusicAlbum> albums;
   final List<TrackResult> songs;
+  final List<String> genres;
+  final int? monthlyListeners;
+  final String? biography;
+  final List<String> similarArtists;
+  final List<ArtistMusicVideo> musicVideos;
   const ArtistCatalog({
     required this.name, required this.albums, required this.songs,
+    this.genres = const [], this.monthlyListeners, this.biography,
+    this.similarArtists = const [], this.musicVideos = const [],
   });
+}
+
+class ArtistMusicVideo {
+  final String title;
+  final String? artwork;
+  final String? url;
+  const ArtistMusicVideo({required this.title, this.artwork, this.url});
 }
 
 /// iTunes catalog metadata is separate from playback sources.
@@ -83,7 +98,20 @@ class MusicCatalogService {
       artist: (item['artistName'] ?? '').toString(),
       artwork: _art(item['artworkUrl100']),
       trackCount: (item['trackCount'] as num?)?.toInt(),
+      releaseType: _releaseType((item['collectionName'] ?? '').toString(),
+        (item['trackCount'] as num?)?.toInt()),
     );
+  }
+
+  String _releaseType(String title, int? trackCount, {bool single = false}) {
+    final lower = title.toLowerCase();
+    if (single || lower.endsWith(' - single') ||
+        (trackCount != null && trackCount <= 3)) return 'single';
+    if (lower.endsWith(' - ep') ||
+        (trackCount != null && trackCount >= 4 && trackCount <= 6)) {
+      return 'ep';
+    }
+    return 'album';
   }
 
   /// Canonical Apple catalog search results; playback remains addon-backed.
@@ -141,6 +169,9 @@ class MusicCatalogService {
           artwork:item['image']?.toString(),
           trackCount:item['trackCount'] is num
               ?(item['trackCount'] as num).toInt():null,
+          releaseType:_releaseType(item['title']?.toString() ?? '',
+            (item['trackCount'] as num?)?.toInt(),
+            single:item['isSingle']==true),
         ));
       }
     }
@@ -160,7 +191,32 @@ class MusicCatalogService {
         ));
       }
     }
-    return ArtistCatalog(name:name,albums:albums,songs:songs);
+    List<String> strings(dynamic value) => value is List
+        ? value.whereType<String>().where((text) => text.trim().isNotEmpty)
+            .toList()
+        : const <String>[];
+    final rawVideos = data['musicVideos'];
+    final videos = <ArtistMusicVideo>[];
+    if (rawVideos is List) {
+      for (final raw in rawVideos.whereType<Map>()) {
+        final item = Map<String, dynamic>.from(raw);
+        final title = item['title']?.toString() ?? '';
+        if (title.isEmpty) continue;
+        videos.add(ArtistMusicVideo(
+          title: title,
+          artwork: item['image']?.toString(),
+          url: item['url']?.toString(),
+        ));
+      }
+    }
+    return ArtistCatalog(
+      name:name, albums:albums, songs:songs,
+      genres:strings(data['genres']),
+      monthlyListeners:(data['monthlyListeners'] as num?)?.toInt(),
+      biography:data['biography']?.toString(),
+      similarArtists:strings(data['similarArtists']),
+      musicVideos:videos,
+    );
   }
 
   Future<ArtistCatalog> artist(String artist, {bool refresh = false}) {
