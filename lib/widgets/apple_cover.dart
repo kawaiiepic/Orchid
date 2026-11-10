@@ -22,7 +22,7 @@ class AppleCover extends StatelessWidget {
     this.fallbackUrl,
     this.preferredUrl,
     this.isAlbum = false,
-    this.zoomOnHover = true,
+    this.zoomOnHover = false,
     this.size = 48,
     this.radius = 8,
   });
