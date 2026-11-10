@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
-import 'package:just_audio/just_audio.dart';
+import '../services/orchid_audio_player.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -133,7 +133,7 @@ double _safeOffset(double v) {
 }
 
 class KaraokeLyrics extends StatefulWidget {
-  final AudioPlayer player;
+  final OrchidAudioPlayer player;
   final LyricsResult? lyrics;
   final bool loading;
   const KaraokeLyrics({super.key, required this.player, required this.lyrics, this.loading = false});
