@@ -1,5 +1,6 @@
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart' as glass;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'orchid_style.dart';
 
 /// Shared Orchid actions. Desktop uses clean, borderless translucent
 /// controls, while mobile uses shader-backed liquid_glass_widgets.
@@ -21,6 +22,7 @@ abstract final class OrchidAdaptiveControls {
           onTap: onPressed ?? () {},
           enabled: onPressed != null,
           useOwnLayer: true,
+          settings: OrchidStyle.glassSettings,
           quality: glass.GlassQuality.standard,
           style: prominent
               ? glass.GlassButtonStyle.prominent
