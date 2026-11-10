@@ -1,5 +1,6 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../widgets/orchid_hover_zoom.dart';
+import '../widgets/orchid_detail_header.dart';
 import '../widgets/orchid_adaptive_controls.dart';
 
 import '../models/addon.dart';
@@ -60,7 +61,7 @@ Widget _cover(BuildContext context, String? artwork, {double size = 128}) {
     );
   }
   return ClipRRect(
-    borderRadius: BorderRadius.circular(10),
+    borderRadius: BorderRadius.circular(12),
     child: OrchidHoverZoom(
       child: Image.network(
         artwork, width: size, height: size, fit: BoxFit.cover,
@@ -137,26 +138,12 @@ Widget _musicHeader(BuildContext context, {
   required String subtitle,
   required Widget artwork,
   required Widget actions,
-}) => OrchidGlassPanel(
-  radius:22,
-  child:Padding(
-    padding:const EdgeInsets.all(18),
-    child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-    Center(child:artwork),
-    const SizedBox(height:20),
-    Text(eyebrow.toUpperCase(),style:const TextStyle(
-      fontSize:11,letterSpacing:2,fontWeight:FontWeight.w600,
-      color:OrchidStyle.lilac,
-    )),
-    const SizedBox(height:8),
-    Text(title,style:const TextStyle(fontSize:27,
-      height:1.12,fontWeight:FontWeight.w700)),
-    const SizedBox(height:8),
-    Text(subtitle).small().muted(),
-    const SizedBox(height:20),
-    actions,
-    ]),
-  ),
+}) => OrchidDetailHeader(
+  eyebrow: eyebrow,
+  title: title,
+  subtitle: subtitle,
+  artwork: artwork,
+  actions: actions,
 );
 
 Widget _trackTile(BuildContext context, TrackResult song, {
@@ -165,7 +152,9 @@ Widget _trackTile(BuildContext context, TrackResult song, {
   int? number,
 }) => SongContextMenu(
   track: song, player: player, library: library,
-  child: Button(
+  addonService: addonService, addons: addons,
+  child: OrchidHoverSurface(
+    child: Button(
   style: const ButtonStyle.ghost(),
   onPressed: () {
     player.setAddons(addons);
@@ -201,6 +190,7 @@ Widget _trackTile(BuildContext context, TrackResult song, {
       ),
     ]),
   ),
+    ),
   ),
 );
 
@@ -250,8 +240,8 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
               subtitle:catalog==null
                 ? 'Explore the discography'
                 : '${catalog.albums.length} releases · ${catalog.songs.length} catalog tracks',
-              artwork:ArtistArtwork(
-                artist:widget.artist,size:190,radius:95),
+              artwork:Center(child: ArtistArtwork(
+                artist:widget.artist,size:190,radius:95)),
               actions:Column(
                 crossAxisAlignment:CrossAxisAlignment.start,
                 children:[
@@ -302,22 +292,21 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
                         artwork: album.artwork, collectionId: album.id,
                         player: widget.player, addonService: widget.addonService,
                         addons: widget.addons, library: widget.library),
-                      child: OrchidGlassPanel(
-                        radius: 17,
-                        child: Padding(
-                          padding: const EdgeInsets.all(10),
-                          child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _cover(context, album.artwork, size: 128),
-                            const SizedBox(height: 10),
-                            Text(album.title, maxLines: 2,
-                              overflow: TextOverflow.ellipsis).semiBold(),
-                            const SizedBox(height: 4),
-                            Text('${album.trackCount ?? '?'} tracks').small().muted(),
-                            ],
-                          ),
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _cover(context, album.artwork, size: 148),
+                          const SizedBox(height: 9),
+                          Text(album.title, maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 13,
+                              color: Color(0xFFF5EDFF),
+                              fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 3),
+                          Text('${album.trackCount ?? '?'} tracks',
+                            maxLines: 1, overflow: TextOverflow.ellipsis)
+                            .small().muted(),
+                        ],
                       ),
                     ),
                   )).toList(),
@@ -385,7 +374,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
                 '${_catalogDuration(tracks).isNotEmpty ? ' · ${_catalogDuration(tracks)}' : ''}',
               artwork:_cover(context,
                 widget.artwork ?? (tracks.isNotEmpty ? tracks.first.artworkUrl:null),
-                size:210),
+                size:194),
               actions:Column(
                 crossAxisAlignment:CrossAxisAlignment.start,
                 children:[
