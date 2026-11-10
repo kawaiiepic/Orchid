@@ -63,7 +63,7 @@ class _SearchScreenState extends State<SearchScreen> {
   List<MusicPlaylist> get _playlists {
     final query = _norm(_controller.text);
     if (query.isEmpty) return [];
-    return widget.library.playlists
+    return widget.library.visiblePlaylists
         .where((p) => _norm(p.name).contains(query)).toList()
       ..sort((a,b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
   }
