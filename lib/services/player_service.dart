@@ -391,7 +391,7 @@ class PlayerService extends ChangeNotifier {
     try {
       final stream = await addonService
           .resolvePlayback(track, _addons)
-          .timeout(const Duration(seconds: 30));
+          .timeout(const Duration(seconds: 50));
       if (generation != lyricsGeneration) return;
       playingVia = _sourceName(stream.via ?? stream.quality, stream, track);
       await player.setUrl(stream.url).timeout(const Duration(seconds: 20));
