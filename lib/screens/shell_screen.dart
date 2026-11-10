@@ -403,7 +403,7 @@ class _ShellScreenState extends State<ShellScreen>{
      OrchidHomeScreen(
       header:desktop ? _desktopGreeting() : _topBar(context),
       player:_player,addonService:_addonService,addons:_addons,account:_account,
-      openExplore:()=>_selectTab(1),
+      openExplore:()=>_selectTab(3),
       openProfile:_openProfile,
       openLibrary:()=>_selectTab(2),
       openAiDj:()=>_selectTab(7),
