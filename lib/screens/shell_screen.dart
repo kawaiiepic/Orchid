@@ -351,6 +351,14 @@ class _ShellScreenState extends State<ShellScreen>{
    ),
   );
  }
+ Widget _featurePage(Widget page, bool desktop) {
+  if (desktop) return page;
+  return Column(children:[
+   _topBar(context),
+   Expanded(child:page),
+  ]);
+ }
+
  NavigationItem _button(String title,IconData icon,int index)=>NavigationItem(
   key:ValueKey(index),style:const ButtonStyle.muted(density:ButtonDensity.icon),
   selectedStyle:const ButtonStyle.fixed(density:ButtonDensity.icon),
@@ -438,26 +446,26 @@ class _ShellScreenState extends State<ShellScreen>{
        playlistsOnly:true,
      ) else const SizedBox.shrink(),
      if(_initializedTabs.contains(5))
-      ReplayScreen(account:_account)
+      _featurePage(ReplayScreen(account:_account),desktop)
      else const SizedBox.shrink(),
      if(_initializedTabs.contains(6))
-      RadioScreen(account:_account,player:_player,addons:_addons)
+      _featurePage(RadioScreen(account:_account,player:_player,addons:_addons),desktop)
      else const SizedBox.shrink(),
      if(_initializedTabs.contains(7))
-      AiDjScreen(account:_account)
+      _featurePage(AiDjScreen(account:_account),desktop)
      else const SizedBox.shrink(),
      if(_initializedTabs.contains(8))
-      AllTimeTopSongsScreen(account:_account,player:_player,addons:_addons)
+      _featurePage(AllTimeTopSongsScreen(account:_account,player:_player,addons:_addons),desktop)
      else const SizedBox.shrink(),
      if(_initializedTabs.contains(9))
-      SettingsScreen(
+      _featurePage(SettingsScreen(
        account:_account,addonService:_addonService,addons:_addons,
        onAddonsChanged:(list) {
         if(!mounted)return;
         setState(()=>_addons=list);
         _player.setAddons(list);
        },
-      )
+      ),desktop)
      else const SizedBox.shrink(),
 
       ],
