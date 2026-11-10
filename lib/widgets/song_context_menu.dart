@@ -1,6 +1,8 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import '../models/addon.dart';
+import '../services/addon_service.dart';
+import '../screens/song_detail_screen.dart';
 import '../services/music_library.dart';
 import '../services/player_service.dart';
 import 'orchid_style.dart';
@@ -12,6 +14,8 @@ class SongContextMenu extends StatefulWidget {
   final TrackResult track;
   final PlayerService player;
   final MusicLibrary library;
+  final AddonService? addonService;
+  final List<InstalledAddon> addons;
   final MusicPlaylist? playlist;
   final bool openOnTap;
   final bool showMenuButton;
@@ -22,6 +26,8 @@ class SongContextMenu extends StatefulWidget {
     required this.track,
     required this.player,
     required this.library,
+    this.addonService,
+    this.addons = const [],
     this.playlist,
     this.openOnTap = false,
     this.showMenuButton = true,
@@ -63,6 +69,8 @@ class _SongContextMenuState extends State<SongContextMenu> {
           track: widget.track,
           player: widget.player,
           library: widget.library,
+          addonService: widget.addonService,
+          addons: widget.addons,
           playlist: widget.playlist,
           dismiss: _close,
         ),
@@ -124,6 +132,8 @@ class _SongActionPanel extends StatefulWidget {
   final TrackResult track;
   final PlayerService player;
   final MusicLibrary library;
+  final AddonService? addonService;
+  final List<InstalledAddon> addons;
   final MusicPlaylist? playlist;
   final VoidCallback dismiss;
 
@@ -131,6 +141,8 @@ class _SongActionPanel extends StatefulWidget {
     required this.track,
     required this.player,
     required this.library,
+    this.addonService,
+    this.addons = const [],
     this.playlist,
     required this.dismiss,
   });
@@ -274,6 +286,20 @@ class _SongActionPanelState extends State<_SongActionPanel> {
             child: Text(widget.track.title, maxLines: 1,
               overflow: TextOverflow.ellipsis).semiBold(),
           ),
+          _action('View Song', LucideIcons.info, () {
+            showSongDetailDrawer(context,
+              player: widget.player,
+              addonService: widget.addonService ?? AddonService(),
+              addons: widget.addons,
+              library: widget.library,
+              title: widget.track.title,
+              artist: widget.track.artist,
+              album: widget.track.album,
+              artworkUrl: widget.track.artworkUrl,
+              track: widget.track,
+            );
+            widget.dismiss();
+          }),
           _action('Play Now', LucideIcons.play, () {
             widget.dismiss();
             widget.player.playTrack(widget.track).catchError((Object e) {
