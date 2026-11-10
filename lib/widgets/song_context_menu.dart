@@ -508,7 +508,7 @@ class _SongActionPanelState extends State<_SongActionPanel> {
               () {
                 final track = widget.track;
                 widget.dismiss();
-                OrchidShare.song(track).catchError((Object error) {
+                OrchidShare.song(track, context: context).catchError((Object error) {
                   debugPrint('[Orchid Share] Song share failed: $error');
                 });
               }),
@@ -662,7 +662,7 @@ class _SongActionPanelState extends State<_SongActionPanel> {
           _action('Share Song', LucideIcons.share, () {
             final track = widget.track;
             widget.dismiss();
-            OrchidShare.song(track).catchError((Object error) {
+            OrchidShare.song(track, context: context).catchError((Object error) {
               debugPrint('[Orchid Share] Song share failed: $error');
             });
           }),
