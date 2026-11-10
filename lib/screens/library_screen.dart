@@ -115,7 +115,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: SongContextMenu(
         track: _track(song), player: widget.player,
-        library: widget.library,
+        library: widget.library, playlist: playlist,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () {
