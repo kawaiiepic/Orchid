@@ -1101,6 +1101,13 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     );
   }
 
+  Widget _homeInset(Widget child) => _desktop
+      ? child
+      : Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: child,
+        );
+
   Widget _desktopSection(String title, {String? subtitle}) =>
       OrchidSectionHeader(title: title, subtitle: subtitle);
 
@@ -1109,14 +1116,14 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     final charts = _items('charts');
     final recent = _uniqueRecent();
     return ListView(
-      padding: EdgeInsets.fromLTRB(_desktop ? 28 : 16,
-        _desktop ? 28 : 12, _desktop ? 30 : 16,
+      padding: EdgeInsets.fromLTRB(_desktop ? 28 : 0,
+        _desktop ? 28 : 12, _desktop ? 30 : 0,
         _desktop ? 0 : OrchidStyle.iosDockClearance(context)),
       children: [
         widget.header,
-        _desktopShortcuts(),
+        _homeInset(_desktopShortcuts()),
         gap,
-        _desktopSection('Made For You'),
+        _homeInset(_desktopSection('Made For You')),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(children: [
@@ -1145,49 +1152,49 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
           ]),
         ),
         gap,
-        _desktopSection('Daily Mixes'),
+        _homeInset(_desktopSection('Daily Mixes')),
         _dailyMixCards(),
         gap,
-        _desktopSection('New For You'),
+        _homeInset(_desktopSection('New For You')),
         if (_loading && _history == null)
-          const Text('Finding music for you…').muted()
+          _homeInset(const Text('Finding music for you…').muted())
         else if (charts.isNotEmpty)
-          _desktopSongList(charts)
+          _homeInset(_desktopSongList(charts))
         else
-          const Text('Fresh music will appear here soon.').muted(),
+          _homeInset(const Text('Fresh music will appear here soon.').muted()),
         gap,
         if (recent.isNotEmpty) ...[
-          _desktopSection('Recently Played'),
-          _desktopSongList(recent),
+          _homeInset(_desktopSection('Recently Played')),
+          _homeInset(_desktopSongList(recent)),
           gap,
         ],
         if (_items('featuredAlbums').isNotEmpty) ...[
-          _desktopSection('Featured Albums'),
+          _homeInset(_desktopSection('Featured Albums')),
           _horizontalItems(_items('featuredAlbums'), albums: true),
           gap,
         ],
         if (_items('artists').isNotEmpty) ...[
-          _desktopSection('Your Top Artists'),
+          _homeInset(_desktopSection('Your Top Artists')),
           _horizontalItems(_items('artists'), albums: false),
           gap,
         ],
         if (_items('albums').isNotEmpty) ...[
-          _desktopSection('Your Top Albums'),
+          _homeInset(_desktopSection('Your Top Albums')),
           _horizontalItems(_items('albums'), albums: true),
           gap,
         ],
         if (_history != null) ...[
-          _desktopSection('This Month’s Listening'),
-          _monthlyListening(),
+          _homeInset(_desktopSection('This Month’s Listening')),
+          _homeInset(_monthlyListening()),
           gap,
         ],
         if (_error != null) ...[
-          Text(_error!, style: const TextStyle(
-            color: Color(0xFFD7A7BA), fontSize: 12)),
+          _homeInset(Text(_error!, style: const TextStyle(
+            color: Color(0xFFD7A7BA), fontSize: 12))),
           const SizedBox(height: 12),
-          Align(alignment: Alignment.centerLeft,
+          _homeInset(Align(alignment: Alignment.centerLeft,
             child: OutlineButton(
-              onPressed: _refresh, child: const Text('Try again'))),
+              onPressed: _refresh, child: const Text('Try again')))),
         ],
       ],
     );
