@@ -321,6 +321,63 @@ class IOSMiniPlayer extends StatelessWidget {
 }
 
 
+/// Thin, borderless progress track with a larger invisible drag target.
+class _ThinPlayerSlider extends StatelessWidget {
+  final double value;
+  final ValueChanged<double>? onChanged;
+  final double width;
+
+  const _ThinPlayerSlider({
+    required this.value,
+    required this.onChanged,
+    required this.width,
+  });
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: width,
+    height: 20,
+    child: LayoutBuilder(
+      builder: (context, constraints) {
+        void update(double dx) {
+          if (onChanged != null && constraints.maxWidth > 0) {
+            onChanged!((dx / constraints.maxWidth).clamp(0.0, 1.0));
+          }
+        }
+        return MouseRegion(
+          cursor: onChanged == null
+            ? SystemMouseCursors.basic
+            : SystemMouseCursors.click,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapDown: (details) => update(details.localPosition.dx),
+            onHorizontalDragUpdate: (details) => update(details.localPosition.dx),
+            child: Center(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(3),
+                child: SizedBox(
+                  width: width,
+                  height: 3,
+                  child: Stack(children: [
+                    const Positioned.fill(
+                      child: ColoredBox(color: Color(0x665E536D)),
+                    ),
+                    FractionallySizedBox(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: value.clamp(0.0, 1.0),
+                      child: const ColoredBox(color: Color(0xFFBBA4D6)),
+                    ),
+                  ]),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    ),
+  );
+}
+
 /// Floating desktop player styled after Eclipse's compact transport deck.
 class DesktopPlayerBar extends StatelessWidget {
   final PlayerService player;
@@ -356,10 +413,20 @@ class DesktopPlayerBar extends StatelessWidget {
     VoidCallback? action, {
     Color color = const Color(0xFFB4ACC4),
     double size = 17,
-  }) => IconButton.ghost(
-    onPressed: action,
-    icon: Icon(icon, size: size, color: action == null
-        ? const Color(0xFF61586D) : color),
+  }) => MouseRegion(
+    cursor: action == null ? SystemMouseCursors.basic : SystemMouseCursors.click,
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: action,
+      child: SizedBox(
+        width: 31,
+        height: 31,
+        child: Center(
+          child: Icon(icon, size: size, color: action == null
+            ? const Color(0xFF61586D) : color),
+        ),
+      ),
+    ),
   );
 
   @override
@@ -372,7 +439,7 @@ class DesktopPlayerBar extends StatelessWidget {
         return LayoutBuilder(builder: (context, constraints) {
           final narrow = constraints.maxWidth < 800;
           final sideWidth = narrow ? 156.0 : 235.0;
-          final volumeWidth = narrow ? 68.0 : 110.0;
+          final volumeWidth = narrow ? 50.0 : 70.0;
           return _BorderlessPlayerGlass(
             radius: 17,
             child: SizedBox(
@@ -414,12 +481,43 @@ class DesktopPlayerBar extends StatelessWidget {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(track.title,
-                                    maxLines: 1, overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Color(0xFFF9F4FF),
-                                      fontSize: 12, fontWeight: FontWeight.w600,
-                                    )),
+                                  Row(children: [
+                                    Expanded(child: Text(track.title,
+                                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Color(0xFFF9F4FF),
+                                        fontSize: 12, fontWeight: FontWeight.w600,
+                                      ))),
+                                    const SizedBox(width: 5),
+                                    ListenableBuilder(
+                                      listenable: library,
+                                      builder: (context, _) {
+                                        final saved = SavedSong(
+                                          track.title, track.artist,
+                                          album: track.album,
+                                          artwork: track.artworkUrl,
+                                        );
+                                        final liked = library.isFavorite(saved);
+                                        return MouseRegion(
+                                          cursor: SystemMouseCursors.click,
+                                          child: GestureDetector(
+                                            behavior: HitTestBehavior.opaque,
+                                            onTap: () { library.toggleFavorite(saved); },
+                                            child: SizedBox(
+                                              width: 26, height: 26,
+                                              child: Center(child: Icon(
+                                                LucideIcons.heart,
+                                                size: 15,
+                                                color: liked
+                                                  ? const Color(0xFFF0A0CB)
+                                                  : const Color(0xFFA79AB9),
+                                              )),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ]),
                                   const SizedBox(height: 3),
                                   Text(track.artist,
                                     maxLines: 1, overflow: TextOverflow.ellipsis,
@@ -498,15 +596,18 @@ class DesktopPlayerBar extends StatelessWidget {
                                 ),
                                 const SizedBox(width: 6),
                                 Expanded(
-                                  child: Slider(
-                                    value: SliderValue.single(total > 0
-                                      ? elapsed / total : 0),
-                                    min: 0,
-                                    max: 1,
-                                    onChanged: active && total > 0
-                                      ? (value) => player.seek(Duration(
-                                          milliseconds: (value.value * total).round()))
-                                      : null,
+                                  child: Center(
+                                    child: LayoutBuilder(builder: (context, bounds) {
+                                      final width = bounds.maxWidth.clamp(0.0, narrow ? 165.0 : 260.0);
+                                      return _ThinPlayerSlider(
+                                        width: width,
+                                        value: total > 0 ? elapsed / total : 0,
+                                        onChanged: active && total > 0
+                                          ? (value) => player.seek(Duration(
+                                              milliseconds: (value * total).round()))
+                                          : null,
+                                      );
+                                    }),
                                   ),
                                 ),
                                 const SizedBox(width: 6),
@@ -525,29 +626,26 @@ class DesktopPlayerBar extends StatelessWidget {
                     ),
                     const SizedBox(width: 12),
                     SizedBox(
-                      width: narrow ? 106 : 168,
+                      width: narrow ? 91 : 145,
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           const Icon(LucideIcons.volume2,
-                            color: Color(0xFFB9AFCB), size: 16),
-                          const SizedBox(width: 4),
-                          SizedBox(
+                            color: Color(0xFFB9AFCB), size: 15),
+                          const SizedBox(width: 7),
+                          _ThinPlayerSlider(
                             width: volumeWidth,
-                            child: Slider(
-                              value: SliderValue.single(player.volume),
-                              min: 0,
-                              max: 1,
-                              onChanged: (value) =>
-                                player.setVolume(value.value),
-                            ),
+                            value: player.volume,
+                            onChanged: player.setVolume,
                           ),
-                          if (!narrow)
+                          if (!narrow) ...[
+                            const SizedBox(width: 19),
                             _control(
                               LucideIcons.listMusic,
                               active ? () => showQueueSheet(context, player) : null,
                               size: 16,
                             ),
+                          ],
                         ],
                       ),
                     ),
