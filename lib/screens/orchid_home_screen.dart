@@ -343,7 +343,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
       );
     }
     final cardWidth = width ?? (desktop ? 186.0 : OrchidStyle.compact(context, 186));
-    final cardHeight = height ?? (desktop ? 226.0 : OrchidStyle.compact(context, 216));
+    final cardHeight = height ?? (desktop ? 226.0 : cardWidth);
     if (desktop) {
       return _clickable(
         onTap: onTap,
@@ -425,6 +425,46 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                   fontSize: 11, color: Color(0xFFA99BB7))),
             ],
           ),
+        ),
+      );
+    }
+    if (desktopCircle) {
+      return _clickable(
+        onTap: onTap,
+        child: SizedBox(
+          width: cardWidth,
+          height: cardHeight,
+          child: Column(children: [
+            Expanded(child: Center(
+              child: ClipOval(
+                child: SizedBox(
+                  width: cardWidth * .72,
+                  height: cardWidth * .72,
+                  child: artwork == null
+                    ? const ColoredBox(
+                        color: OrchidStyle.panel,
+                        child: Icon(LucideIcons.user,
+                          color: OrchidStyle.lilac))
+                    : FittedBox(
+                        fit: BoxFit.cover,
+                        child: SizedBox(
+                          width: cardWidth, height: cardWidth,
+                          child: artwork,
+                        ),
+                      ),
+                ),
+              ),
+            )),
+            Text(title, textAlign: TextAlign.center,
+              maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Color(0xFFF5EDFF),
+                fontSize: 13, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 3),
+            Text(subtitle, textAlign: TextAlign.center,
+              maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Color(0xFFA99BB7),
+                fontSize: 11)),
+          ]),
         ),
       );
     }
@@ -840,7 +880,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
         title: title,
         subtitle: artist,
         width: size,
-        height: OrchidStyle.compact(context, 216),
+        height: size,
         badge: nowPlaying ? LucideIcons.audioLines : null,
         artwork: AppleCover(
           artist: artist,
@@ -1015,7 +1055,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
       subtitle: isAlbum ? artist : '${_count(item['plays'])} plays',
       width: size,
       desktopCircle: !isAlbum,
-      height: _desktop && !isAlbum ? 172 : OrchidStyle.compact(context, 216),
+      height: !isAlbum && _desktop ? 172 : OrchidStyle.compact(context, 205),
       artwork: isAlbum
           ? AppleCover(
               artist: artist,
@@ -1165,135 +1205,9 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
       animation: widget.player,
       builder: (context, _) {
         final stats = _history?['stats'] is Map
-            ? Map<String, dynamic>.from(_history!['stats'] as Map)
-            : <String, dynamic>{};
-        if (_desktop) return _desktopHome(stats);
-        return ListView(
-          padding: EdgeInsets.fromLTRB(OrchidStyle.compact(context,20),OrchidStyle.compact(context,20),OrchidStyle.compact(context,20),OrchidStyle.compact(context,20)+OrchidStyle.iosDockClearance(context)),
-          children: [
-            widget.header,
-            _pinnedPlaylists(),
-            OrchidHero(
-              eyebrow: 'Your listening space',
-              title: 'Made for your ears.',
-              description: 'Your favorite music, daily discoveries and the artists you keep coming back to.',
-              icon: LucideIcons.audioLines,
-              action: Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  OrchidAdaptiveControls.button(
-                    prominent: true,
-                    onPressed: () => widget.openDailyMixes(null),
-                    child: const Text('Explore Daily Mixes'),
-                  ),
-                  OrchidAdaptiveControls.button(
-                    onPressed: widget.openLibrary,
-                    child: const Text('My Library'),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height:OrchidStyle.compact(context,28)),
-            const OrchidSectionHeader(
-              title: 'Made for You',
-              subtitle: 'A little more personal',
-            ),
-            const SizedBox(height:12),
-            SingleChildScrollView(scrollDirection:Axis.horizontal,
-              child:Row(children:[
-                _madeForYouCard(),
-                const SizedBox(width:10),
-                _personalCard('All-Time Top Songs','Your most-played tracks',
-                  LucideIcons.trophy,
-                  const [Color(0xFFC48C31),Color(0xFF774227),Color(0xFF241722)],
-                  widget.openTopSongs),
-                const SizedBox(width:10),
-                _personalCard('Radio','Pick a vibe, play forever',
-                  LucideIcons.radio,
-                  const [Color(0xFF0E9E91),Color(0xFF265D83),Color(0xFF202244)],
-                  widget.openRadio),
-
-              ])),
-            SizedBox(height:OrchidStyle.compact(context,28)),
-            const OrchidSectionHeader(
-              title: 'AI DJ',
-              subtitle: 'Talk music with your personal DJ',
-            ),
-            const SizedBox(height:12),
-            _clickable(
-              onTap:widget.openAiDj,
-              child:Container(
-                width:double.infinity,
-                padding:EdgeInsets.symmetric(horizontal:OrchidStyle.compact(context,18),vertical:OrchidStyle.compact(context,14)),
-                decoration:OrchidStyle.panelDecoration(radius:15),
-                child:Row(children:[
-                  Icon(LucideIcons.bot,size:OrchidStyle.compact(context,22),color:OrchidStyle.lilac),
-                  const SizedBox(width:12),
-                  Expanded(child:const Text('Chat with AI DJ').semiBold()),
-                  Icon(LucideIcons.chevronRight,size:OrchidStyle.compact(context,19),color:OrchidStyle.lilac),
-                ]),
-              ),
-            ),
-            SizedBox(height:OrchidStyle.compact(context,28)),
-            const OrchidSectionHeader(
-              title: 'Daily Mixes',
-              subtitle: 'Fresh rotations for your listening mood',
-            ),
-            _dailyMixCards(),
-            SizedBox(height:OrchidStyle.compact(context,28)),
-            const OrchidSectionHeader(
-              title: 'Your listening',
-              subtitle: 'A little portrait of your music taste',
-
-            ),
-            const SizedBox(height: 10),
-            if (_error != null) ...[
-              Text(_error!).small(),
-              const SizedBox(height: 8),
-              OutlineButton(onPressed: _refresh, child: const Text('Try again')),
-            ],
-            if (_loading && _history == null)
-              const Text('Loading your music home…').muted(),
-            if (_history != null) ...[
-              const OrchidSectionHeader(title: 'This month’s stats'),
-              const SizedBox(height: 10),
-              _monthlyListening(),
-              const SizedBox(height: 24),
-              const OrchidSectionHeader(title:'Recently played'),
-              const SizedBox(height:10),
-              if (_uniqueRecent().isEmpty)
-                const Text('Play some music to start your Orchid history.').muted()
-              else _recentCards(_uniqueRecent()),
-              const SizedBox(height:24),
-              const OrchidSectionHeader(
-                title:'Popular on Apple Music',
-                subtitle:'Explore something new',
-              ),
-              const SizedBox(height:10),
-              if(_items('charts').isEmpty)
-                const Text('Apple Music charts are unavailable.').muted()
-              else _recentCards(_items('charts').take(12).toList()),
-              const SizedBox(height:24),
-              const OrchidSectionHeader(title:'Featured albums'),
-              const SizedBox(height:10),
-              _horizontalItems(_items('featuredAlbums'),albums:true),
-              if(_items('artists').isNotEmpty)...[
-                const SizedBox(height:24),
-                const OrchidSectionHeader(title:'Your top artists'),
-                const SizedBox(height:10),
-                _horizontalItems(_items('artists'),albums:false),
-              ],
-              if(_items('albums').isNotEmpty)...[
-                const SizedBox(height:24),
-                const OrchidSectionHeader(title:'Your top albums'),
-                const SizedBox(height:10),
-                _horizontalItems(_items('albums'),albums:true),
-              ],
-            ],
-            const SizedBox(height: 24),
-          ],
-        );
+          ? Map<String, dynamic>.from(_history!['stats'] as Map)
+          : <String, dynamic>{};
+        return _desktopHome(stats);
       },
     );
   }
