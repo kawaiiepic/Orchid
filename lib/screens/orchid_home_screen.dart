@@ -1065,12 +1065,14 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
               fallbackUrl: item['image']?.toString(),
               size: size,
               radius: 0,
+              zoomOnHover: true,
             )
           : ArtistArtwork(
               artist: title,
               size: size,
               fallbackUrl: item['image']?.toString(),
               radius: 0,
+              zoomOnHover: true,
             ),
       onTap: () => _showMusicDetail(item, isAlbum: isAlbum),
     );
