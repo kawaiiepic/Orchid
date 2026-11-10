@@ -94,8 +94,10 @@ class OrchidSectionHeader extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: EdgeInsets.only(bottom: OrchidStyle.compact(context, 14)),
+  Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 850;
+    return Padding(
+    padding: EdgeInsets.only(bottom: compact ? 18 : 14),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -110,7 +112,11 @@ class OrchidSectionHeader extends StatelessWidget {
         Expanded(child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title).large().semiBold(),
+            Text(title, style: TextStyle(
+              fontSize: compact ? 15 : 18,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFFF7EDFF),
+            )),
             if (subtitle != null) ...[
               const SizedBox(height: 3),
               Text(subtitle!).small().muted(),
@@ -120,7 +126,8 @@ class OrchidSectionHeader extends StatelessWidget {
         if (trailing != null) trailing!,
       ],
     ),
-  );
+    );
+  }
 }
 
 class OrchidHero extends StatelessWidget {
@@ -142,18 +149,22 @@ class OrchidHero extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(0, 8, 0, 12),
+  Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 850;
+    return Padding(
+    padding: EdgeInsets.fromLTRB(0, 8, 0, compact ? 18 : 12),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(
-          color: Color(0xFFF9F5FF),
-          fontSize: 26, fontWeight: FontWeight.w700,
+        Text(title, style: TextStyle(
+          color: const Color(0xFFF9F5FF),
+          fontSize: compact ? 22 : 26,
+          fontWeight: FontWeight.w700,
         )),
         const SizedBox(height: 7),
-        Text(description, style: const TextStyle(
-          color: Color(0xFFBCB0CA), fontSize: 12,
+        Text(description, style: TextStyle(
+          color: const Color(0xFFBCB0CA),
+          fontSize: compact ? 11 : 12,
         )),
         if (action != null) ...[
           const SizedBox(height: 12),
@@ -161,7 +172,8 @@ class OrchidHero extends StatelessWidget {
         ],
       ],
     ),
-  );
+    );
+  }
 }
 
 /// Shared Orchid glass surface using liquid_glass_widgets on every platform.
