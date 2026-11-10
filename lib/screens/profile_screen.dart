@@ -140,25 +140,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
        const SizedBox(width:14),
        Expanded(child:Column(
         crossAxisAlignment:CrossAxisAlignment.start,children:[
-          const Text('Account avatar').semiBold(),
-          const Text('Shared across Petal and Orchid').small().muted(),
+          Text(a.username??'Account').large().semiBold(),
+          Text(a.email??'').small().muted(),
           const SizedBox(height:8),
           Wrap(spacing:8,runSpacing:8,children:[
            OutlineButton(onPressed:busy?null:_chooseAvatar,
              child:const Text('Change avatar')),
-           if(a.avatarUrl!=null)
-             GhostButton(
-               onPressed:busy?null:()=>_run(a.removeAccountAvatar),
-               child:const Text('Remove')),
+           GhostButton(
+             onPressed:busy?null:()=>_run(a.logout),
+             child:const Text('Sign out')),
           ]),
         ],
        )),
       ]),
-      const SizedBox(height:16),
-      Text(a.username??'Account').large().semiBold(),
-      Text(a.email??'').muted(),
-      const SizedBox(height:12),
-      OutlineButton(onPressed:busy?null:()=>_run(a.logout),child:const Text('Sign out')),
     ]))),
     ],
     if(widget.section!='account') ...[
