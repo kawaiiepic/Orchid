@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart' as material;
+import '../services/spotify_service.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../widgets/orchid_hover_zoom.dart';
 import '../widgets/orchid_adaptive_controls.dart';
@@ -50,6 +52,88 @@ class _LibraryScreenState extends State<LibraryScreen> {
   String? _selectedAlbumKey;
   String? _selectedArtist;
   bool _followingOnly = false;
+  String _playlistSort = 'Recents';
+  String _playlistSize = 'M';
+  String? _playlistFolderId;
+  bool _reorderingPlaylists = false;
+  bool _importingPlaylist = false;
+
+  Future<String?> _askName(String title, {String hint = 'Name'}) async {
+    final controller = material.TextEditingController();
+    try {
+      return await material.showDialog<String>(
+        context: context,
+        builder: (ctx) => material.AlertDialog(
+          title: material.Text(title),
+          content: material.TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: material.InputDecoration(hintText: hint),
+            onSubmitted: (value) => material.Navigator.pop(
+              ctx, value.trim().isEmpty ? null : value.trim()),
+          ),
+          actions: [
+            material.TextButton(onPressed: () => material.Navigator.pop(ctx),
+              child: const material.Text('Cancel')),
+            material.TextButton(onPressed: () => material.Navigator.pop(ctx,
+              controller.text.trim().isEmpty ? null : controller.text.trim()),
+              child: const material.Text('Continue')),
+          ],
+        ),
+      );
+    } finally {
+      controller.dispose();
+    }
+  }
+
+  Future<void> _newPlaylist() async {
+    final name = await _askName('New playlist');
+    if (name == null || !mounted) return;
+    final playlist = await widget.library.createPlaylist(name);
+    if (_playlistFolderId != null) {
+      await widget.library.movePlaylistToFolder(playlist, _playlistFolderId);
+    }
+  }
+
+  Future<void> _newFolder() async {
+    final name = await _askName('New folder');
+    if (name == null || !mounted) return;
+    await widget.library.createPlaylistFolder(name);
+  }
+
+  Future<void> _spotifyImport() async {
+    final link = await _askName('Import Spotify playlist',
+      hint: 'https://open.spotify.com/playlist/...');
+    if (link == null || !mounted) return;
+    setState(() => _importingPlaylist = true);
+    try {
+      final imported = await SpotifyService().importPublicPlaylist(link);
+      if (!mounted) return;
+      final playlist = await widget.library.createPlaylist(imported.name);
+      for (final song in imported.songs) {
+        await widget.library.addToPlaylist(playlist, song);
+      }
+      if (_playlistFolderId != null) {
+        await widget.library.movePlaylistToFolder(playlist, _playlistFolderId);
+      }
+    } catch (error) {
+      if (!mounted) return;
+      await material.showDialog<void>(
+        context: context,
+        builder: (ctx) => material.AlertDialog(
+          title: const material.Text('Spotify import unavailable'),
+          content: material.Text('$error'),
+          actions: [
+            material.TextButton(
+              onPressed: () => material.Navigator.pop(ctx),
+              child: const material.Text('OK')),
+          ],
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _importingPlaylist = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -599,29 +683,160 @@ class _LibraryScreenState extends State<LibraryScreen> {
     ]);
   }
 
-  Widget _playlistsGrid(List<MusicPlaylist> playlists) =>
-    LayoutBuilder(builder: (context, bounds) {
+  List<MusicPlaylist> _sortedPlaylists(List<MusicPlaylist> playlists) {
+    final result = playlists.where((p) => p.folderId == _playlistFolderId).toList();
+    switch (_playlistSort) {
+      case 'Recently Added':
+        result.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      case 'Recents':
+        result.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+      case 'Alphabetical':
+        result.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      case 'Creator':
+        result.sort((a, b) {
+          final byCreator = a.creator.toLowerCase().compareTo(b.creator.toLowerCase());
+          return byCreator != 0 ? byCreator :
+              a.name.toLowerCase().compareTo(b.name.toLowerCase());
+        });
+      case 'Custom Order':
+        break;
+    }
+    return result;
+  }
+
+  Widget _playlistsGrid(List<MusicPlaylist> playlists) {
+    final filtered = _sortedPlaylists(playlists);
+    final maxExtent = switch (_playlistSize) {
+      'S' => 140.0,
+      'L' => 235.0,
+      'XL' => 295.0,
+      _ => 185.0,
+    };
+    return LayoutBuilder(builder: (context, bounds) {
       const gap = 12.0;
-      final columns = (bounds.maxWidth / 165).floor().clamp(2, 7).toInt();
-      final entries = <Widget>[
-        for (final playlist in playlists)
-          _playlistButton(playlist.name, playlist.songs,
-            () => widget.onPlaylistSelected?.call(playlist.id),
-            playlist: playlist),
-      ];
+      final columns = (bounds.maxWidth / maxExtent).floor().clamp(1, 9).toInt();
+      if (_reorderingPlaylists && _playlistSort == 'Custom Order') {
+        return material.ReorderableListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: filtered.length,
+          onReorder: (oldIndex, newIndex) {
+            if (newIndex > oldIndex) newIndex--;
+            if (oldIndex == newIndex) return;
+            final moving = filtered[oldIndex];
+            final target = filtered[newIndex];
+            widget.library.movePlaylistBefore(moving, target);
+          },
+          itemBuilder: (context, index) {
+            final p = filtered[index];
+            return material.ListTile(
+              key: material.ValueKey(p.id),
+              leading: SizedBox(width: 48, height: 48,
+                child: _playlistArtwork(p.songs)),
+              title: material.Text(p.name),
+              subtitle: material.Text('${p.songs.length} songs'),
+              trailing: const Icon(LucideIcons.gripVertical),
+            );
+          },
+        );
+      }
       return GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        itemCount: entries.length,
+        itemCount: filtered.length,
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: columns,
           crossAxisSpacing: gap,
           mainAxisSpacing: 18,
           childAspectRatio: .75,
         ),
-        itemBuilder: (_, i) => entries[i],
+        itemBuilder: (_, i) {
+          final playlist = filtered[i];
+          return _playlistButton(playlist.name, playlist.songs,
+            () => widget.onPlaylistSelected?.call(playlist.id),
+            playlist: playlist);
+        },
       );
     });
+  }
+
+  Widget _playlistsToolbar() {
+    final folders = widget.library.playlistFolders;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          material.PopupMenuButton<String>(
+            tooltip: 'Sort playlists',
+            onSelected: (value) => setState(() {
+              _playlistSort = value;
+              _reorderingPlaylists = false;
+            }),
+            itemBuilder: (_) => [
+              for (final sort in const [
+                'Recents', 'Recently Added', 'Alphabetical',
+                'Creator', 'Custom Order',
+              ])
+                material.PopupMenuItem(value: sort, child: material.Text(sort)),
+            ],
+            child: _playlistToolbarChip(LucideIcons.arrowDownUp, _playlistSort),
+          ),
+          if (_playlistSort == 'Custom Order')
+            OrchidAdaptiveControls.button(
+              prominent: _reorderingPlaylists,
+              onPressed: () => setState(() =>
+                _reorderingPlaylists = !_reorderingPlaylists),
+              child: Text(_reorderingPlaylists ? 'Done' : 'Reorder'),
+            ),
+          material.PopupMenuButton<String>(
+            tooltip: 'Playlist size',
+            onSelected: (value) => setState(() => _playlistSize = value),
+            itemBuilder: (_) => [
+              for (final size in const ['S', 'M', 'L', 'XL'])
+                material.PopupMenuItem(value: size, child: material.Text(size)),
+            ],
+            child: _playlistToolbarChip(LucideIcons.layoutGrid, 'Size: $_playlistSize'),
+          ),
+          OrchidAdaptiveControls.button(
+            onPressed: _importingPlaylist ? null : _spotifyImport,
+            child: Text(_importingPlaylist ? 'Importing…' : 'Import'),
+          ),
+          OrchidAdaptiveControls.button(
+            onPressed: _newFolder, child: const Text('New Folder')),
+          OrchidAdaptiveControls.button(
+            prominent: true, onPressed: _newPlaylist,
+            child: const Text('New')),
+        ],
+      ),
+      if (folders.isNotEmpty || _playlistFolderId != null) ...[
+        const SizedBox(height: 14),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          OrchidAdaptiveControls.button(
+            prominent: _playlistFolderId == null,
+            onPressed: () => setState(() => _playlistFolderId = null),
+            child: const Text('All')),
+          for (final folder in folders)
+            OrchidAdaptiveControls.button(
+              prominent: _playlistFolderId == folder.id,
+              onPressed: () => setState(() => _playlistFolderId = folder.id),
+              child: Text(folder.name)),
+        ]),
+      ],
+    ]);
+  }
+
+  Widget _playlistToolbarChip(IconData icon, String label) =>
+    Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        color: const Color(0x443F3150),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 16), const SizedBox(width: 7),
+        Text(label), const SizedBox(width: 5),
+        const Icon(LucideIcons.chevronDown, size: 14),
+      ]),
+    );
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -764,6 +979,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
             _songList(selectedSongs, playlist: activePlaylist),
           ] else ...[
             const Text('Playlists').x2Large().semiBold(),
+            const SizedBox(height: 16),
+            _playlistsToolbar(),
             const SizedBox(height: 20),
             _playlistsGrid(playlists),
           ],
