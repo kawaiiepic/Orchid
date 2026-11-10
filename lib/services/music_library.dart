@@ -110,15 +110,22 @@ class MusicLibrary extends ChangeNotifier {
   final Map<String, String?> savedArtists = {};
   final Set<String> savedPlaylistIds = {};
 
-  String _artistKey(String artist) => artist.trim().toLowerCase();
-  bool isArtistSaved(String artist) => savedArtists.containsKey(_artistKey(artist));
+  String? _savedArtistKey(String artist) {
+    final normalized = artist.trim().toLowerCase();
+    for (final key in savedArtists.keys) {
+      if (key.toLowerCase() == normalized) return key;
+    }
+    return null;
+  }
+  bool isArtistSaved(String artist) => _savedArtistKey(artist) != null;
   Future<void> toggleArtistSaved(String artist, {String? artwork}) async {
-    final key = _artistKey(artist);
-    if (key.isEmpty) return;
-    if (savedArtists.containsKey(key)) {
-      savedArtists.remove(key);
+    final name = artist.trim();
+    if (name.isEmpty) return;
+    final existing = _savedArtistKey(name);
+    if (existing != null) {
+      savedArtists.remove(existing);
     } else {
-      savedArtists[key] = artwork;
+      savedArtists[name] = artwork;
     }
     await _save();
   }
