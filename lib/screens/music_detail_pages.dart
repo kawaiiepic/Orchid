@@ -181,12 +181,7 @@ Widget _trackTile(BuildContext context, TrackResult song, {
         Text(trackDurationLabel(song.duration)!).xSmall().muted(),
         const SizedBox(width: 6),
       ],
-      IconButton.ghost(
-        onPressed: () => _openTrack(context, song,
-          player: player, addonService: addonService,
-          addons: addons, library: library),
-        icon: const Icon(LucideIcons.info, size: 18),
-      ),
+
     ]),
   ),
     ),
