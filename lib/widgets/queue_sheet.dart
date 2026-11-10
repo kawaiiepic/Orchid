@@ -4,6 +4,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../models/addon.dart';
 import '../services/player_service.dart';
 import 'track_duration.dart';
+import 'orchid_style.dart';
 
 /// Queue and listening history open as a real page instead of an overlay.
 void showQueueSheet(BuildContext context, PlayerService player) {
@@ -30,10 +31,11 @@ class _QueueDrawerBody extends StatelessWidget {
         final suggestions = player.recommendations;
         final idx = player.queueIndex;
 
-        return Container(
-          width: double.infinity,
-          color: scheme.card,
-          child: Column(
+        return OrchidGlassPanel(
+          radius: 18,
+          child: SizedBox(
+            width: double.infinity,
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
@@ -151,6 +153,7 @@ class _QueueDrawerBody extends StatelessWidget {
                 ),
               ),
             ],
+            ),
           ),
         );
       },
