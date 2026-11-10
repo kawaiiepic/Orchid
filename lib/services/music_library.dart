@@ -57,14 +57,20 @@ class MusicLibrary extends ChangeNotifier {
     return created;
   }
 
-  List<SavedSong> get librarySongs => _savedLibrary.songs;
+  // Reading Library must not mutate playlists during an account load.
+  List<SavedSong> get librarySongs {
+    for (final playlist in playlists) {
+      if (playlist.id == libraryPlaylistId) return playlist.songs;
+    }
+    return const <SavedSong>[];
+  }
   List<MusicPlaylist> get visiblePlaylists =>
       playlists.where((p) => p.id != libraryPlaylistId).toList();
   bool isInLibrary(SavedSong song) =>
       librarySongs.any((s) => s.key == song.key);
 
   bool _includeInLibrary(SavedSong song) {
-    final songs = librarySongs;
+    final songs = _savedLibrary.songs;
     if (songs.any((s) => s.key == song.key)) return false;
     songs.insert(0, song);
     return true;
@@ -75,7 +81,9 @@ class MusicLibrary extends ChangeNotifier {
   }
 
   Future<void> removeFromLibrary(SavedSong song) async {
-    librarySongs.removeWhere((s) => s.key == song.key);
+    final existing = playlists.where((p) => p.id == libraryPlaylistId);
+    if (existing.isEmpty) return;
+    existing.first.songs.removeWhere((s) => s.key == song.key);
     await _save();
   }
   final List<SavedSong> favorites = [];
