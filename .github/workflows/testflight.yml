@@ -17,12 +17,6 @@ jobs:
   ios:
     runs-on: macos-latest
     timeout-minutes: 75
-    # miniaudio's CoreAudio bridge includes Objective-C Foundation headers.
-    # Compile the Rust cc bridge as Objective-C rather than plain C on iOS.
-    env:
-      CFLAGS_aarch64_apple_ios: "-x objective-c"
-      CFLAGS_aarch64_apple_ios_sim: "-x objective-c"
-      CFLAGS_x86_64_apple_ios: "-x objective-c"
     steps:
       - uses: actions/checkout@v6
 
@@ -35,6 +29,9 @@ jobs:
 
       - name: Resolve Flutter packages
         run: flutter pub get
+
+      - name: Fix miniaudio_player 3.0.2 iOS native build
+        run: python3 scripts/patch_miniaudio_ios.py
 
       - name: Analyze Dart source
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
