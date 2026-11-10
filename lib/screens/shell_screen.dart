@@ -69,6 +69,7 @@ class _ShellScreenState extends State<ShellScreen>{
    selected = const ValueKey(4);
    _initializedTabs.add(4);
    _verticalScrollAccum = 0;
+   _iosDockCollapsed = false;
   });
   _contentRevision.value++;
  }
@@ -79,6 +80,7 @@ class _ShellScreenState extends State<ShellScreen>{
    if (index == 4) _selectedPlaylistId = null;
    _initializedTabs.add(index);
    _verticalScrollAccum=0;
+   _iosDockCollapsed=false;
   });
   _contentRevision.value++;
  }
@@ -190,7 +192,16 @@ class _ShellScreenState extends State<ShellScreen>{
       color: page == index
         ? OrchidStyle.pink
         : const Color(0xFFF8F6FC)),
-    onTap: () => _selectTab(index),
+    onTap: () {
+      if (_iosDockCollapsed) {
+        setState(() {
+          _iosDockCollapsed = false;
+          _verticalScrollAccum = 0;
+        });
+      } else {
+        _selectTab(index);
+      }
+    },
     width: 58,
     height: 58,
     useOwnLayer: true,
@@ -216,7 +227,8 @@ class _ShellScreenState extends State<ShellScreen>{
  };
 
  Widget _iosFloatingDock(int page) {
-  final bottom=MediaQuery.paddingOf(context).bottom;
+  // Keep the dock in the physical safe area; never follow keyboard insets.
+  final bottom=MediaQuery.viewPaddingOf(context).bottom;
   return Positioned(
    left:12,right:12,bottom:bottom+4,
    child:ListenableBuilder(
@@ -354,11 +366,13 @@ class _ShellScreenState extends State<ShellScreen>{
 
  Widget _featurePage(Widget page, bool desktop) {
   if (desktop) return page;
-  return Column(children:[
-   _topBar(context),
-   Expanded(child:page),
-  ]);
+  return page;
  }
+
+  bool _isDesktopLayout(BuildContext context) =>
+    (kIsWeb || (defaultTargetPlatform != TargetPlatform.iOS &&
+      defaultTargetPlatform != TargetPlatform.android)) &&
+    MediaQuery.sizeOf(context).width >= 850;
 
   Widget _buildBrowsing(bool desktop) {
   final page=(selected as ValueKey<int>?)?.value??0;
@@ -381,10 +395,10 @@ class _ShellScreenState extends State<ShellScreen>{
       library:_library,
      ),
      if(_initializedTabs.contains(1))
-      SearchScreen(header:desktop ? const SizedBox.shrink() : _topBar(context),addonService:_addonService,player:_player,addons:_addons,library:_library,account:_account)
+      SearchScreen(header:const SizedBox.shrink(),addonService:_addonService,player:_player,addons:_addons,library:_library,account:_account)
      else const SizedBox.shrink(),
      if(_initializedTabs.contains(2)) LibraryScreen(
-      header:desktop ? const SizedBox.shrink() : _topBar(context),
+      header:const SizedBox.shrink(),
       library:_library,
       account:_account,
       player:_player,
@@ -393,12 +407,12 @@ class _ShellScreenState extends State<ShellScreen>{
       openExplore:()=>_selectTab(1),
      ) else const SizedBox.shrink(),
      if(_initializedTabs.contains(3)) DiscoverScreen(
-       header:desktop ? const SizedBox.shrink() : _topBar(context),
+       header:const SizedBox.shrink(),
        account:_account,player:_player,addonService:_addonService,
        addons:_addons,library:_library,
      ) else const SizedBox.shrink(),
      if(_initializedTabs.contains(4)) LibraryScreen(
-       header:desktop ? const SizedBox.shrink() : _topBar(context),
+       header:const SizedBox.shrink(),
        library:_library,account:_account,player:_player,
        addonService:_addonService,addons:_addons,
        openExplore:()=>_selectTab(3),
@@ -468,9 +482,7 @@ class _ShellScreenState extends State<ShellScreen>{
    return SafeArea(child:Scaffold(child:ProfileScreen(account:_account)));
   }
   final page=(selected as ValueKey<int>?)?.value??0;
-  final desktop=(kIsWeb || (defaultTargetPlatform!=TargetPlatform.iOS
-    && defaultTargetPlatform!=TargetPlatform.android))
-    && MediaQuery.sizeOf(context).width>=850;
+  final desktop=_isDesktopLayout(context);
   // Every compact layout uses the same floating Liquid Glass dock.
 
   final browsing = Navigator(
@@ -478,7 +490,8 @@ class _ShellScreenState extends State<ShellScreen>{
     onGenerateRoute: (_) => ShadcnPageRoute<void>(
       builder: (_) => ListenableBuilder(
         listenable: _contentRevision,
-        builder: (_, __) => _buildBrowsing(desktop),
+        builder: (routeContext, __) =>
+          _buildBrowsing(_isDesktopLayout(routeContext)),
       ),
     ),
   );
@@ -541,7 +554,9 @@ class _ShellScreenState extends State<ShellScreen>{
     );
   }
 
+  final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
   return Scaffold(
+   resizeToAvoidBottomInset: false,
    child:Container(
     decoration:const BoxDecoration(
      gradient:LinearGradient(
@@ -557,8 +572,17 @@ class _ShellScreenState extends State<ShellScreen>{
      ),
     ),
     child:Stack(children:[
-     browsing,
-     _iosFloatingDock(page),
+     // Keep content scrollable above the keyboard, but let scrollables
+     // paint behind the system bottom inset and the floating dock.
+     Positioned.fill(
+       bottom: keyboardInset,
+       child: MediaQuery.removePadding(
+         context: context,
+         removeBottom: true,
+         child: browsing,
+       ),
+     ),
+     if (keyboardInset == 0) _iosFloatingDock(page),
     ]),
    ),
   );
