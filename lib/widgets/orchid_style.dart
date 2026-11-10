@@ -126,10 +126,10 @@ class OrchidHero extends StatelessWidget {
         ),
       );
     }
-    return Container(
+    return OrchidGlassPanel(
+    radius: 24,
+    child: SizedBox(
     width: double.infinity,
-    clipBehavior: Clip.antiAlias,
-    decoration: OrchidStyle.gradientDecoration(),
     child: Stack(
       children: [
         Positioned(
@@ -177,6 +177,7 @@ class OrchidHero extends StatelessWidget {
           ),
         ),
       ],
+    ),
     ),
   );
   }
