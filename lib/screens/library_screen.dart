@@ -488,15 +488,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
           ),
         ),
       ),
-      const SizedBox(height: 14),
-      Wrap(spacing: 8, runSpacing: 8, children: [
-        for (final view in const ['Songs', 'Albums', 'Artists'])
-          OrchidAdaptiveControls.button(
-            prominent: _view == view,
-            onPressed: () => setState(() => _view = view),
-            child: Text(view),
-          ),
-      ]),
+      if (MediaQuery.sizeOf(context).width >= 850) ...[
+        const SizedBox(height: 14),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          for (final view in const ['Songs', 'Albums', 'Artists'])
+            OrchidAdaptiveControls.button(
+              prominent: _view == view,
+              onPressed: () => setState(() => _view = view),
+              child: Text(view),
+            ),
+        ]),
+      ],
     ],
   );
 
@@ -1200,7 +1202,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ] else ...[
               OrchidSectionHeader(title: mobile ? _view : 'Library'),
               const SizedBox(height: 8),
-              Text('${widget.library.librarySongs.length} saved songs').small().muted(),
+              Text(mobile
+                ? switch (_view) {
+                    'Artists' => '${widget.library.savedArtists.length} followed artists',
+                    'Albums' => '${albums.length} saved albums',
+                    _ => '${widget.library.librarySongs.length} saved songs',
+                  }
+                : '${widget.library.librarySongs.length} saved songs').small().muted(),
               const SizedBox(height: 18),
               _libraryTools(),
               const SizedBox(height: 18),
