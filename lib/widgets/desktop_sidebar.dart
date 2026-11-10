@@ -118,44 +118,31 @@ class DesktopSidebar extends StatelessWidget {
               ),
             ),
           ),
-          Container(
-            decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: Color(0xFF34304C))),
-            ),
-            padding: const EdgeInsets.fromLTRB(9, 8, 9, 12),
-            child: Row(children: [
-              Expanded(child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onProfile,
-                child: Container(
-                  padding: const EdgeInsets.all(9),
-                  child: Row(children: [
-                    Container(
-                      width: 32, height: 32,
-                      alignment: Alignment.center,
-                      decoration: const BoxDecoration(
-                        color: OrchidStyle.panelLight,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        accountName.isNotEmpty ? accountName[0].toUpperCase() : '?',
-                        style: const TextStyle(color: OrchidStyle.lilac,
-                          fontSize: 14, fontWeight: FontWeight.w700),
-                      ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 12, 18, 14),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: onSettings,
+                  child: Container(
+                    width: 38, height: 38,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(
+                      color: OrchidStyle.panelLight,
+                      shape: BoxShape.circle,
                     ),
-                    const SizedBox(width: 9),
-                    Expanded(child: Text(accountName,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12,
-                        color: Color(0xFFF0E4FF), fontWeight: FontWeight.w600))),
-                  ]),
+                    child: Text(
+                      accountName.isNotEmpty ? accountName[0].toUpperCase() : '?',
+                      style: const TextStyle(color: OrchidStyle.lilac,
+                        fontSize: 15, fontWeight: FontWeight.w700),
+                    ),
+                  ),
                 ),
-              )),
-              IconButton.ghost(
-                onPressed: onSettings,
-                icon: const Icon(LucideIcons.settings, size: 17),
               ),
-            ]),
+            ),
           ),
         ],
       ),
