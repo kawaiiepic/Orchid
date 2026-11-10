@@ -556,7 +556,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
           mainAxisSpacing: 18, childAspectRatio: .82),
         itemBuilder: (context, index) {
           final artist = artists[index];
+          final savedSongCount = widget.library.librarySongs.where((song) =>
+            song.artist.trim().toLowerCase() == artist.toLowerCase()).length;
           return OrchidHoverMenu(
+            showHoverButton: false,
             actions: [OrchidHoverAction(
               widget.library.isArtistSaved(artist)
                   ? 'Unfollow artist' : 'Follow artist',
@@ -568,11 +571,19 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 _selectedAlbumKey = null;
               }),
               child: Column(children: [
-                Expanded(child: LayoutBuilder(builder: (context, size) =>
-                  ArtistArtwork(artist: artist, size: size.maxWidth,
-                    radius: size.maxWidth / 2))),
+                Expanded(child: LayoutBuilder(builder: (context, bounds) {
+                  final diameter = bounds.maxWidth < bounds.maxHeight
+                      ? bounds.maxWidth : bounds.maxHeight;
+                  return Center(child: ClipOval(
+                    child: ArtistArtwork(artist: artist, size: diameter,
+                      radius: diameter / 2),
+                  ));
+                })),
                 const SizedBox(height: 8),
                 Text(artist, maxLines: 1, overflow: TextOverflow.ellipsis).semiBold(),
+                const SizedBox(height: 3),
+                Text('${savedSongCount} ${savedSongCount == 1 ? 'song' : 'songs'}',
+                  maxLines: 1, overflow: TextOverflow.ellipsis).small().muted(),
               ]),
             ),
           );
