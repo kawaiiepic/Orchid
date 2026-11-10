@@ -75,6 +75,7 @@ class DesktopSidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     return OrchidGlassPanel(
       radius: 18,
+      transparentOnDesktop: false,
       child: SizedBox(
         width: 236,
         child: Column(
