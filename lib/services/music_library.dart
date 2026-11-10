@@ -363,7 +363,7 @@ class MusicLibrary extends ChangeNotifier {
 
   Future<MusicPlaylist> importPlaylist(
     String name, List<SavedSong> songs,
-    {String creator = 'You', String? folderId},
+    {String creator = 'You', String? folderId}
   ) async {
     final unique = <String, SavedSong>{};
     for (final song in songs) {
