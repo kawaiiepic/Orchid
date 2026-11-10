@@ -123,10 +123,12 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                           size: 130, radius: 11,
                         ),
                         const SizedBox(height: 7),
-                        Text((item['title'] ?? '').toString(),
-                          maxLines: 1, overflow: TextOverflow.ellipsis).semiBold(),
-                        Text((item['artist'] ?? '').toString(),
-                          maxLines: 1, overflow: TextOverflow.ellipsis).small().muted(),
+                        SizedBox(width: 130, child: Text(
+                          (item['title'] ?? '').toString(),
+                          maxLines: 1, overflow: TextOverflow.ellipsis)),
+                        SizedBox(width: 130, child: Text(
+                          (item['artist'] ?? '').toString(),
+                          maxLines: 1, overflow: TextOverflow.ellipsis).small().muted()),
                       ],
                     ),
                   ),
@@ -206,10 +208,12 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                       size: 130, radius: 11,
                     ),
                     const SizedBox(height: 7),
-                    Text((item['name'] ?? '').toString(),
-                      maxLines: 1, overflow: TextOverflow.ellipsis).semiBold(),
-                    Text((item['artist'] ?? '').toString(),
-                      maxLines: 1, overflow: TextOverflow.ellipsis).small().muted(),
+                    SizedBox(width: 130, child: Text(
+                      (item['name'] ?? '').toString(),
+                      maxLines: 1, overflow: TextOverflow.ellipsis)),
+                    SizedBox(width: 130, child: Text(
+                      (item['artist'] ?? '').toString(),
+                      maxLines: 1, overflow: TextOverflow.ellipsis).small().muted()),
                   ],
                 ),
               ),
