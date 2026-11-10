@@ -6,11 +6,12 @@ import '../models/addon.dart';
 import '../services/player_service.dart';
 import 'track_duration.dart';
 import 'orchid_style.dart';
-import 'content_drawer.dart';
 
 /// Queue and listening history open as a real page instead of an overlay.
 void showQueueSheet(BuildContext context, PlayerService player) {
-  (orchidContentNavigatorKey.currentState ?? Navigator.of(context))
+  // The fullscreen player is on the root navigator. Pushing onto the
+  // shell's nested content navigator would place Queue *behind* the player.
+  Navigator.of(context, rootNavigator: true)
       .push(ShadcnPageRoute<void>(
     builder: (_) => Scaffold(
       child: SafeArea(child: _QueueDrawerBody(player: player)),
