@@ -555,7 +555,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Color(0xFFFFFFFF),
-                        fontSize: 16,
+                        fontSize: 14,
                         fontWeight: FontWeight.w700,
                         height: 1.14,
                         shadows: [Shadow(blurRadius: 8, color: Color(0xAA000000))],
@@ -875,7 +875,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
       sourceId: 'orchid-history',
       sourceName: 'Orchid History',
     );
-    final size = OrchidStyle.compact(context, 186);
+    final size = _desktop ? 186.0 : OrchidStyle.compact(context, 156);
     return SongContextMenu(
       track: result,
       player: widget.player,
@@ -1061,7 +1061,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
       subtitle: isAlbum ? artist : '${_count(item['plays'])} plays',
       width: size,
       desktopCircle: !isAlbum,
-      height: !isAlbum && _desktop ? 172 : OrchidStyle.compact(context, 205),
+      height: !isAlbum && _desktop ? 172 : OrchidStyle.compact(context, 174),
       artwork: isAlbum
           ? AppleCover(
               artist: artist,
@@ -1094,7 +1094,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
         children: [
           for (final item in items) ...[
             _topCard(item, isAlbum: albums),
-            const SizedBox(width: 10),
+            SizedBox(width: _desktop ? 10 : 16),
           ],
         ],
       ),
@@ -1105,7 +1105,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
       OrchidSectionHeader(title: title, subtitle: subtitle);
 
   Widget _desktopHome(Map<String, dynamic> stats) {
-    const gap = SizedBox(height: 31);
+    final gap = SizedBox(height: _desktop ? 31 : 38);
     final charts = _items('charts');
     final recent = _uniqueRecent();
     return ListView(
