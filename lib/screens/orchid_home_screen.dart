@@ -1110,7 +1110,8 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     final recent = _uniqueRecent();
     return ListView(
       padding: EdgeInsets.fromLTRB(_desktop ? 28 : 16,
-        _desktop ? 28 : 12, _desktop ? 30 : 16, 0),
+        _desktop ? 28 : 12, _desktop ? 30 : 16,
+        _desktop ? 0 : OrchidStyle.iosDockClearance(context)),
       children: [
         widget.header,
         _desktopShortcuts(),
