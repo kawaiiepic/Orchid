@@ -110,10 +110,11 @@ class _OrchidHoverMenuState extends State<OrchidHoverMenu> {
         if (widget.showHoverButton) Positioned(
           right: 4, top: 4,
           child: IgnorePointer(
-            ignoring: !_hovered,
+            ignoring: !(_hovered || MediaQuery.sizeOf(context).width < 850),
             child: AnimatedOpacity(
               duration: const Duration(milliseconds: 150),
-              opacity: _hovered ? 1 : 0,
+              opacity: (_hovered || MediaQuery.sizeOf(context).width < 850)
+                  ? 1 : 0,
               child: IconButton.ghost(
                 onPressed: _open,
                 icon: const Icon(LucideIcons.ellipsis, size: 19),
