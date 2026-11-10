@@ -294,8 +294,8 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                         ? Center(
                             child: ClipOval(
                               child: SizedBox(
-                                width: cardWidth * .90,
-                                height: cardWidth * .90,
+                                width: cardWidth * .62,
+                                height: cardWidth * .62,
                                 child: FittedBox(
                                   fit: BoxFit.cover,
                                   child: SizedBox(
@@ -789,7 +789,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(child: _desktopSongRow(visible[index], index)),
-              const SizedBox(width: 18),
+              const SizedBox(width: 40),
               Expanded(
                 child: index + 1 < visible.length
                     ? _desktopSongRow(visible[index + 1], index + 1)
@@ -827,6 +827,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
       track: song,
       player: widget.player,
       library: widget.library,
+      showMenuButton: true,
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         child: GestureDetector(
@@ -838,23 +839,23 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
             });
           },
           child: Container(
-            height: 58,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
+            height: 54,
+            padding: const EdgeInsets.fromLTRB(5, 0, 45, 0),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(children: [
               SizedBox(
-                width: 27,
+                width: 24,
                 child: Text('${index + 1}',
                   style: const TextStyle(color: Color(0xFF8C8498),
                     fontSize: 12)),
               ),
               AppleCover(
                 artist: artist, name: title, album: album,
-                fallbackUrl: image, size: 43, radius: 7,
+                fallbackUrl: image, size: 34, radius: 6,
               ),
-              const SizedBox(width: 13),
+              const SizedBox(width: 10),
               Expanded(
                 flex: 4,
                 child: Column(
@@ -871,9 +872,9 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               SizedBox(
-                width: 48,
+                width: 40,
                 child: Text(duration ?? '—', textAlign: TextAlign.end,
                   style: const TextStyle(
                     fontSize: 11, color: Color(0xFFB2A9BC))),
@@ -916,7 +917,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
       subtitle: isAlbum ? artist : '${_count(item['plays'])} plays',
       width: size,
       desktopCircle: !isAlbum,
-      height: OrchidStyle.compact(context, 216),
+      height: _desktop && !isAlbum ? 172 : OrchidStyle.compact(context, 216),
       artwork: isAlbum
           ? AppleCover(
               artist: artist,
