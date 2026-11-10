@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/services.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
@@ -174,7 +173,7 @@ class _AudioConnectSheetState extends State<_AudioConnectSheet> {
           trailing: const Icon(LucideIcons.volume2,
             color: Color(0xFFE35C9B), size: 20)),
         _section('AirPlay & Bluetooth'),
-        if (Platform.isIOS)
+        if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Row(children: [
