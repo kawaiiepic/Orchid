@@ -10,10 +10,13 @@ class HlsVariantService {
 
   final Map<String, Future<String>> _cache = {};
 
-  Future<String> preferredUrl(String url) =>
-      _cache.putIfAbsent(url, () => _resolve(url));
+  /// Fullscreen mobile backgrounds favour a smaller H.264 rendition to
+  /// avoid decoding a high-bitrate, high-resolution HLS stream for decoration.
+  Future<String> preferredUrl(String url, {bool efficient = false}) =>
+      _cache.putIfAbsent('${efficient ? 'efficient' : 'standard'}|$url',
+          () => _resolve(url, efficient: efficient));
 
-  Future<String> _resolve(String url) async {
+  Future<String> _resolve(String url, {required bool efficient}) async {
     final uri = Uri.tryParse(url);
     if (uri == null || uri.scheme != 'https' ||
         !uri.path.toLowerCase().endsWith('.m3u8')) {
@@ -60,10 +63,17 @@ class HlsVariantService {
         ));
       }
       final avc = options.where((option) => option.avc && !option.hevc).toList()
-        ..sort((a, b) => b.bandwidth.compareTo(a.bandwidth));
+        ..sort((a, b) => a.bandwidth.compareTo(b.bandwidth));
       if (avc.isNotEmpty) {
-        debugPrint('[Orchid Artwork] Using AVC HLS rendition instead of HEVC');
-        return avc.first.url;
+        // Pick the best available H.264 stream below ~1.8 Mbps on mobile.
+        // Keep the highest-quality AVC variant for the desktop cover player.
+        final selected = efficient
+            ? (avc.where((v) => v.bandwidth > 0 && v.bandwidth <= 1800000)
+                    .lastOrNull ?? avc.first)
+            : avc.last;
+        debugPrint('[Orchid Artwork] AVC HLS variant: '
+            '${selected.bandwidth} bps (efficient=$efficient)');
+        return selected.url;
       }
       debugPrint('[Orchid Artwork] No AVC rendition advertised; using source HLS playlist');
     } catch (e) {
