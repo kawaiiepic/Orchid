@@ -375,7 +375,9 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
     if (videos.isEmpty) {
       return const Text('No music videos available from the catalog.').muted();
     }
-    return Wrap(spacing: 14, runSpacing: 18, children: [
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(children: [
       for (final video in videos)
         SizedBox(
           width: 220,
@@ -414,7 +416,9 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
             ),
           ),
         ),
-    ]);
+        const SizedBox(width: 14),
+      ]),
+    );
   }
 
   @override
