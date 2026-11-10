@@ -42,20 +42,21 @@ class _ShellScreenState extends State<ShellScreen>{
  bool _onContentScroll(ScrollNotification notification) {
   if (notification.metrics.axis != Axis.vertical ||
       notification is! ScrollUpdateNotification) return false;
-  final delta=notification.scrollDelta ?? 0;
-  if (notification.metrics.pixels < 80) {
+  final offset = notification.metrics.pixels;
+  if (offset <= 2) {
    _verticalScrollAccum=0;
-   if (_iosDockCollapsed) setState(() => _iosDockCollapsed=false);
+   if (_iosDockCollapsed) setState(()=>_iosDockCollapsed=false);
    return false;
   }
-  if (delta.abs()<1) return false;
-  _verticalScrollAccum=(_verticalScrollAccum+delta).clamp(-120.0,120.0);
+  final delta = notification.scrollDelta ?? 0;
+  if (delta <= 0) {
+   _verticalScrollAccum=0;
+   return false;
+  }
+  _verticalScrollAccum=(_verticalScrollAccum+delta).clamp(0.0,120.0);
   if (!_iosDockCollapsed && _verticalScrollAccum>36) {
    _verticalScrollAccum=0;
-   setState(() => _iosDockCollapsed=true);
-  } else if (_iosDockCollapsed && _verticalScrollAccum < -28) {
-   _verticalScrollAccum=0;
-   setState(() => _iosDockCollapsed=false);
+   setState(()=>_iosDockCollapsed=true);
   }
   return false;
  }
@@ -63,7 +64,6 @@ class _ShellScreenState extends State<ShellScreen>{
   setState(() {
    selected=ValueKey(index);
    _initializedTabs.add(index);
-   _iosDockCollapsed=false;
    _verticalScrollAccum=0;
   });
  }
@@ -498,8 +498,7 @@ class _ShellScreenState extends State<ShellScreen>{
             onPlaylists:()=>_selectTab(4),
             onLibrary:()=>_selectTab(2),
             onReplay:()=>_selectTab(5),
-            onRadio:()=>_openFeatureSheet('Radio',
-              RadioScreen(account:_account,player:_player,addons:_addons)),
+            onRadio:()=>_selectTab(6),
             onAiDj:()=>_selectTab(7),
             onSettings:_openSettings,
             onProfile:_openProfile,
@@ -532,8 +531,9 @@ class _ShellScreenState extends State<ShellScreen>{
        selectedKey:selected,
        children:[
         _button('Home',BootstrapIcons.house,0),
-        _button('Explore',BootstrapIcons.compass,1),
+        _button('Discover',BootstrapIcons.compass,3),
         _button('Library',BootstrapIcons.musicNoteList,2),
+        _button('Search',BootstrapIcons.search,1),
        ],
       ),
      ),
