@@ -11,6 +11,8 @@ import '../widgets/content_drawer.dart';
 import '../widgets/track_duration.dart';
 import '../widgets/orchid_style.dart';
 import '../widgets/apple_cover.dart';
+import '../widgets/orchid_detail_header.dart';
+import '../widgets/orchid_hover_zoom.dart';
 
 void showSongDetailDrawer(BuildContext context, {
   required PlayerService player,
@@ -128,6 +130,9 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
     track:t,
     player:widget.player,
     library:library,
+    addonService:widget.addonService,
+    addons:widget.addons,
+    showViewSong:false,
     openOnTap:true,
     child:const Padding(
       padding:EdgeInsets.all(12),
@@ -140,7 +145,7 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
    artist: widget.artist,
    name: widget.title,
    fallbackUrl: widget.artworkUrl ?? widget.track?.artworkUrl,
-   size: 210,
+   size: 194,
    radius: 16,
  );
 
@@ -150,63 +155,50 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
    child:ListView(
      padding:const EdgeInsets.fromLTRB(20,12,20,28),
      children:[
-       if(widget.library!=null)
-         Align(alignment:Alignment.centerRight,child:_libraryActions()),
-       const SizedBox(height:12),
-       OrchidGlassPanel(
-         radius:22,
-         child:Padding(
-           padding:const EdgeInsets.all(20),
-           child:Column(
-           crossAxisAlignment:CrossAxisAlignment.start,
-           children:[
-             Center(child:artwork()),
-             const SizedBox(height:20),
-             const Text('SONG',style:TextStyle(
-               fontSize:11,letterSpacing:2,
-               color:OrchidStyle.lilac,fontWeight:FontWeight.w700)),
-             const SizedBox(height:9),
-             Text(widget.title,style:const TextStyle(
-               fontSize:27,height:1.12,fontWeight:FontWeight.w700)),
-             const SizedBox(height:8),
-             Text(widget.artist,style:const TextStyle(
-               fontSize:16,color:OrchidStyle.lilac)),
-             const SizedBox(height:12),
-             Wrap(spacing:8,runSpacing:7,children:[
-               if(displayedDuration!=null)
-                 Text(displayedDuration!).small().muted(),
-               if(widget.track?.sourceName.isNotEmpty==true)
-                 Text(widget.track!.sourceName).small().muted(),
-               if(widget.nowPlaying)
-                 const Text('Now playing').small().muted(),
-             ]),
-             const SizedBox(height:19),
-             Wrap(spacing:10,runSpacing:10,children:[
-               OrchidAdaptiveControls.button(prominent: true, 
-                 onPressed:busy?null:playFirst,
-                 child:Row(mainAxisSize:MainAxisSize.min,children:[
-                   const Icon(LucideIcons.play,size:17),
-                   const SizedBox(width:9),
-                   Text(playing?'Starting…':'Play'),
-                 ]),
-               ),
-               OrchidAdaptiveControls.button(
-                 onPressed:busy?null:queueFirst,
-                 child:const Row(mainAxisSize:MainAxisSize.min,children:[
-                   Icon(LucideIcons.listMusic,size:17),
-                   SizedBox(width:8),
-                   Text('Add to queue'),
-                 ]),
-               ),
-             ]),
-           ],
-           ),
+       Align(
+         alignment: Alignment.centerLeft,
+         child: IconButton.ghost(
+           onPressed: () => dismissContentDrawer(context),
+           icon: const Icon(LucideIcons.arrowLeft),
          ),
+       ),
+       const SizedBox(height: 12),
+       OrchidDetailHeader(
+         eyebrow: 'Song',
+         title: widget.title,
+         subtitle: [
+           widget.artist,
+           if (widget.album?.trim().isNotEmpty == true) widget.album!,
+           if (displayedDuration != null) displayedDuration!,
+           if (widget.nowPlaying) 'Now playing',
+         ].join(' · '),
+         artwork: artwork(),
+         trailing: widget.library != null ? _libraryActions() : null,
+         actions: Wrap(spacing: 10, runSpacing: 10, children: [
+           OrchidAdaptiveControls.button(
+             prominent: true,
+             onPressed: busy ? null : playFirst,
+             child: Row(mainAxisSize: MainAxisSize.min, children: [
+               const Icon(LucideIcons.play, size: 17),
+               const SizedBox(width: 9),
+               Text(playing ? 'Starting…' : 'Play'),
+             ]),
+           ),
+           OrchidAdaptiveControls.button(
+             onPressed: busy ? null : queueFirst,
+             child: const Row(mainAxisSize: MainAxisSize.min, children: [
+               Icon(LucideIcons.listMusic, size: 17),
+               SizedBox(width: 8),
+               Text('Add to queue'),
+             ]),
+           ),
+         ]),
        ),
        const SizedBox(height:27),
        const OrchidSectionHeader(title:'About this song'),
        OrchidGlassPanel(
          radius:16,
+         transparentOnDesktop: false,
          child:Padding(
            padding:const EdgeInsets.all(15),
            child:Column(
@@ -267,8 +259,7 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
          const SizedBox(height:12),
          ...matches.take(12).map((t)=>Padding(
            padding:const EdgeInsets.only(bottom:7),
-           child:OrchidGlassPanel(
-             radius:14,
+           child:OrchidHoverSurface(
              child:Row(children:[
                Expanded(child:Button(
                  style:const ButtonStyle.ghost(),
