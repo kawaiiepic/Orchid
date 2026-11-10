@@ -196,7 +196,7 @@ class PlayerService extends ChangeNotifier {
     _stateSubscription = player.playerStateStream.listen((state) {
       if (_disposed) return;
       notifyListeners();
-      if (state.processingState == OrchidOrchidProcessingState.completed &&
+      if (state.processingState == OrchidProcessingState.completed &&
           !_autoAdvancing && !resolving &&
           (hasNext || repeatMode == OrchidRepeatMode.one)) {
         _autoAdvancing = true;
@@ -338,7 +338,7 @@ class PlayerService extends ChangeNotifier {
       // Let the audio stream finish delivering its last completion event.
       // The guard prevents duplicate advances while the next source resolves.
       if (_disposed || resolving ||
-          player.processingState != OrchidOrchidProcessingState.completed) {
+          player.processingState != OrchidProcessingState.completed) {
         return;
       }
       if (repeatMode == OrchidRepeatMode.one && current != null) {
