@@ -17,7 +17,8 @@ abstract final class OrchidStyle {
   // while leaving room to reach the last card at the bottom of the list.
   static double iosDockClearance(BuildContext context) {
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return 0;
-    return 152 + MediaQuery.paddingOf(context).bottom;
+    // The dock floats over content; do not reserve a large blank footer.
+    return 12;
   }
 
   static const violet = Color(0xFFBE9AFF);
