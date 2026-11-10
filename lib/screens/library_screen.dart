@@ -113,8 +113,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
     return filtered;
   }
 
-  Widget _songRow(SavedSong song, int number, {MusicPlaylist? playlist}) =>
-    Padding(
+  Widget _songRow(SavedSong song, int number, {MusicPlaylist? playlist}) {
+    var hovered = false;
+    return StatefulBuilder(builder: (context, updateHover) => MouseRegion(
+      onEnter: (_) => updateHover(() => hovered = true),
+      onExit: (_) => updateHover(() => hovered = false),
+      child: Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: SongContextMenu(
         track: _track(song), player: widget.player,
@@ -130,7 +134,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
             child: Row(children: [
-              SizedBox(width: 30, child: _HoverPlayNumber(number: number)),
+              SizedBox(width: 30, child: Center(child: hovered
+                ? const Icon(LucideIcons.play, size: 16)
+                : Text('$number').small().muted())),
               const SizedBox(width: 10),
               AppleCover(artist: song.artist, name: song.title,
                 album: song.album, fallbackUrl: song.artwork,
@@ -161,7 +167,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
           ),
         ),
       ),
-    );
+    )));
+  }
 
   Widget _songList(List<SavedSong> songs, {MusicPlaylist? playlist}) {
     if (songs.isEmpty) return const Text('No songs found.').muted();
@@ -459,23 +466,4 @@ class _LibraryScreenState extends State<LibraryScreen> {
     },
   );
 
-}
-
-class _HoverPlayNumber extends StatefulWidget {
-  final int number;
-  const _HoverPlayNumber({required this.number});
-  @override
-  State<_HoverPlayNumber> createState() => _HoverPlayNumberState();
-}
-
-class _HoverPlayNumberState extends State<_HoverPlayNumber> {
-  bool hovered = false;
-  @override
-  Widget build(BuildContext context) => MouseRegion(
-    onEnter: (_) => setState(() => hovered = true),
-    onExit: (_) => setState(() => hovered = false),
-    child: Center(child: hovered
-      ? const Icon(LucideIcons.play, size: 16)
-      : Text('${widget.number}').small().muted()),
-  );
 }
