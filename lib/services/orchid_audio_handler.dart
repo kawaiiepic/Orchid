@@ -1,0 +1,211 @@
+import 'dart:async';
+
+import 'package:audio_service/audio_service.dart';
+import 'package:audio_session/audio_session.dart';
+import 'package:flutter/foundation.dart';
+import 'package:just_audio/just_audio.dart' as ja;
+
+import 'player_service.dart';
+
+/// Bridges Orchid's existing just_audio player to Android media controls,
+/// lock-screen artwork, headset buttons and iOS Control Center.
+/// Playback and queue ownership remain in PlayerService.
+class OrchidAudioHandler extends BaseAudioHandler {
+  PlayerService? _service;
+  AudioSession? _session;
+  StreamSubscription<ja.PlayerState>? _playbackSubscription;
+  StreamSubscription<Duration>? _positionSubscription;
+  StreamSubscription<Duration?>? _durationSubscription;
+  StreamSubscription<Duration>? _bufferedSubscription;
+  StreamSubscription<AudioInterruptionEvent>? _interruptionSubscription;
+  StreamSubscription<void>? _noisySubscription;
+  bool _pausedForInterruption = false;
+
+  Future<void> configureSession() async {
+    _session = await AudioSession.instance;
+    await _session!.configure(const AudioSessionConfiguration.music());
+    _interruptionSubscription = _session!.interruptionEventStream.listen((event) {
+      final service = _service;
+      if (service == null) return;
+      if (event.begin) {
+        if (event.type == AudioInterruptionType.duck) return;
+        _pausedForInterruption = service.player.playing;
+        if (_pausedForInterruption) unawaited(service.player.pause());
+      } else if (event.type == AudioInterruptionType.pause &&
+                 _pausedForInterruption) {
+        _pausedForInterruption = false;
+        unawaited(service.player.play());
+      } else {
+        _pausedForInterruption = false;
+      }
+    });
+    _noisySubscription = _session!.becomingNoisyEventStream.listen((_) {
+      final service = _service;
+      if (service != null && service.player.playing) {
+        unawaited(service.player.pause());
+      }
+    });
+  }
+
+  void attach(PlayerService service) {
+    detach();
+    _service = service;
+    service.addListener(_sync);
+    _playbackSubscription = service.player.playerStateStream.listen((_) => _sync());
+    _positionSubscription = service.player.positionStream.listen((_) => _sync());
+    _durationSubscription = service.player.durationStream.listen((_) => _sync());
+    _bufferedSubscription = service.player.bufferedPositionStream.listen((_) => _sync());
+    _sync();
+  }
+
+  void detach() {
+    final service = _service;
+    if (service != null) service.removeListener(_sync);
+    _service = null;
+    unawaited(_playbackSubscription?.cancel() ?? Future<void>.value());
+    unawaited(_positionSubscription?.cancel() ?? Future<void>.value());
+    unawaited(_durationSubscription?.cancel() ?? Future<void>.value());
+    unawaited(_bufferedSubscription?.cancel() ?? Future<void>.value());
+    _playbackSubscription = null;
+    _positionSubscription = null;
+    _durationSubscription = null;
+    _bufferedSubscription = null;
+    mediaItem.add(null);
+    queue.add(const []);
+    playbackState.add(PlaybackState(
+      processingState: AudioProcessingState.idle,
+    ));
+  }
+
+  MediaItem _itemFor(dynamic track, {Duration? actualDuration}) {
+    final artwork = Uri.tryParse(track.artworkUrl?.toString() ?? '');
+    return MediaItem(
+      id: '${track.sourceId}:${track.id}',
+      title: track.title,
+      artist: track.artist,
+      album: track.album,
+      duration: actualDuration ??
+          (track.duration != null && track.duration! > 0
+              ? Duration(seconds: track.duration!)
+              : null),
+      artUri: artwork != null &&
+              (artwork.scheme == 'https' || artwork.scheme == 'http')
+          ? artwork
+          : null,
+    );
+  }
+
+  void _sync() {
+    final service = _service;
+    if (service == null) return;
+    final player = service.player;
+    final track = service.current;
+    // Avoid regenerating album art downloads on every position update.
+    final previous = mediaItem.valueOrNull;
+    final id = track == null ? null : '${track.sourceId}:${track.id}';
+    if (track == null) {
+      if (previous != null) mediaItem.add(null);
+    } else if (previous?.id != id || previous?.duration !=
+        (player.duration ?? (track.duration == null
+            ? null : Duration(seconds: track.duration!)))) {
+      mediaItem.add(_itemFor(track, actualDuration: player.duration));
+    }
+
+    final items = service.queue.map((t) => _itemFor(t)).toList();
+    final old = queue.valueOrNull ?? const <MediaItem>[];
+    if (old.length != items.length ||
+        !listEquals(old.map((e) => e.id).toList(),
+            items.map((e) => e.id).toList())) {
+      queue.add(items);
+    }
+
+    final controls = <MediaControl>[
+      if (service.hasPrevious) MediaControl.skipToPrevious,
+      player.playing ? MediaControl.pause : MediaControl.play,
+      if (service.hasNext) MediaControl.skipToNext,
+    ];
+    final state = switch (player.processingState) {
+      ja.ProcessingState.idle => AudioProcessingState.idle,
+      ja.ProcessingState.loading => AudioProcessingState.loading,
+      ja.ProcessingState.buffering => AudioProcessingState.buffering,
+      ja.ProcessingState.ready => AudioProcessingState.ready,
+      ja.ProcessingState.completed => AudioProcessingState.completed,
+    };
+    playbackState.add(PlaybackState(
+      controls: controls,
+      systemActions: const {MediaAction.seek},
+      androidCompactActionIndices:
+          List<int>.generate(controls.length, (i) => i),
+      processingState: service.resolving ? AudioProcessingState.loading : state,
+      playing: player.playing,
+      updatePosition: player.position,
+      bufferedPosition: player.bufferedPosition,
+      speed: player.speed,
+      queueIndex: service.queueIndex >= 0 &&
+                  service.queueIndex < service.queue.length
+          ? service.queueIndex
+          : null,
+    ));
+  }
+
+  @override
+  Future<void> play() async {
+    final service = _service;
+    if (service == null) return;
+    if (await (_session?.setActive(true) ?? Future.value(true))) {
+      await service.player.play();
+    }
+  }
+
+  @override
+  Future<void> pause() async => _service?.player.pause();
+
+  @override
+  Future<void> seek(Duration position) async {
+    await _service?.seek(position);
+  }
+
+  @override
+  Future<void> skipToNext() async {
+    await _service?.playNext();
+  }
+
+  @override
+  Future<void> skipToPrevious() async {
+    await _service?.playPrevious();
+  }
+
+  @override
+  Future<void> stop() async {
+    await _service?.player.stop();
+    _sync();
+  }
+
+  Future<void> disposeHandler() async {
+    detach();
+    await _interruptionSubscription?.cancel();
+    await _noisySubscription?.cancel();
+  }
+}
+
+/// Initialized only on iOS and Android, leaving desktop playback unchanged.
+class OrchidBackgroundAudio {
+  static OrchidAudioHandler? handler;
+
+  static Future<void> initialize() async {
+    if (handler != null) return;
+    handler = await AudioService.init<OrchidAudioHandler>(
+      builder: OrchidAudioHandler.new,
+      config: const AudioServiceConfig(
+        androidNotificationChannelId: 'dev.blossomvale.orchid.playback',
+        androidNotificationChannelName: 'Orchid music playback',
+        androidNotificationOngoing: true,
+        androidStopForegroundOnPause: false,
+      ),
+    );
+    await handler!.configureSession();
+  }
+
+  static void attach(PlayerService service) => handler?.attach(service);
+  static void detach() => handler?.detach();
+}
