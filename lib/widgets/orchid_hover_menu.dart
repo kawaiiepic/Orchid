@@ -14,11 +14,13 @@ class OrchidHoverAction {
 class OrchidHoverMenu extends StatefulWidget {
   final Widget child;
   final List<OrchidHoverAction> actions;
+  final bool showHoverButton;
 
   const OrchidHoverMenu({
     super.key,
     required this.child,
     required this.actions,
+    this.showHoverButton = true,
   });
 
   @override
@@ -35,7 +37,7 @@ class _OrchidHoverMenuState extends State<OrchidHoverMenu> {
     _entry = null;
   }
 
-  void _open() {
+  void _open({Offset? at}) {
     if (widget.actions.isEmpty) return;
     _close();
     final object = context.findRenderObject();
@@ -43,11 +45,11 @@ class _OrchidHoverMenuState extends State<OrchidHoverMenu> {
     final origin = object.localToGlobal(Offset.zero);
     final screen = MediaQuery.sizeOf(context);
     const width = 212.0;
-    final left = (origin.dx + object.size.width - width)
+    final left = ((at?.dx ?? (origin.dx + object.size.width)) - width)
       .clamp(8.0, (screen.width - width - 8).clamp(8.0, double.infinity))
       .toDouble();
     final height = widget.actions.length * 43.0 + 16.0;
-    final top = (origin.dy + 40)
+    final top = (at?.dy ?? (origin.dy + 40))
       .clamp(8.0, (screen.height - height - 8).clamp(8.0, double.infinity))
       .toDouble();
     _entry = OverlayEntry(builder: (context) => Stack(children: [
@@ -98,10 +100,11 @@ class _OrchidHoverMenuState extends State<OrchidHoverMenu> {
     onExit: (_) { if (mounted) setState(() => _hovered = false); },
     child: GestureDetector(
       behavior: HitTestBehavior.translucent,
-      onLongPress: _open,
+      onLongPress: () => _open(),
+      onSecondaryTapDown: (details) => _open(at: details.globalPosition),
       child: Stack(children: [
         widget.child,
-        Positioned(
+        if (widget.showHoverButton) Positioned(
           right: 4, top: 4,
           child: IgnorePointer(
             ignoring: !_hovered,
