@@ -52,12 +52,21 @@ class _SongContextMenuState extends State<SongContextMenu> {
 
   void _open(Offset position) {
     _close();
-    final screen = MediaQuery.sizeOf(context);
+    final overlay = Overlay.of(context);
+    final overlayBox = overlay.context.findRenderObject() as RenderBox;
+    // Pointer coordinates are global, but Positioned expects coordinates
+    // relative to this overlay (which can live inside the content navigator).
+    final pointer = overlayBox.globalToLocal(position);
+    final bounds = overlayBox.size;
     const width = 268.0;
     const height = 402.0;
-    final left = position.dx.clamp(8.0, (screen.width - width - 8).clamp(8.0, double.infinity)).toDouble();
-    final top = position.dy.clamp(8.0, (screen.height - height - 8).clamp(8.0, double.infinity)).toDouble();
-    final overlay = Overlay.of(context);
+    const margin = 8.0;
+    final left = pointer.dx.clamp(
+      margin, (bounds.width - width - margin).clamp(margin, double.infinity),
+    ).toDouble();
+    final top = pointer.dy.clamp(
+      margin, (bounds.height - height - margin).clamp(margin, double.infinity),
+    ).toDouble();
     _entry = OverlayEntry(builder: (_) => Stack(children: [
       Positioned.fill(
         child: GestureDetector(
@@ -89,15 +98,6 @@ class _SongContextMenuState extends State<SongContextMenu> {
     super.dispose();
   }
 
-  void _openBelowButton() {
-    final box = context.findRenderObject() as RenderBox?;
-    if (box == null) return;
-    final position = box.localToGlobal(
-      Offset(box.size.width - 12, box.size.height),
-    );
-    _open(position);
-  }
-
   @override
   Widget build(BuildContext context) => MouseRegion(
     onEnter: (_) { if (mounted) setState(() => _hovered = true); },
@@ -106,7 +106,9 @@ class _SongContextMenuState extends State<SongContextMenu> {
       behavior: HitTestBehavior.opaque,
       onSecondaryTapDown: (details) => _open(details.globalPosition),
       onLongPressStart: (details) => _open(details.globalPosition),
-      onTap: widget.openOnTap ? _openBelowButton : null,
+      onTapDown: widget.openOnTap
+          ? (details) => _open(details.globalPosition)
+          : null,
       child: widget.showMenuButton
         ? Stack(children: [
             widget.child,
@@ -124,7 +126,7 @@ class _SongContextMenuState extends State<SongContextMenu> {
                       onExit: (_) => setState(() => _menuHovered = false),
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
-                        onTap: _openBelowButton,
+                        onTapDown: (details) => _open(details.globalPosition),
                         child: SizedBox(
                           width: 40,
                           height: 40,
