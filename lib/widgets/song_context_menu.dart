@@ -1,5 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import 'package:flutter/material.dart' as material;
+import 'content_drawer.dart';
 
 import '../models/addon.dart';
 import '../services/addon_service.dart';
@@ -98,45 +98,21 @@ class _SongContextMenuState extends State<SongContextMenu> {
   }
 
   void _openMobileSheet() {
-    material.showModalBottomSheet<void>(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      backgroundColor: const Color(0x00000000),
-      barrierColor: const Color(0x99000000),
-      builder: (sheetContext) => material.SafeArea(
-        top: false,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 8),
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.sizeOf(sheetContext).height * .82),
-          decoration: const BoxDecoration(
-            color: Color(0xFF2E2239),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
-          ),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const SizedBox(height: 12),
-            Container(width: 40, height: 4,
-              decoration: BoxDecoration(
-                color: const Color(0xFF806F90),
-                borderRadius: BorderRadius.circular(4))),
-            const SizedBox(height: 12),
-            Flexible(child: SingleChildScrollView(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.viewInsetsOf(sheetContext).bottom + 16),
-              child: _SongActionPanel(
-                track: widget.track,
-                player: widget.player,
-                library: widget.library,
-                addonService: widget.addonService,
-                addons: widget.addons,
-                showViewSong: widget.showViewSong,
-                playlist: widget.playlist,
-                mobileSheet: true,
-                dismiss: () => Navigator.of(sheetContext).pop(),
-              ),
-            )),
-          ]),
+    showOrchidActionDrawer(
+      context,
+      maxHeightFraction: .82,
+      builder: (drawerContext, close) => SingleChildScrollView(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: _SongActionPanel(
+          track: widget.track,
+          player: widget.player,
+          library: widget.library,
+          addonService: widget.addonService,
+          addons: widget.addons,
+          showViewSong: widget.showViewSong,
+          playlist: widget.playlist,
+          mobileSheet: true,
+          dismiss: close,
         ),
       ),
     );
