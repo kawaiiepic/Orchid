@@ -216,7 +216,11 @@ class _ReplayScreenState extends State<ReplayScreen> {
 }
 ).hasMatch(p)).toList()..sort();
         if (sorted.isNotEmpty) {
-          final latest = sorted.last.split('-');
+          // Keep the user's selected year when that year has listening data.
+          final sameYear = sorted.where((p) =>
+            p.startsWith('$year-')).toList();
+          final latest = (sameYear.isNotEmpty
+            ? sameYear.last : sorted.last).split('-');
           year = int.parse(latest[0]);
           month = int.parse(latest[1]);
           availablePeriods = periods;
