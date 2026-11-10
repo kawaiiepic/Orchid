@@ -102,6 +102,10 @@ class OrchidConnect extends ChangeNotifier {
    }
    await player.playTrack(target,fromQueue:queue.isEmpty?[target]:queue);
   }
+  final requestedRepeat=state['repeat']?.toString();
+  final repeat=OrchidRepeatMode.values.where((m)=>m.name==requestedRepeat)
+    .firstOrNull??OrchidRepeatMode.off;
+  player.restoreRemoteOptions(shuffle:state['shuffle']==true,repeat:repeat);
   final position=(state['position'] as num?)?.toDouble()??0;
   if((player.player.position.inMilliseconds/1000-position).abs()>(sync?3:0.5)){
    await player.seek(Duration(milliseconds:(position*1000).round()));
