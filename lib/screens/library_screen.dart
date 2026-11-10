@@ -511,9 +511,23 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   Widget _savedArtistsGrid() {
     final query = _queryController.text.trim().toLowerCase();
-    final artists = widget.library.savedArtists.keys
-        .where((name) => name.toLowerCase().contains(query)).toList()..sort();
-    if (artists.isEmpty) return const Text('No saved artists found.').muted();
+    // A library artist can come from a saved song or an explicitly followed artist.
+    // Deduplicate names case-insensitively while preserving their display casing.
+    final artistNames = <String, String>{};
+    for (final song in widget.library.librarySongs) {
+      final name = song.artist.trim();
+      if (name.isNotEmpty) artistNames.putIfAbsent(name.toLowerCase(), () => name);
+    }
+    for (final name in widget.library.savedArtists.keys) {
+      final trimmed = name.trim();
+      if (trimmed.isNotEmpty) {
+        artistNames.putIfAbsent(trimmed.toLowerCase(), () => trimmed);
+      }
+    }
+    final artists = artistNames.values
+        .where((name) => name.toLowerCase().contains(query)).toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    if (artists.isEmpty) return const Text('No artists in your library yet.').muted();
     return LayoutBuilder(builder: (context, bounds) {
       final columns = (bounds.maxWidth / 165).floor().clamp(2, 7).toInt();
       return GridView.builder(
@@ -526,8 +540,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
         itemBuilder: (context, index) {
           final artist = artists[index];
           return OrchidHoverMenu(
-            actions: [OrchidHoverAction('Remove from Library',
-              LucideIcons.library, () => widget.library.toggleArtistSaved(artist))],
+            actions: [OrchidHoverAction(
+              widget.library.isArtistSaved(artist)
+                  ? 'Unfollow artist' : 'Follow artist',
+              LucideIcons.library,
+              () => widget.library.toggleArtistSaved(artist))],
             child: GestureDetector(
               onTap: () => setState(() {
                 _selectedArtist = artist;
@@ -580,7 +597,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
       final activeAlbumSongs = albums[_selectedAlbumKey];
       final selectedArtist = _selectedArtist;
       final activeArtist = selectedArtist != null &&
-          widget.library.isArtistSaved(selectedArtist) ? selectedArtist : null;
+          (widget.library.isArtistSaved(selectedArtist) ||
+           widget.library.librarySongs.any((song) =>
+             song.artist.trim().toLowerCase() ==
+                 selectedArtist.trim().toLowerCase()))
+          ? selectedArtist : null;
       final artistSongs = activeArtist == null ? <SavedSong>[] :
           widget.library.librarySongs.where((song) =>
             song.artist.trim().toLowerCase() ==
