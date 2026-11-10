@@ -9,6 +9,7 @@ class ArtistArtwork extends StatelessWidget {
   final double size;
   final String? fallbackUrl;
   final double radius;
+  final bool zoomOnHover;
 
   const ArtistArtwork({
     super.key,
@@ -16,6 +17,7 @@ class ArtistArtwork extends StatelessWidget {
     required this.size,
     this.fallbackUrl,
     this.radius = 12,
+    this.zoomOnHover = true,
   });
 
   @override
@@ -23,21 +25,20 @@ class ArtistArtwork extends StatelessWidget {
     future: ArtistImageService.instance.imageFor(artist),
     builder: (context, snapshot) {
       final url = snapshot.data ?? fallbackUrl;
+      final artwork = SizedBox(
+        width: size,
+        height: size,
+        child: url == null || !url.startsWith('https://')
+            ? _placeholder(context)
+            : Image.network(
+                url,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _placeholder(context),
+              ),
+      );
       return ClipRRect(
         borderRadius: BorderRadius.circular(radius),
-        child: OrchidHoverZoom(
-          child: SizedBox(
-          width: size,
-          height: size,
-          child: url == null || !url.startsWith('https://')
-              ? _placeholder(context)
-              : Image.network(
-                  url,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _placeholder(context),
-                ),
-          ),
-        ),
+        child: zoomOnHover ? OrchidHoverZoom(child: artwork) : artwork,
       );
     },
   );
