@@ -47,6 +47,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   final _queryController = TextEditingController();
   String _view = 'Songs';
   String? _selectedAlbumKey;
+  String? _selectedArtist;
 
   @override
   void dispose() {
@@ -210,7 +211,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       ),
       const SizedBox(height: 14),
       Wrap(spacing: 8, runSpacing: 8, children: [
-        for (final view in const ['Songs', 'Albums', 'Artists', 'Playlists'])
+        for (final view in const ['Songs', 'Albums', 'Artists'])
           OrchidAdaptiveControls.button(
             prominent: _view == view,
             onPressed: () => setState(() => _view = view),
@@ -305,7 +306,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Widget _albumsGrid(Map<String, List<SavedSong>> albums) {
-    final query = _queryController.text.trim().toLowerCase();
+    final query = _selectedArtist == null
+        ? _queryController.text.trim().toLowerCase() : '';
     final entries = albums.entries.where((entry) {
       final song = entry.value.first;
       return query.isEmpty ||
@@ -430,10 +432,87 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
 
+
+  Widget _savedArtistDetail(String artist, List<SavedSong> songs,
+      Map<String, List<SavedSong>> albums) {
+    final art = widget.library.savedArtists[artist];
+    final artistAlbums = <String, List<SavedSong>>{
+      for (final entry in albums.entries)
+        if (entry.value.first.artist.trim().toLowerCase() ==
+            artist.trim().toLowerCase()) entry.key: entry.value,
+    };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Align(alignment: Alignment.centerLeft,
+          child: IconButton.ghost(
+            onPressed: () => setState(() {
+              _selectedArtist = null;
+              _selectedAlbumKey = null;
+            }),
+            icon: const Icon(LucideIcons.arrowLeft))),
+        const SizedBox(height: 12),
+        LayoutBuilder(builder: (context, bounds) {
+          final artwork = ArtistArtwork(
+            artist: artist, fallbackUrl: art, size: 168, radius: 84);
+          final details = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Artist').small().muted(),
+              const SizedBox(height: 6),
+              Text(artist).x2Large().semiBold(),
+              const SizedBox(height: 7),
+              Text('${artistAlbums.length} saved albums · '
+                '${songs.length} saved ${songs.length == 1 ? 'song' : 'songs'}')
+                  .small().muted(),
+              const SizedBox(height: 16),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                OrchidAdaptiveControls.button(
+                  prominent: true,
+                  onPressed: songs.isEmpty ? null : () => _playCollection(songs),
+                  child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(LucideIcons.play, size: 17),
+                    SizedBox(width: 8), Text('Play all'),
+                  ]),
+                ),
+                OrchidAdaptiveControls.button(
+                  onPressed: () => openArtistPage(context,
+                    artist: artist, artwork: art, account: widget.account,
+                    player: widget.player, addonService: widget.addonService,
+                    addons: widget.addons, library: widget.library),
+                  child: const Text('View full discography'),
+                ),
+              ]),
+            ],
+          );
+          if (bounds.maxWidth < 530) {
+            return Column(crossAxisAlignment: CrossAxisAlignment.start,
+              children: [artwork, const SizedBox(height: 18), details]);
+          }
+          return Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            artwork, const SizedBox(width: 22), Expanded(child: details),
+          ]);
+        }),
+        const SizedBox(height: 30),
+        Text('Saved Albums').large().semiBold(),
+        const SizedBox(height: 14),
+        _albumsGrid(artistAlbums),
+        const SizedBox(height: 28),
+        Text('Saved Songs').large().semiBold(),
+        const SizedBox(height: 12),
+        if (songs.isEmpty)
+          const Text('No songs from this artist in your library yet.').muted()
+        else
+          for (var i = 0; i < songs.length; i++)
+            _songRow(songs[i], i + 1),
+      ],
+    );
+  }
+
   Widget _savedArtistsGrid() {
     final query = _queryController.text.trim().toLowerCase();
     final artists = widget.library.savedArtists.keys
-        .where((name) => name.contains(query)).toList()..sort();
+        .where((name) => name.toLowerCase().contains(query)).toList()..sort();
     if (artists.isEmpty) return const Text('No saved artists found.').muted();
     return LayoutBuilder(builder: (context, bounds) {
       final columns = (bounds.maxWidth / 165).floor().clamp(2, 7).toInt();
@@ -450,10 +529,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
             actions: [OrchidHoverAction('Remove from Library',
               LucideIcons.library, () => widget.library.toggleArtistSaved(artist))],
             child: GestureDetector(
-              onTap: () => openArtistPage(context, artist: artist,
-                account: widget.account, player: widget.player,
-                addonService: widget.addonService, addons: widget.addons,
-                library: widget.library),
+              onTap: () => setState(() {
+                _selectedArtist = artist;
+                _selectedAlbumKey = null;
+              }),
               child: Column(children: [
                 Expanded(child: LayoutBuilder(builder: (context, size) =>
                   ArtistArtwork(artist: artist, size: size.maxWidth,
@@ -499,6 +578,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
       final playlists = widget.library.visiblePlaylists;
       final albums = _libraryAlbums();
       final activeAlbumSongs = albums[_selectedAlbumKey];
+      final selectedArtist = _selectedArtist;
+      final activeArtist = selectedArtist != null &&
+          widget.library.isArtistSaved(selectedArtist) ? selectedArtist : null;
+      final artistSongs = activeArtist == null ? <SavedSong>[] :
+          widget.library.librarySongs.where((song) =>
+            song.artist.trim().toLowerCase() ==
+                activeArtist.trim().toLowerCase()).toList();
       final id = widget.selectedPlaylistId;
       MusicPlaylist? activePlaylist;
       if (id != null && id != 'favorites') {
@@ -522,8 +608,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
         children: [
           widget.header,
           if (!widget.playlistsOnly) ...[
-            if (_view == 'Albums' && activeAlbumSongs != null) ...[
+            if (activeAlbumSongs != null &&
+                (_view == 'Albums' || _view == 'Artists' &&
+                    activeArtist != null)) ...[
               _savedAlbumDetail(activeAlbumSongs),
+            ] else if (_view == 'Artists' && activeArtist != null) ...[
+              _savedArtistDetail(activeArtist, artistSongs, albums),
             ] else ...[
               const Text('Library').x2Large().semiBold(),
               const SizedBox(height: 8),
@@ -533,10 +623,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
               const SizedBox(height: 18),
               if (_view == 'Artists')
                 _savedArtistsGrid()
-              else if (_view == 'Playlists')
-                _playlistsGrid(widget.library.savedPlaylists.where((playlist) =>
-                  playlist.name.toLowerCase().contains(
-                    _queryController.text.trim().toLowerCase())).toList())
               else if (_view == 'Albums')
                 _albumsGrid(albums)
               else
