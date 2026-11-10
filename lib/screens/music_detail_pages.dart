@@ -684,7 +684,75 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
     super.initState();
     _tracks = MusicCatalogService.instance.album(
       widget.artist, widget.album, collectionId: widget.collectionId);
+    _otherReleases = MusicCatalogService.instance.artist(widget.artist);
   }
+
+  String _normalized(String value) =>
+      value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), ' ').trim();
+
+  Widget _moreByArtist() => FutureBuilder<ArtistCatalog>(
+    future: _otherReleases,
+    builder: (context, snapshot) {
+      final releases = snapshot.data?.albums.where((release) {
+        if (widget.collectionId != null &&
+            release.id == widget.collectionId) return false;
+        return _normalized(release.title) != _normalized(widget.album) &&
+            _normalized(release.artist) == _normalized(widget.artist);
+      }).toList() ?? <MusicAlbum>[];
+      if (releases.isEmpty) return const SizedBox.shrink();
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 30),
+          OrchidSectionHeader(title: 'More by ${widget.artist}'),
+          const SizedBox(height: 12),
+          // Albums, EPs and singles all appear in one vertically stacked list.
+          for (final release in releases)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: OrchidHoverSurface(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => openAlbumPage(context,
+                    artist: release.artist,
+                    album: release.title,
+                    artwork: release.artwork,
+                    collectionId: release.id,
+                    player: widget.player,
+                    addonService: widget.addonService,
+                    addons: widget.addons,
+                    library: widget.library),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 6),
+                    child: Row(children: [
+                      _cover(context, release.artwork, size: 60),
+                      const SizedBox(width: 14),
+                      Expanded(child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(release.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis).semiBold(),
+                          const SizedBox(height: 4),
+                          Text(release.releaseType == 'single' ? 'Single' :
+                            release.releaseType == 'ep' ? 'EP' : 'Album')
+                            .small().muted(),
+                        ],
+                      )),
+                      const SizedBox(width: 8),
+                      const Icon(LucideIcons.chevronRight,
+                        size: 16, color: Color(0xFFB7ABCA)),
+                    ]),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      );
+    },
+  );
 
   @override
   Widget build(BuildContext context) => FutureBuilder<List<TrackResult>>(
@@ -735,8 +803,6 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
                 child: const Text('Retry'),
               ),
             ] else ...[
-              OrchidSectionHeader(title: 'Tracklist', subtitle: '${tracks.length} songs'),
-              const SizedBox(height: 8),
               if (tracks.isEmpty)
                 const Text('No tracks found for this album.').muted()
               else
@@ -745,6 +811,7 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
                   player: widget.player, addonService: widget.addonService,
                   addons: widget.addons, library: widget.library)),
             ],
+            _moreByArtist(),
           ],
         );
       },
