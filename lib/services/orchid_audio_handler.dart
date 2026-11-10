@@ -207,7 +207,7 @@ class OrchidBackgroundAudio {
     if (handler != null) return;
     handler = await AudioService.init<OrchidAudioHandler>(
       builder: OrchidAudioHandler.new,
-      config: const AudioServiceConfig(
+      config: AudioServiceConfig(
         androidNotificationChannelId: 'dev.blossomvale.orchid.playback',
         androidNotificationChannelName: 'Orchid music playback',
         androidNotificationOngoing: true,
