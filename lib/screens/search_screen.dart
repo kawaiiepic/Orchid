@@ -593,9 +593,9 @@ class _SearchScreenState extends State<SearchScreen> {
             child:Text(_searching?'…':'Search')),
         ]),
       ),
-      SizedBox(height:48,child:ListView(
+      SizedBox(height:58,child:ListView(
         scrollDirection:Axis.horizontal,
-        padding:const EdgeInsets.symmetric(horizontal:18,vertical:5),
+        padding:const EdgeInsets.symmetric(horizontal:18,vertical:7),
         children:[
           for(final category in SearchCategory.values)
             Padding(padding:const EdgeInsets.only(right:8),
