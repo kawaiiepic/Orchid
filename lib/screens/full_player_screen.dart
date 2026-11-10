@@ -9,6 +9,7 @@ import '../services/lyrics_service.dart';
 import '../services/player_service.dart';
 import '../services/music_library.dart';
 import '../widgets/song_context_menu.dart';
+import '../widgets/orchid_style.dart';
 import '../services/animated_artwork_service.dart';
 import '../widgets/canvas_video.dart';
 
@@ -120,15 +121,13 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
         ),
         Positioned(
           top: top, right: 12,
-          child: Container(
-            width: 252,
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF211C2C),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFF5D496A)),
-            ),
-            child: GestureDetector(
+          child: OrchidGlassPanel(
+            radius: 16,
+            child: SizedBox(
+              width: 252,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () => _setAnimatedEnabled(!_animatedEnabled),
               child: Padding(
@@ -142,7 +141,9 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                       ? 'Disable animated artwork'
                       : 'Enable animated artwork').small()),
                 ]),
+                ),
               ),
+            ),
             ),
           ),
         ),
@@ -224,19 +225,18 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                 player:widget.player,
                 library:library,
                 openOnTap:true,
-                child:Container(
-                  padding:const EdgeInsets.symmetric(horizontal:14,vertical:10),
-                  decoration:BoxDecoration(
-                    border:Border.all(color:const Color(0xFF685874)),
-                    borderRadius:BorderRadius.circular(9),
-                  ),
-                  child:const Row(
+                child:OrchidGlassPanel(
+                  radius:9,
+                  child:Padding(
+                    padding:const EdgeInsets.symmetric(horizontal:14,vertical:10),
+                    child:const Row(
                     mainAxisSize:MainAxisSize.min,
                     children:[
                       Icon(LucideIcons.listPlus,size:18),
                       SizedBox(width:8),
                       Text('Add to playlist'),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
