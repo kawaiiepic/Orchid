@@ -5,6 +5,7 @@ import 'package:orchid/widgets/queue_sheet.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/addon.dart';
 import '../services/lyrics_service.dart';
 import '../services/player_service.dart';
 import '../services/music_library.dart';
@@ -12,6 +13,7 @@ import '../widgets/song_context_menu.dart';
 import '../widgets/orchid_style.dart';
 import '../services/animated_artwork_service.dart';
 import '../widgets/canvas_video.dart';
+import '../widgets/artist_artwork.dart';
 
 class FullPlayerScreen extends StatefulWidget {
   final PlayerService player;
@@ -497,11 +499,16 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
       child: ClipRRect(
         borderRadius: BorderRadius.zero,
         child: Stack(fit: StackFit.expand, children: [
-          LiquidArtworkBackground(
-            imageUrl: track?.artworkUrl,
-            intensity: 0.95,
-            child: const SizedBox.expand(),
-          ),
+          // Avoid repainting a heavily blurred still behind the moving
+          // video. It is useful only until the first video frame is ready.
+          if (_mobileVideoReady && _animatedEnabled && !_animationFailed)
+            const ColoredBox(color: Color(0xFF110C16))
+          else
+            LiquidArtworkBackground(
+              imageUrl: track?.artworkUrl,
+              intensity: 0.95,
+              child: const SizedBox.expand(),
+            ),
           // Play the album's animated Apple Music cover behind the entire
           // mobile player. CanvasVideo loops silently and reports HLS errors.
           // The artwork-reactive static background remains underneath as the
@@ -509,7 +516,8 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
           if (_animatedEnabled && !_animationFailed &&
               _appleArtwork != null)
             Positioned.fill(
-              child: ClipRect(
+              child: IgnorePointer(
+                child: ClipRect(
                 child: Transform.scale(
                   // CanvasVideo normally rounds cover corners. Overscan keeps
                   // them outside the screen for an edge-to-edge background.
@@ -517,6 +525,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                   child: CanvasVideo(
                     key: ValueKey('mobile-background-${_appleArtwork!.url}'),
                     url: _appleArtwork!.url,
+                    efficient: true,
                     fallbackArtworkUrl: track?.artworkUrl,
                     onFailure: _artworkFailed,
                     onReady: () {
@@ -525,6 +534,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                       setState(() => _mobileVideoReady = true);
                     },
                   ),
+                ),
                 ),
               ),
             ),
@@ -548,7 +558,18 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () => setState(() => _mobileControlsHidden = false),
-                child: const SizedBox.expand(),
+                child: Stack(children: [
+                  const SizedBox.expand(),
+                  Positioned(
+                    left: 20, right: 20, bottom: 14,
+                    child: SafeArea(
+                      top: false,
+                      child: IgnorePointer(
+                        child: _mobileCinemaTrackInfo(track),
+                      ),
+                    ),
+                  ),
+                ]),
               ),
             )
           else SafeArea(
@@ -734,6 +755,67 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
         ]),
       ),
     );
+  }
+
+  /// Compact track information while the animated artwork is unobstructed.
+  Widget _mobileCinemaTrackInfo(TrackResult? track) {
+    const white = Color(0xFFF9F4FC);
+    const faint = Color(0xDDE0D9E6);
+    return Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+      ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: SizedBox.square(
+          dimension: 58,
+          child: track?.artworkUrl?.startsWith('https://') == true
+              ? CachedNetworkImage(
+                  imageUrl: track!.artworkUrl!,
+                  fit: BoxFit.cover,
+                  errorWidget: (_, __, ___) => _mobileEmptyArtwork(),
+                )
+              : _mobileEmptyArtwork(),
+        ),
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 5),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(track?.title ?? 'No track playing',
+                maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 17, fontWeight: FontWeight.w700,
+                  color: white,
+                  shadows: [Shadow(color: Color(0xCC000000), blurRadius: 10)],
+                )),
+              const SizedBox(height: 3),
+              Text(track?.artist ?? '',
+                maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 13, color: faint,
+                  shadows: [Shadow(color: Color(0xBB000000), blurRadius: 8)],
+                )),
+            ],
+          ),
+        ),
+      ),
+      if (track != null && track.artist.trim().isNotEmpty) ...[
+        const SizedBox(width: 14),
+        SizedBox.square(
+          dimension: 58,
+          child: ClipOval(
+            child: ArtistArtwork(
+              key: ValueKey('cinema-artist-${track.artist}'),
+              artist: track.artist,
+              size: 58,
+              radius: 29,
+            ),
+          ),
+        ),
+      ],
+    ]);
   }
 
   Widget _mobileEmptyArtwork() => const ColoredBox(
