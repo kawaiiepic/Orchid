@@ -58,3 +58,22 @@ jobs:
           cache: true
       - name: Build Linux desktop
         run: flutter build linux --debug
+
+  ios-build:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    env:
+      CFLAGS_aarch64_apple_ios: "-x objective-c"
+      CFLAGS_aarch64_apple_ios_sim: "-x objective-c"
+      CFLAGS_x86_64_apple_ios: "-x objective-c"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.2
+          cache: true
+      - name: Resolve dependencies
+        run: flutter pub get
+      - name: Build unsigned iOS app
+        run: flutter build ios --release --no-codesign
