@@ -81,6 +81,7 @@ class MusicCatalogService {
           ? ((item['trackTimeMillis'] as num) / 1000).round() : null,
       artworkUrl: _art(item['artworkUrl100']),
       previewUrl: item['previewUrl'] as String?,
+      shareUrl: item['trackViewUrl'] as String?,
       sourceId: 'itunes', sourceName: 'iTunes',
     );
   }
@@ -187,6 +188,7 @@ class MusicCatalogService {
           artworkUrl:item['image']?.toString(),
           duration:item['duration'] is num
               ?(item['duration'] as num).toInt():null,
+          shareUrl:item['url']?.toString(),
           sourceId:'apple-music',sourceName:'Apple Music',
         ));
       }
