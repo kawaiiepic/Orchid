@@ -471,9 +471,7 @@ class _ShellScreenState extends State<ShellScreen>{
   final desktop=(kIsWeb || (defaultTargetPlatform!=TargetPlatform.iOS
     && defaultTargetPlatform!=TargetPlatform.android))
     && MediaQuery.sizeOf(context).width>=850;
-  // The floating dock belongs to the compact layout, regardless of OS.
-  // This also covers narrow Linux/Windows/web windows and tablets.
-  final mobileDock = !desktop;
+  // Every compact layout uses the same floating Liquid Glass dock.
 
   final browsing = Navigator(
     key: orchidContentNavigatorKey,
