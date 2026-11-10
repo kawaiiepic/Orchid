@@ -272,6 +272,8 @@ class _ShellScreenState extends State<ShellScreen>{
            selectedLabelColor: const Color(0xFFF8E4FF),
            unselectedLabelColor: const Color(0xFFCEBEDA),
            indicatorColor: const Color(0x807954AB),
+           indicatorSettings: OrchidStyle.glassSettings,
+           glowOpacity: 0,
            settings: OrchidStyle.glassSettings,
            quality: glass.GlassQuality.premium,
            backgroundQuality: glass.GlassQuality.premium,
