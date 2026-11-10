@@ -384,10 +384,14 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
      children:[
        Align(
          alignment: Alignment.centerLeft,
-         child: IconButton.ghost(
-           onPressed: () => dismissContentDrawer(context),
-           icon: const Icon(LucideIcons.arrowLeft),
-         ),
+         child: MediaQuery.sizeOf(context).width < 850
+           ? OrchidBackButton(
+               onPressed: () => dismissContentDrawer(context),
+             )
+           : IconButton.ghost(
+               onPressed: () => dismissContentDrawer(context),
+               icon: const Icon(LucideIcons.arrowLeft),
+             ),
        ),
        const SizedBox(height: 12),
        OrchidDetailHeader(
