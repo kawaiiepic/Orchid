@@ -162,78 +162,30 @@ class _ShellScreenState extends State<ShellScreen>{
   _positionSubscription?.cancel();_player.removeListener(_trackChanged);
   _player.dispose();_library.dispose();_account.removeListener(_accountChanged);_account.dispose();super.dispose();
  }
- void _openProfile() {
-  showContentDrawer(
-   context,
-   builder: (sheetContext) => Scaffold(
-    child: Column(children:[
-     Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 2),
-      child:Row(children:[
-       const Text('Your Profile').large().semiBold(),
-       const Spacer(),
-       IconButton.ghost(
-        onPressed:()=>dismissContentDrawer(sheetContext),
-        icon:const Icon(LucideIcons.x),
-       ),
-      ]),
-     ),
-     Expanded(child:ProfileScreen(account:_account)),
-    ]),
-   ),
-  );
- }
+ void _openProfile()=>_openSettings();
+
  void _openFeatureSheet(String title, Widget child) {
-  showContentDrawer(
-   context,
-   builder:(sheetContext)=>Scaffold(
-    child:Column(children:[
+  Navigator.of(context).push(ShadcnPageRoute<void>(
+   builder:(_) => Scaffold(
+    child:SafeArea(child:Column(children:[
      Padding(
-      padding:const EdgeInsets.fromLTRB(16,12,16,2),
+      padding:const EdgeInsets.fromLTRB(18,12,18,8),
       child:Row(children:[
-       const Icon(LucideIcons.music2,color:OrchidStyle.lilac),
+       IconButton.ghost(
+        onPressed:()=>Navigator.of(context).pop(),
+        icon:const Icon(LucideIcons.arrowLeft)),
        const SizedBox(width:10),
        Expanded(child:Text(title).large().semiBold()),
-       IconButton.ghost(
-        onPressed:()=>dismissContentDrawer(sheetContext),
-        icon:const Icon(LucideIcons.x),
-       ),
       ]),
      ),
      Expanded(child:child),
-    ]),
+    ])),
    ),
-  );
+  ));
  }
- void _openSettings() {
-  showContentDrawer(context, preferredWidth:700,
-    builder:(_) => Scaffold(
-      child:Column(children:[
-        Padding(
-          padding:const EdgeInsets.fromLTRB(12,8,12,0),
-          child:Row(children:[
-            IconButton.ghost(
-              onPressed:()=>dismissContentDrawer(context),
-              icon:const Icon(LucideIcons.x),
-            ),
-            const SizedBox(width:10),
-            const Text('Settings').large().semiBold(),
-          ]),
-        ),
-        Expanded(child:SettingsScreen(
-          account:_account,
-          addonService:_addonService,
-          addons:_addons,
-          onAddonsChanged:(list) {
-            if(!mounted)return;
-            setState(()=>_addons=list);
-            _player.setAddons(list);
-          },
-        )),
-      ]),
-    ),
-  );
- }
+
+ void _openSettings()=>_selectTab(9);
+
  Widget _glassDockAction(IconData icon,int index,int page) {
   return liquid.LiquidGlass(
    shape:const liquid.LiquidGlassShape.circle(),
@@ -258,68 +210,93 @@ class _ShellScreenState extends State<ShellScreen>{
   );
  }
 
+ IconData _pageIcon(int page) => switch(page) {
+  1 => LucideIcons.search,
+  2 => LucideIcons.library,
+  3 => LucideIcons.compass,
+  4 => LucideIcons.listMusic,
+  5 => LucideIcons.audioLines,
+  6 => LucideIcons.radio,
+  7 => LucideIcons.bot,
+  8 => LucideIcons.trophy,
+  9 => LucideIcons.settings,
+  _ => LucideIcons.house,
+ };
+
  Widget _iosFloatingDock(int page) {
   final bottom=MediaQuery.paddingOf(context).bottom;
   return Positioned(
-   left:12,right:12,bottom:bottom+8,
+   left:12,right:12,bottom:bottom+4,
    child:ListenableBuilder(
     listenable:_player,
     builder:(context,_) {
      final hasTrack=_player.current!=null;
      final collapsed=hasTrack && _iosDockCollapsed;
+     final dockIndex=switch(page) { 3=>1, 2=>2, 1=>3, _=>0 };
      return AnimatedSize(
-      duration:const Duration(milliseconds:240),
-      curve:Curves.easeOutCubic,
+      duration:const Duration(milliseconds:320),
+      curve:Curves.easeInOutCubic,
       alignment:Alignment.bottomCenter,
-      child:collapsed
-       ? Row(children:[
-          _glassDockAction(LucideIcons.house,0,page),
+      child:AnimatedSwitcher(
+       duration:const Duration(milliseconds:260),
+       switchInCurve:Curves.easeOutCubic,
+       switchOutCurve:Curves.easeInCubic,
+       transitionBuilder:(child,animation)=>FadeTransition(
+        opacity:animation,
+        child:SlideTransition(
+         position:Tween<Offset>(
+          begin:const Offset(0,.14),end:Offset.zero).animate(animation),
+         child:child,
+        ),
+       ),
+       child:collapsed
+        ? Row(key:const ValueKey('compact-dock'),children:[
+          _glassDockAction(_pageIcon(page),page,page),
           const SizedBox(width:8),
-          Expanded(child:IOSMiniPlayer(player:_player,library:_library,compact:true)),
+          Expanded(child:IOSMiniPlayer(
+           player:_player,library:_library,compact:true)),
           const SizedBox(width:8),
           _glassDockAction(LucideIcons.search,1,page),
          ])
-       : Column(
-          mainAxisSize:MainAxisSize.min,
-          children:[
-           if(hasTrack)...[
-            Padding(
-             padding:const EdgeInsets.symmetric(horizontal:4),
-             child:IOSMiniPlayer(player:_player,library:_library),
-            ),
-            const SizedBox(height:8),
-           ],
-           liquid.LiquidGlassNavigationBar(
-            settings:const liquid.LiquidGlassSettings(
-             brightness:liquid.LiquidGlassBrightness.dark,
-             tintColor:Color(0xFF7954AB),
-             tintOpacity:0.24,
-             opacity:0.88,
-             fallback:liquid.LiquidGlassFallback.frosted,
-             fallbackBlurSigma:20,
-            ),
-            currentIndex:page.clamp(0,2),
-            onTap:_selectTab,
-            onReselect:_selectTab,
-            activeColor:const Color(0xFFF8E4FF),
-            inactiveColor:const Color(0xFFCEBEDA),
-            items:const [
-             liquid.LiquidGlassNavItem(
-              icon:Icon(LucideIcons.house),
-              label:'Home',
-             ),
-             liquid.LiquidGlassNavItem(
-              icon:Icon(LucideIcons.compass),
-              label:'Explore',
-             ),
-             liquid.LiquidGlassNavItem(
-              icon:Icon(LucideIcons.library),
-              label:'Library',
-             ),
-            ],
+        : Column(
+         key:const ValueKey('expanded-dock'),
+         mainAxisSize:MainAxisSize.min,
+         children:[
+          if(hasTrack)...[
+           Padding(
+            padding:const EdgeInsets.symmetric(horizontal:4),
+            child:IOSMiniPlayer(player:_player,library:_library),
            ),
+           const SizedBox(height:6),
           ],
-         ),
+          liquid.LiquidGlassNavigationBar(
+           settings:const liquid.LiquidGlassSettings(
+            brightness:liquid.LiquidGlassBrightness.dark,
+            tintColor:Color(0xFF7954AB),
+            tintOpacity:0.24,
+            opacity:0.88,
+            fallback:liquid.LiquidGlassFallback.frosted,
+            fallbackBlurSigma:20,
+           ),
+           currentIndex:dockIndex,
+           onTap:(index)=>_selectTab([0,3,2,1][index]),
+           onReselect:(index)=>_selectTab([0,3,2,1][index]),
+           activeColor:const Color(0xFFF8E4FF),
+           inactiveColor:const Color(0xFFCEBEDA),
+           items:const [
+            liquid.LiquidGlassNavItem(
+             icon:Icon(LucideIcons.house),label:'Home'),
+            liquid.LiquidGlassNavItem(
+             icon:Icon(LucideIcons.compass),label:'Discover'),
+            liquid.LiquidGlassNavItem(
+             icon:Icon(LucideIcons.library),label:'Library'),
+            liquid.LiquidGlassNavItem(
+             icon:Icon(LucideIcons.search),label:'Search'),
+           ],
+          ),
+         ],
+        ),
+      ),
      );
     },
    ),
