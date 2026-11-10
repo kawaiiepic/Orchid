@@ -4,6 +4,26 @@ import 'package:liquid_glass_widgets/liquid_glass_widgets.dart' as glass;
 import 'package:sizer/sizer.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
+/// Plain chevron navigation for compact pages. The hit target stays large
+/// without painting a circle, border, or background around the arrow.
+class OrchidBackButton extends StatelessWidget {
+  final VoidCallback onPressed;
+
+  const OrchidBackButton({super.key, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    behavior: HitTestBehavior.opaque,
+    onTap: onPressed,
+    child: const SizedBox(
+      width: 48,
+      height: 48,
+      child: Center(child: Icon(LucideIcons.chevronLeft,
+        size: 27, color: Color(0xFFF7EDFF))),
+    ),
+  );
+}
+
 /// Shared visual language for Orchid's browsing surfaces.
 abstract final class OrchidStyle {
   // Keep desktop's original metrics; use Sizer's viewport width to make
