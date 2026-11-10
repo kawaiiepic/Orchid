@@ -15,9 +15,11 @@ class CanvasVideo extends StatefulWidget {
   final VoidCallback? onFailure;
   /// Fired after the video has actually rendered its first frame.
   final VoidCallback? onReady;
+  /// Prefer a lower-bandwidth HLS stream for fullscreen ambient playback.
+  final bool efficient;
   const CanvasVideo({
     super.key, required this.url, this.fallbackArtworkUrl,
-    this.onFailure, this.onReady,
+    this.onFailure, this.onReady, this.efficient = false,
   });
 
   @override
@@ -45,7 +47,12 @@ class _CanvasVideoState extends State<CanvasVideo> {
   void initState() {
     super.initState();
     _video = mk.Player();
-    _controller = VideoController(_video);
+    _controller = VideoController(
+      _video,
+      configuration: const VideoControllerConfiguration(
+        enableHardwareAcceleration: true,
+      ),
+    );
     _errorSubscription = _video.stream.error.listen((message) {
       debugPrint('[Orchid Artwork] MPV error: $message');
       if (!mounted || _failed) return;
@@ -73,7 +80,8 @@ class _CanvasVideoState extends State<CanvasVideo> {
       if (generation != _generation) return;
       await _video.setPlaylistMode(mk.PlaylistMode.loop);
       if (generation != _generation) return;
-      final playableUrl = await HlsVariantService.instance.preferredUrl(widget.url);
+      final playableUrl = await HlsVariantService.instance.preferredUrl(
+        widget.url, efficient: widget.efficient);
       if (generation != _generation) return;
       await _video.open(mk.Media(playableUrl, httpHeaders: const {
         'User-Agent': 'Mozilla/5.0',
@@ -106,7 +114,8 @@ class _CanvasVideoState extends State<CanvasVideo> {
   @override
   void didUpdateWidget(covariant CanvasVideo oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.url != oldWidget.url) {
+    if (widget.url != oldWidget.url ||
+        widget.efficient != oldWidget.efficient) {
       unawaited(_video.stop().then((_) => _start()));
     }
   }
