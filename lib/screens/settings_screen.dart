@@ -214,19 +214,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
         ] else ...[
-          Row(children: [
-            if (!desktop) ...[
+          if (!desktop) ...[
+            Row(children: [
               IconButton.ghost(
                 onPressed: () => setState(() => _section = -1),
                 icon: const Icon(LucideIcons.arrowLeft),
               ),
               const SizedBox(width: 12),
-            ],
-            Text(const [
-              'Account', 'Connections', 'Lyrics', 'Sources',
-            ][currentSection]).large().semiBold(),
-          ]),
-          const SizedBox(height: 14),
+              Text(const [
+                'Account', 'Connections', 'Lyrics', 'Sources',
+              ][currentSection]).large().semiBold(),
+            ]),
+            const SizedBox(height: 14),
+          ],
         if (currentSection == 0)
           ProfileScreen(account: widget.account,
             embedded: true, section: 'account'),
