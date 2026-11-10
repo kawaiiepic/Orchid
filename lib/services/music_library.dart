@@ -310,6 +310,16 @@ class MusicLibrary extends ChangeNotifier {
     await _save();
   }
 
+  Future<void> movePlaylistBefore(
+      MusicPlaylist moving, MusicPlaylist target) async {
+    if (moving.id == target.id || moving.id == libraryPlaylistId ||
+        target.id == libraryPlaylistId) return;
+    if (!playlists.contains(moving) || !playlists.contains(target)) return;
+    playlists.remove(moving);
+    playlists.insert(playlists.indexOf(target), moving);
+    await _save();
+  }
+
   Future<void> reorderPlaylist(int oldIndex, int newIndex) async {
     final visible = visiblePlaylists;
     if (oldIndex < 0 || oldIndex >= visible.length ||
