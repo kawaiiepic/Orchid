@@ -102,7 +102,30 @@ class OrchidHero extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) {
+    if (MediaQuery.sizeOf(context).width < 850) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(0, 8, 0, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: const TextStyle(
+              color: Color(0xFFF9F5FF),
+              fontSize: 25, fontWeight: FontWeight.w700,
+            )),
+            const SizedBox(height: 7),
+            Text(description, style: const TextStyle(
+              color: Color(0xFFBCB0CA), fontSize: 12,
+            )),
+            if (action != null) ...[
+              const SizedBox(height: 12),
+              action!,
+            ],
+          ],
+        ),
+      );
+    }
+    return Container(
     width: double.infinity,
     clipBehavior: Clip.antiAlias,
     decoration: OrchidStyle.gradientDecoration(),
@@ -155,6 +178,7 @@ class OrchidHero extends StatelessWidget {
       ],
     ),
   );
+  }
 }
 
 /// Shared dark Liquid Glass panel. Renders native glass on supported Apple
