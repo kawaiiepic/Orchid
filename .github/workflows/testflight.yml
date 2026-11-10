@@ -17,6 +17,12 @@ jobs:
   ios:
     runs-on: macos-latest
     timeout-minutes: 75
+    # miniaudio's CoreAudio bridge includes Objective-C Foundation headers.
+    # Compile the Rust cc bridge as Objective-C rather than plain C on iOS.
+    env:
+      CFLAGS_aarch64_apple_ios: "-x objective-c"
+      CFLAGS_aarch64_apple_ios_sim: "-x objective-c"
+      CFLAGS_x86_64_apple_ios: "-x objective-c"
     steps:
       - uses: actions/checkout@v6
 
