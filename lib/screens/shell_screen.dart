@@ -233,7 +233,7 @@ class _ShellScreenState extends State<ShellScreen>{
   // Keep the dock in the physical safe area; never follow keyboard insets.
   final bottom=MediaQuery.viewPaddingOf(context).bottom;
   return Positioned(
-   left:12,right:12,bottom:bottom+4,
+   left:12,right:12,bottom:bottom+16,
    child:ListenableBuilder(
     listenable:_player,
     builder:(context,_) {
