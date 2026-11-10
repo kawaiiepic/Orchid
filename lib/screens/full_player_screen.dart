@@ -489,7 +489,6 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
     return Scaffold(
       child: ClipRRect(
         borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(34),
           bottom: Radius.circular(26),
         ),
         child: Stack(fit: StackFit.expand, children: [
