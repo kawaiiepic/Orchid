@@ -208,6 +208,14 @@ class OrchidAccount extends ChangeNotifier {
  Future<Map<String,dynamic>> saveInstalledAddons(List<Map<String,dynamic>> addons,int revision) =>
    _request('PUT','/orchid/addons',{'addons':addons,'revision':revision});
 
+ /// Authenticated Orchid Connect API. Keep the session cookie on the account,
+ /// not in individual widgets or media services.
+ Future<Map<String,dynamic>> connectGet(String path) => _request('GET','/orchid/connect$path');
+ Future<Map<String,dynamic>> connectPost(String path, Map<String,dynamic> body) =>
+   _request('POST','/orchid/connect$path',body);
+ Future<Map<String,dynamic>> connectPut(String path, Map<String,dynamic> body) =>
+   _request('PUT','/orchid/connect$path',body);
+
  Future<Map<String,dynamic>> orchidHome() async {
   if(!signedIn)throw StateError('Sign in first');
   return _request('GET','/orchid/home');
