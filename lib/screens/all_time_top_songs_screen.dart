@@ -40,8 +40,9 @@ class _AllTimeTopSongsScreenState extends State<AllTimeTopSongsScreen>{
     catch(e){debugPrint('[Orchid Top Songs] Playback failed: $e');}
   }
   @override Widget build(BuildContext context)=>ListView(
-    padding:EdgeInsets.fromLTRB(24, 24, 24,
-      24 + OrchidStyle.iosDockClearance(context)),children:[
+    padding:EdgeInsets.fromLTRB(24,
+      24 + MediaQuery.paddingOf(context).top, 24,
+      24 + OrchidStyle.iosDockClearance(context)),children:
       const OrchidHero(eyebrow:'Made for You',title:'All-Time Top Songs',
         description:'The songs you keep coming back to.',icon:LucideIcons.trophy),
       const SizedBox(height:20),
