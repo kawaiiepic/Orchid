@@ -176,11 +176,11 @@ class MiniPlayerBar extends StatelessWidget {
                 const SizedBox(width: 6),
                 SizedBox(
                   width: 104,
-                  child: Slider(
-                    value: SliderValue.single(player.volume),
+                  child: liquid.LiquidGlassSlider(
+                    value: player.volume.clamp(0.0, 1.0).toDouble(),
                     min: 0,
                     max: 1,
-                    onChanged: (value) => player.setVolume(value.value),
+                    onChanged: player.setVolume,
                   ),
                 ),
               ],
