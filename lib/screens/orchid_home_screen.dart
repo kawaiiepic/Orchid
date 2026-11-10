@@ -547,7 +547,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
   Widget _desktopShortcuts() => ListenableBuilder(
     listenable: widget.library,
     builder: (context, _) {
-      final playlists = widget.library.playlists;
+      final playlists = widget.library.visiblePlaylists;
       return LayoutBuilder(builder: (context, box) {
         final columns = box.maxWidth >= 940 ? 3 : 2;
         const gap = 10.0;
@@ -627,7 +627,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
   Widget _pinnedPlaylists() => ListenableBuilder(
     listenable: widget.library,
     builder: (context, _) {
-      final playlists = widget.library.playlists.where((p) => p.pinned).toList();
+      final playlists = widget.library.visiblePlaylists.where((p) => p.pinned).toList();
       if (playlists.isEmpty) return const SizedBox.shrink();
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
