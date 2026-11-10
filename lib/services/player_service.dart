@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
-import 'package:just_audio/just_audio.dart';
+import 'orchid_audio_player.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/addon.dart';
@@ -12,82 +12,97 @@ import 'lyrics_service.dart';
 enum OrchidRepeatMode { off, all, one }
 
 class PlayerService extends ChangeNotifier {
-  final AndroidEqualizer _equalizer=AndroidEqualizer();
-  final AndroidLoudnessEnhancer _loudness=AndroidLoudnessEnhancer();
-  late final AudioPlayer player=AudioPlayer(
-    audioPipeline: AudioPipeline(androidAudioEffects:[
-      _equalizer,_loudness,
-    ]),
-  );
+  final OrchidAudioPlayer player=OrchidAudioPlayer();
   bool eqEnabled=false;
   bool normalizationEnabled=false;
   String eqPreset='Flat';
-  List<AndroidEqualizerBand> eqBands=[];
+  List<double> eqBands=List<double>.filled(10,0);
   double crossfadeSeconds=0;
-  bool get supportsHardwareEq=>!kIsWeb&&defaultTargetPlatform==TargetPlatform.android;
+  bool get supportsHardwareEq=>true;
   String? streamUrl;
+  int _prefetchRevision=0;
+  StreamSubscription<String>? _trackTransitionSubscription;
+
   static const Map<String,List<double>> eqPresets={
-    'Flat':[0,0,0,0,0],
-    'Bass Boost':[6,4,1,0,0],
-    'Vocal':[-3,-1,3,3,1],
-    'Treble Boost':[-1,0,1,4,6],
-    'Warm':[3,2,1,-1,-2],
-    'Bright':[-2,0,1,3,4],
+    'Flat':[0,0,0,0,0,0,0,0,0,0],
+    'Bass Boost':[6,6,5,3,1,0,0,0,0,0],
+    'Vocal':[-3,-2,-1,0,1,3,4,3,1,0],
+    'Treble Boost':[-2,-1,0,0,0,1,2,4,5,6],
+    'Warm':[3,3,2,1,0,0,-1,-2,-2,-2],
+    'Bright':[-2,-1,0,0,1,1,2,3,4,4],
+    'Rock':[5,4,2,0,-1,-1,2,3,4,4],
+    'Pop':[-1,0,1,3,3,2,1,-1,-1,-2],
+    'Jazz':[3,2,1,1,-1,-1,0,2,2,3],
+    'Classical':[4,3,2,1,0,-1,-1,-2,-2,-2],
+    'Custom':[0,0,0,0,0,0,0,0,0,0],
   };
-  Future<void> _restoreAudioPipeline() async {
-    try {
+
+  Future<void> _restoreAudioPipeline() async{
+    try{
       final prefs=await SharedPreferences.getInstance();
       if(_disposed)return;
       eqPreset=prefs.getString('orchid_eq_preset')??'Flat';
+      if(!eqPresets.containsKey(eqPreset))eqPreset='Flat';
       eqEnabled=prefs.getBool('orchid_eq_enabled')??false;
       normalizationEnabled=prefs.getBool('orchid_normalization')??false;
-      crossfadeSeconds=(prefs.getDouble('orchid_crossfade_seconds')??0).clamp(0,12);
-      if(supportsHardwareEq){
-        final settings=await _equalizer.parameters;
-        eqBands=settings.bands;
-        await _equalizer.setEnabled(eqEnabled);
-        await _loudness.setEnabled(normalizationEnabled);
-        await _loudness.setTargetGain(3);
-        await _applyEqPreset();
+      crossfadeSeconds=(prefs.getDouble('orchid_crossfade_seconds')??0).clamp(0.0,12.0);
+      final saved=prefs.getStringList('orchid_eq_custom_bands');
+      if(saved!=null&&saved.length==10){
+        eqBands=saved.map((v)=>(double.tryParse(v)??0).clamp(-12.0,12.0)).toList();
       }
-      notifyListeners();
-    }catch(e){debugPrint('[Orchid Audio] Effects unavailable: $e');}
+      await player.setCrossfade(Duration(milliseconds:(crossfadeSeconds*1000).round()));
+      await player.setNormalization(normalizationEnabled);
+      await _applyEqPreset();
+      if(!_disposed)notifyListeners();
+    }catch(e){debugPrint('[Orchid Audio] Could not restore effects: $e');}
   }
-  Future<void> _applyEqPreset() async {
-    final gains=eqPresets[eqPreset]??eqPresets['Flat']!;
-    if(eqBands.isEmpty)return;
-    for(var i=0;i<eqBands.length;i++){
-      final index=eqBands.length==1?0:((i*4)/(eqBands.length-1)).round();
-      await eqBands[i].setGain(gains[index].clamp(-10,10));
-    }
+
+  List<double> get activeEqBands=>eqPreset=='Custom'?List.of(eqBands):
+    List.of(eqPresets[eqPreset]??eqPresets['Flat']!);
+
+  Future<void> _applyEqPreset() async{
+    await player.setEq(eqEnabled?activeEqBands:eqPresets['Flat']!);
   }
   Future<void> setEqPreset(String preset) async{
     if(!eqPresets.containsKey(preset))return;
     eqPreset=preset;
-    if(supportsHardwareEq)await _applyEqPreset();
+    await _applyEqPreset();
     notifyListeners();
     (await SharedPreferences.getInstance()).setString('orchid_eq_preset',preset);
   }
+  Future<void> setEqBand(int index,double db) async{
+    if(index<0||index>=10)return;
+    if(eqPreset!='Custom')eqBands=activeEqBands;
+    eqPreset='Custom';
+    eqBands[index]=db.clamp(-12.0,12.0);
+    await _applyEqPreset();
+    notifyListeners();
+    final prefs=await SharedPreferences.getInstance();
+    await prefs.setString('orchid_eq_preset','Custom');
+    await prefs.setStringList('orchid_eq_custom_bands',eqBands.map((v)=>v.toString()).toList());
+  }
   Future<void> setEqEnabled(bool enabled) async{
-    if(!supportsHardwareEq)return;
-    await _equalizer.setEnabled(enabled);
-    eqEnabled=enabled;notifyListeners();
+    eqEnabled=enabled;
+    await _applyEqPreset();
+    notifyListeners();
     (await SharedPreferences.getInstance()).setBool('orchid_eq_enabled',enabled);
   }
   Future<void> setNormalization(bool enabled) async{
-    if(!supportsHardwareEq)return;
-    await _loudness.setEnabled(enabled);
+    await player.setNormalization(enabled);
     normalizationEnabled=enabled;notifyListeners();
     (await SharedPreferences.getInstance()).setBool('orchid_normalization',enabled);
   }
   Future<void> setCrossfade(double seconds) async{
-    crossfadeSeconds=seconds.clamp(0,12);
+    final duration=seconds.clamp(0.0,12.0);
+    await player.setCrossfade(Duration(milliseconds:(duration*1000).round()));
+    crossfadeSeconds=duration;
     notifyListeners();
     (await SharedPreferences.getInstance()).setDouble('orchid_crossfade_seconds',crossfadeSeconds);
   }
+
   final AddonService addonService;
   final LyricsService lyricsService;
-  StreamSubscription<PlayerState>? _stateSubscription;
+  StreamSubscription<OrchidPlayerState>? _stateSubscription;
   bool _autoAdvancing = false;
   bool _disposed = false;
   bool keepPlaying = true;
@@ -177,10 +192,11 @@ class PlayerService extends ChangeNotifier {
   }) : lyricsService = lyricsService ?? LyricsService() {
     unawaited(_restoreKeepPlaying());
     unawaited(_restoreAudioPipeline());
+    _trackTransitionSubscription=player.trackTransitions.listen(_handleEngineTransition);
     _stateSubscription = player.playerStateStream.listen((state) {
       if (_disposed) return;
       notifyListeners();
-      if (state.processingState == ProcessingState.completed &&
+      if (state.processingState == OrchidProcessingState.completed &&
           !_autoAdvancing && !resolving &&
           (hasNext || repeatMode == OrchidRepeatMode.one)) {
         _autoAdvancing = true;
@@ -226,6 +242,7 @@ class PlayerService extends ChangeNotifier {
     }
     queue.add(track);
     notifyListeners();
+    unawaited(_schedulePrefetch());
   }
 
   /// Insert a track immediately after the current track without
@@ -238,6 +255,7 @@ class PlayerService extends ChangeNotifier {
     final nextIndex = (queueIndex + 1).clamp(0, queue.length);
     queue.insert(nextIndex, track);
     notifyListeners();
+    unawaited(_schedulePrefetch());
   }
 
   String _trackIdentity(TrackResult t) =>
@@ -320,7 +338,7 @@ class PlayerService extends ChangeNotifier {
       // Let the audio stream finish delivering its last completion event.
       // The guard prevents duplicate advances while the next source resolves.
       if (_disposed || resolving ||
-          player.processingState != ProcessingState.completed) {
+          player.processingState != OrchidProcessingState.completed) {
         return;
       }
       if (repeatMode == OrchidRepeatMode.one && current != null) {
@@ -484,6 +502,7 @@ class PlayerService extends ChangeNotifier {
     recommendations = [];
     notifyListeners();
     if (keepPlaying) await prepareRecommendations();
+    if(!_disposed)unawaited(_schedulePrefetch());
   }
 
   Future<void> _loadAndPlay(TrackResult track) async {
@@ -507,7 +526,8 @@ class PlayerService extends ChangeNotifier {
       playingVia = _sourceName(stream.via ?? stream.quality, stream, track);
       streamQuality = stream.quality;
       streamCodec = stream.format;
-      await player.setUrl(stream.url).timeout(const Duration(seconds: 20));
+      await player.openTrack(stream.url,_trackKey(track))
+        .timeout(const Duration(seconds:20));
       streamUrl=stream.url;
       if (generation != lyricsGeneration) return;
       await player.setVolume(volume);
@@ -517,6 +537,7 @@ class PlayerService extends ChangeNotifier {
       resolving = false;
       notifyListeners();
 
+      unawaited(_schedulePrefetch());
       // Lyrics are optional metadata. Never block playback or the Play button
       // on a third-party lyrics provider.
       unawaited(_loadLyricsFor(track, generation));
@@ -533,6 +554,52 @@ class PlayerService extends ChangeNotifier {
         notifyListeners();
       }
       rethrow;
+    }
+  }
+
+  String _trackKey(TrackResult track)=>'${track.sourceId}|${track.id}';
+
+  /// Resolve only the imminent next track. This is essential for seamless
+  /// overlap because Eclipse addons return stream URLs asynchronously.
+  Future<void> _schedulePrefetch() async{
+    if(_disposed||resolving||!hasQueuedNext)return;
+    final revision=++_prefetchRevision;
+    final next=queue[queueIndex+1];
+    final key=_trackKey(next);
+    if(player.canAdvanceTo(key))return;
+    try{
+      final result=await addonService.resolvePlayback(next,_addons)
+        .timeout(const Duration(seconds:35));
+      if(_disposed||revision!=_prefetchRevision||!hasQueuedNext||
+        _trackKey(queue[queueIndex+1])!=key)return;
+      await player.preloadNext(result.url,key);
+    }catch(e){
+      debugPrint('[Orchid Audio] Next-track prefetch unavailable: $e');
+    }
+  }
+
+  void _handleEngineTransition(String key){
+    if(_disposed||resolving||!hasQueuedNext||
+        _trackKey(queue[queueIndex+1])!=key)return;
+    _pushHistory(current);
+    queueIndex++;
+    final track=queue[queueIndex];
+    current=track;
+    streamUrl=null;
+    playingVia=track.sourceName;
+    streamQuality=null;
+    streamCodec=null;
+    lyrics=null;
+    lyricsLoading=true;
+    final generation=++lyricsGeneration;
+    notifyListeners();
+    unawaited(_loadLyricsFor(track,generation));
+    unawaited(_schedulePrefetch());
+    if(radioNextBatch!=null&&queue.length-queueIndex<=3){
+      unawaited(_extendRadio().then((_)=>
+        _schedulePrefetch()));
+    }else if(keepPlaying&&queue.length-queueIndex<=2){
+      unawaited(_beginNewRecommendations());
     }
   }
 
@@ -566,6 +633,10 @@ class PlayerService extends ChangeNotifier {
       await _appendRecommendations();
     }
     if (!hasQueuedNext) return;
+    if (player.canAdvanceTo(_trackKey(queue[queueIndex+1]))) {
+      await player.nextPrepared();
+      return;
+    }
     if (current != null) _pushHistory(current);
     queueIndex++;
     await _loadAndPlay(queue[queueIndex]);
@@ -608,7 +679,8 @@ class PlayerService extends ChangeNotifier {
     radioNextBatch = null;
     ++_recommendationToken;
     _stateSubscription?.cancel();
-    player.dispose();
+    _trackTransitionSubscription?.cancel();
+    unawaited(player.dispose());
     super.dispose();
   }
 }
