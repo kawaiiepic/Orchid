@@ -289,6 +289,14 @@ class _ShellScreenState extends State<ShellScreen>{
             const SizedBox(height:8),
            ],
            liquid.LiquidGlassNavigationBar(
+            settings:const liquid.LiquidGlassSettings(
+             brightness:liquid.LiquidGlassBrightness.dark,
+             tintColor:Color(0xFF7954AB),
+             tintOpacity:0.24,
+             opacity:0.88,
+             fallback:liquid.LiquidGlassFallback.frosted,
+             fallbackBlurSigma:20,
+            ),
             currentIndex:page.clamp(0,2),
             onTap:_selectTab,
             onReselect:_selectTab,
