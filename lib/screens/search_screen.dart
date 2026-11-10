@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/widgets.dart' show EditableText, FocusNode, TextInputAction, TextInputType;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../widgets/orchid_adaptive_controls.dart';
@@ -35,6 +36,7 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   final _controller = TextEditingController();
+  final _searchFocus = FocusNode();
   SearchCategory _category = SearchCategory.all;
   List<TrackResult> _tracks = [];
   List<MusicAlbum> _albums = [];
@@ -74,6 +76,7 @@ class _SearchScreenState extends State<SearchScreen> {
     ++_generation;
     _searchDebounce?.cancel();
     _controller.dispose();
+    _searchFocus.dispose();
     super.dispose();
   }
 
@@ -517,21 +520,66 @@ class _SearchScreenState extends State<SearchScreen> {
         child:Row(children:[
           Expanded(
             child: OrchidGlassPanel(
-              radius: 13,
+              radius: 14,
               transparentOnDesktop: false,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Row(children: [
-                  const Icon(LucideIcons.search,
-                    size: 18, color: OrchidStyle.lilac),
-                  const SizedBox(width: 10),
-                  Expanded(child: TextField(
-                    controller: _controller,
-                    placeholder: const Text('Search music…'),
-                    onChanged: _onQueryChanged,
-                    onSubmitted: (_) => _search(),
-                  )),
-                ]),
+              child: SizedBox(
+                height: 46,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(children: [
+                    const Icon(LucideIcons.search,
+                      size: 18, color: Color(0xFFCDBAE2)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ValueListenableBuilder<TextEditingValue>(
+                        valueListenable: _controller,
+                        builder: (context, value, _) => Stack(
+                          alignment: Alignment.centerLeft,
+                          children: [
+                            if (value.text.isEmpty)
+                              const IgnorePointer(
+                                child: Text('Search songs, artists, albums…',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Color(0xFFB8A9C6),
+                                  )),
+                              ),
+                            EditableText(
+                              controller: _controller,
+                              focusNode: _searchFocus,
+                              style: const TextStyle(
+                                color: Color(0xFFF7F0FF),
+                                fontSize: 14,
+                                height: 1.25,
+                              ),
+                              cursorColor: OrchidStyle.lilac,
+                              backgroundCursorColor: OrchidStyle.lilac,
+                              selectionColor: const Color(0x665F4391),
+                              maxLines: 1,
+                              keyboardType: TextInputType.text,
+                              textInputAction: TextInputAction.search,
+                              onChanged: _onQueryChanged,
+                              onSubmitted: (_) => _search(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (_controller.text.isNotEmpty)
+                      GestureDetector(
+                        onTap: () {
+                          _controller.clear();
+                          _onQueryChanged('');
+                          _searchFocus.requestFocus();
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.all(6),
+                          child: Icon(LucideIcons.x,
+                            size: 16, color: Color(0xFFBEACC9)),
+                        ),
+                      ),
+                  ]),
+                ),
               ),
             ),
           ),
