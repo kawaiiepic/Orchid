@@ -124,32 +124,38 @@ class DesktopSidebar extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(18, 12, 12, 14),
             child: Row(children: [
-              MouseRegion(
-                cursor: SystemMouseCursors.click,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: onProfile,
-                  child: Container(
-                    width: 38, height: 38,
-                    alignment: Alignment.center,
-                    decoration: const BoxDecoration(
-                      color: OrchidStyle.panelLight,
-                      shape: BoxShape.circle,
-                    ),
-                    child: avatarUrl == null
-                      ? Text(
-                          accountName.isNotEmpty ? accountName[0].toUpperCase() : '?',
-                          style: const TextStyle(color: OrchidStyle.lilac,
-                            fontSize: 15, fontWeight: FontWeight.w700))
-                      : ClipOval(child: Image.network(avatarUrl!,
-                          fit: BoxFit.cover, width: 38, height: 38,
-                          errorBuilder: (_, __, ___) =>
-                            const Icon(LucideIcons.user,
-                              color: OrchidStyle.lilac))),
+              Container(
+                width: 38, height: 38,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: OrchidStyle.panelLight,
+                  shape: BoxShape.circle,
+                ),
+                child: avatarUrl == null
+                  ? Text(
+                      accountName.isNotEmpty ? accountName[0].toUpperCase() : '?',
+                      style: const TextStyle(color: OrchidStyle.lilac,
+                        fontSize: 15, fontWeight: FontWeight.w700))
+                  : ClipOval(child: Image.network(avatarUrl!,
+                      fit: BoxFit.cover, width: 38, height: 38,
+                      errorBuilder: (_, __, ___) =>
+                        const Icon(LucideIcons.user,
+                          color: OrchidStyle.lilac))),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  accountName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFFF5EDFF),
                   ),
                 ),
               ),
-              const Spacer(),
+              const SizedBox(width: 6),
               IconButton.ghost(
                 onPressed: onSettings,
                 icon: const Icon(LucideIcons.settings, size: 19,
