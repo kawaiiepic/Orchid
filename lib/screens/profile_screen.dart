@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, Tar
 import 'package:file_picker/file_picker.dart';
 import '../services/orchid_account.dart';
 import '../widgets/avatar_crop_dialog.dart';
+import '../widgets/orchid_style.dart';
 
 class ProfileScreen extends StatefulWidget {
  final OrchidAccount account;
@@ -126,7 +127,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child:Text(registering?'Already have a Petal account? Sign in':'Create a Petal account')),
    ]else...[
     if(widget.section!='connections') ...[
-    Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(
+    OrchidGlassPanel(child:Padding(padding:const EdgeInsets.all(16),child:Column(
      crossAxisAlignment:CrossAxisAlignment.start,children:[
       Row(children:[
        ClipOval(child:SizedBox(width:64,height:64,child:
@@ -163,7 +164,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if(widget.section!='account') ...[
     const Text('Connected services').large().semiBold(),
     const SizedBox(height:10),
-    Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(
+    OrchidGlassPanel(child:Padding(padding:const EdgeInsets.all(16),child:Column(
      crossAxisAlignment:CrossAxisAlignment.start,children:[
       const Text('Last.fm').large().semiBold(),
       const SizedBox(height:5),
