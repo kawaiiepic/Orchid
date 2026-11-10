@@ -496,7 +496,7 @@ class _SearchScreenState extends State<SearchScreen> {
     return ListenableBuilder(
       listenable:widget.library,
       builder:(context,_) => ListView(
-        padding:EdgeInsets.only(bottom:OrchidStyle.iosDockClearance(context)),
+        padding:EdgeInsets.only(bottom:OrchidStyle.iosDockClearance(context) + (MediaQuery.sizeOf(context).width >= 850 ? 110 : 0)),
         children:[
       widget.header,
       const Padding(
