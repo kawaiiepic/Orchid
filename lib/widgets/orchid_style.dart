@@ -1,5 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import 'package:liquid_design/liquid_design.dart' as liquid;
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart' as glass;
 import 'package:sizer/sizer.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
@@ -125,13 +125,14 @@ class OrchidHero extends StatelessWidget {
   );
 }
 
-/// Shared dark Liquid Glass panel. Renders native glass on supported Apple
-/// releases and a Flutter frosted fallback on Linux, Android, and Windows.
+/// Shared Orchid glass surface using liquid_glass_widgets on every platform.
+/// Desktop content can still opt out of an individual panel background.
 class OrchidGlassPanel extends StatelessWidget {
   final Widget child;
   final double radius;
   final double blur;
   final bool transparentOnDesktop;
+
   const OrchidGlassPanel({
     super.key,
     required this.child,
@@ -142,36 +143,16 @@ class OrchidGlassPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Desktop pages share one uninterrupted background. Keep their content
-    // and hit areas, but do not paint individual opaque or frosted panels.
     if (transparentOnDesktop && MediaQuery.sizeOf(context).width >= 850) {
       return child;
     }
-    return ClipRRect(
-    borderRadius: BorderRadius.circular(radius),
-    child: Stack(children: [
-      Positioned.fill(
-        left: -4, top: -4, right: -4, bottom: -4,
-        child: IgnorePointer(
-          child: liquid.LiquidGlass(
-            shape: liquid.LiquidGlassShape.roundedRect(radius + 4),
-            style: liquid.LiquidGlassStyle.clear,
-            interactive: false,
-            interactionStrength: 0,
-            fallback: liquid.LiquidGlassFallback.frosted,
-            fallbackBlurSigma: blur,
-            brightness: liquid.LiquidGlassBrightness.dark,
-            tintColor: const Color(0xFF392447),
-            tintOpacity: 0.36,
-            opacity: 0.76,
-            rimColor: const Color(0x00000000),
-            rimWidth: 0,
-            child: const SizedBox.expand(),
-          ),
-        ),
-      ),
-      child,
-    ]),
+    return glass.GlassContainer(
+      useOwnLayer: true,
+      quality: glass.GlassQuality.standard,
+      shape: glass.LiquidRoundedSuperellipse(borderRadius: radius),
+      clipBehavior: Clip.antiAlias,
+      color: const Color(0x30392447),
+      child: child,
     );
   }
 }
