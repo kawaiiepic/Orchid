@@ -16,7 +16,6 @@ class DesktopSidebar extends StatelessWidget {
   final VoidCallback onLibrary;
   final VoidCallback onReplay;
   final VoidCallback onRadio;
-  final VoidCallback onAiDj;
   final String? selectedPlaylistId;
   final ValueChanged<String?> onPlaylistSelected;
   final VoidCallback onSettings;
@@ -35,7 +34,6 @@ class DesktopSidebar extends StatelessWidget {
     required this.onLibrary,
     required this.onReplay,
     required this.onRadio,
-    required this.onAiDj,
     required this.selectedPlaylistId,
     required this.onPlaylistSelected,
     required this.onSettings,
