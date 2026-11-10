@@ -290,7 +290,7 @@ class MusicLibrary extends ChangeNotifier {
   List<dynamic> _mergeList(
     dynamic baseRaw, dynamic localRaw, dynamic remoteRaw,
     String Function(Map<String, dynamic>) keyOf,
-    {bool mergePlaylistContents = false},
+    {bool mergePlaylistContents = false}
   ) {
     List<Map<String, dynamic>> unpack(dynamic raw) => raw is List
         ? raw.whereType<Map>().map((item) =>
