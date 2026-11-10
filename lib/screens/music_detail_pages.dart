@@ -9,7 +9,6 @@ import '../services/music_catalog_service.dart';
 import '../services/orchid_account.dart';
 import '../services/music_library.dart';
 import '../services/player_service.dart';
-import '../widgets/mini_player_bar.dart';
 import 'song_detail_screen.dart';
 import '../widgets/orchid_style.dart';
 import '../widgets/artist_artwork.dart';
@@ -224,7 +223,6 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    footers: [MiniPlayerBar(player: widget.player, library: widget.library)],
     child: FutureBuilder<ArtistCatalog>(
       future: _catalog,
       builder: (context, snapshot) {
@@ -357,7 +355,6 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    footers: [MiniPlayerBar(player: widget.player)],
     child: FutureBuilder<List<TrackResult>>(
       future: _tracks,
       builder: (context, snapshot) {
