@@ -251,6 +251,74 @@ class _LibraryScreenState extends State<LibraryScreen> {
   String? _playlistFolderId;
   bool _reorderingPlaylists = false;
   bool _importingPlaylist = false;
+  OverlayEntry? _mobilePlaylistAddMenu;
+
+  void _closeMobilePlaylistAddMenu() {
+    _mobilePlaylistAddMenu?.remove();
+    _mobilePlaylistAddMenu?.dispose();
+    _mobilePlaylistAddMenu = null;
+  }
+
+  void _showMobilePlaylistAddMenu() {
+    _closeMobilePlaylistAddMenu();
+    final screen = MediaQuery.sizeOf(context);
+    final top = MediaQuery.paddingOf(context).top + 100;
+    const menuWidth = 230.0;
+    final right = 18.0;
+    final actions = <OrchidHoverAction>[
+      OrchidHoverAction('New playlist', LucideIcons.listMusic, _newPlaylist),
+      OrchidHoverAction('New folder', LucideIcons.folderPlus, _newFolder),
+      if (!_importingPlaylist)
+        OrchidHoverAction('Import Spotify playlist',
+          LucideIcons.download, _spotifyImport),
+    ];
+    _mobilePlaylistAddMenu = OverlayEntry(builder: (context) => Stack(
+      children: [
+        Positioned.fill(child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _closeMobilePlaylistAddMenu,
+        )),
+        Positioned(
+          top: top.clamp(8.0, screen.height - 174.0).toDouble(),
+          right: right,
+          width: menuWidth,
+          child: OrchidGlassPanel(
+            radius: 16,
+            transparentOnDesktop: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 7),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                for (final action in actions)
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      _closeMobilePlaylistAddMenu();
+                      action.onSelected();
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 15, vertical: 13),
+                      child: Row(children: [
+                        Icon(action.icon, size: 18,
+                          color: OrchidStyle.pink),
+                        const SizedBox(width: 12),
+                        Expanded(child: Text(action.label,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFFF7EDFF),
+                          ))),
+                      ]),
+                    ),
+                  ),
+              ]),
+            ),
+          ),
+        ),
+      ],
+    ));
+    Overlay.of(context).insert(_mobilePlaylistAddMenu!);
+  }
+
   bool _mobilePlaylistListMode = false;
 
   Future<String?> _askName(String title, {String hint = 'Name'}) {
@@ -359,10 +427,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Future<void> _newFolder() async {
-    if (_playlistFolderId != null) return;
+    // Playlist folders are flat; newly created folders live at the root.
     final name = await _askName('New folder');
-    if (name == null || !mounted || _playlistFolderId != null) return;
+    if (name == null || !mounted) return;
     await widget.library.createPlaylistFolder(name);
+    if (mounted) setState(() => _playlistFolderId = null);
   }
 
   Future<void> _spotifyImport() async {
@@ -386,6 +455,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   @override
   void dispose() {
+    _closeMobilePlaylistAddMenu();
     _queryController.dispose();
     _librarySearchFocus.dispose();
     super.dispose();
@@ -1528,7 +1598,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 } else if (activeArtist != null) {
                   widget.library.toggleArtistSaved(activeArtist);
                 } else if (showingPlaylists) {
-                  _newPlaylist();
+                  _showMobilePlaylistAddMenu();
                 } else {
                   setState(() {
                     _mobileSelecting = !_mobileSelecting;
