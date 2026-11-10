@@ -496,6 +496,7 @@ class _ShellScreenState extends State<ShellScreen>{
             selectedTab:page,
             library:_library,
             accountName:_account.username ?? _account.email ?? 'Account',
+            avatarUrl:_account.avatarUrl,
             onHome:()=>_selectTab(0),
             onSearch:()=>_selectTab(1),
             onDiscover:()=>_selectTab(3),
