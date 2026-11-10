@@ -212,9 +212,14 @@ class _SearchScreenState extends State<SearchScreen> {
               ?(item['trackCount'] as num).toInt():null,
         ));
       }
-      final artists=rows('artists').map((item)=>
-          item['name']?.toString()??'')
-          .where((name)=>name.isNotEmpty).take(1).toList();
+      final artistNames=rows('artists').map((item)=>
+          item['name']?.toString().trim()??'')
+          .where((name)=>name.isNotEmpty).toList();
+      final seenArtists=<String>{};
+      final artists=artistNames.where((name)=>
+          seenArtists.add(name.toLowerCase()))
+          .take(_category == SearchCategory.artists ? artistNames.length : 1)
+          .toList();
       final playlists=rows('playlists');
       setState(() {
         _tracks=_tracksOn?tracks:[];
@@ -244,7 +249,9 @@ class _SearchScreenState extends State<SearchScreen> {
           setState(() {
             _tracks=fallback[0] as List<TrackResult>;
             _albums=fallback[1] as List<MusicAlbum>;
-            _artists=(fallback[2] as List<String>).take(1).toList();
+            final fallbackArtists=fallback[2] as List<String>;
+            _artists=_category == SearchCategory.artists
+                ? fallbackArtists : fallbackArtists.take(1).toList();
             _applePlaylists=[];
             _applePlaylistsConfigured=false;
             _usingAppleCatalog=false;
@@ -807,7 +814,8 @@ class _SearchScreenState extends State<SearchScreen> {
         children:[
       if (_mobileSearch) ...[
         _mobileSearchBar(),
-        if (_searchFocus.hasFocus) _mobileCategoryChips(),
+        if (_searchFocus.hasFocus || _controller.text.trim().isNotEmpty)
+          _mobileCategoryChips(),
         if (_controller.text.trim().isEmpty && _recentSearches.isNotEmpty)
           _mobileRecentSearches(),
       ] else ...[
@@ -896,7 +904,7 @@ class _SearchScreenState extends State<SearchScreen> {
               child:Text(_searching?'…':'Search')),
           ]),
         ),
-        if (_searchFocus.hasFocus)
+        if (_searchFocus.hasFocus || _controller.text.trim().isNotEmpty)
           SizedBox(height:58,child:ListView(
           scrollDirection:Axis.horizontal,
           padding:const EdgeInsets.symmetric(horizontal:18,vertical:7),
