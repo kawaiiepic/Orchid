@@ -42,7 +42,7 @@ class _SongContextMenuState extends State<SongContextMenu> {
     _close();
     final screen = MediaQuery.sizeOf(context);
     const width = 268.0;
-    const height = 360.0;
+    const height = 402.0;
     final left = position.dx.clamp(8.0, (screen.width - width - 8).clamp(8.0, double.infinity)).toDouble();
     final top = position.dy.clamp(8.0, (screen.height - height - 8).clamp(8.0, double.infinity)).toDouble();
     final overlay = Overlay.of(context);
@@ -183,6 +183,18 @@ class _SongActionPanelState extends State<_SongActionPanel> {
             widget.player.addToQueue(widget.track);
             widget.dismiss();
           }),
+          _action(widget.library.isInLibrary(_saved)
+              ? 'Remove from Library' : 'Add to Library',
+              widget.library.isInLibrary(_saved)
+                  ? LucideIcons.check : LucideIcons.library,
+              () {
+                if (widget.library.isInLibrary(_saved)) {
+                  widget.library.removeFromLibrary(_saved);
+                } else {
+                  widget.library.addToLibrary(_saved);
+                }
+                widget.dismiss();
+              }),
           _action(widget.library.isFavorite(_saved)
               ? 'Remove from Favorites' : 'Add to Favorites',
               LucideIcons.heart, () {
@@ -198,7 +210,7 @@ class _SongActionPanelState extends State<_SongActionPanel> {
             constraints: const BoxConstraints(maxHeight: 145),
             child: SingleChildScrollView(
               child: Column(children: [
-                for (final playlist in widget.library.playlists)
+                for (final playlist in widget.library.visiblePlaylists)
                   _action(
                     playlist.name,
                     widget.library.contains(playlist, _saved)
