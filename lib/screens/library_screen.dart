@@ -19,6 +19,7 @@ class LibraryScreen extends StatefulWidget {
   final AddonService addonService;
   final List<InstalledAddon> addons;
   final VoidCallback openExplore;
+  final bool playlistsOnly;
   const LibraryScreen({
     super.key,
     required this.header,
@@ -28,6 +29,7 @@ class LibraryScreen extends StatefulWidget {
     required this.addonService,
     required this.addons,
     required this.openExplore,
+    this.playlistsOnly = false,
   });
   @override
   State<LibraryScreen> createState() => _LibraryScreenState();
@@ -219,36 +221,87 @@ class _LibraryScreenState extends State<LibraryScreen> {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: widget.library,
     builder: (context, _) => ListView(
-      padding: EdgeInsets.fromLTRB(20,20,20,20+OrchidStyle.iosDockClearance(context)+(MediaQuery.sizeOf(context).width >= 850 ? 110 : 0)),
+      padding: EdgeInsets.fromLTRB(20,20,20,
+        20+OrchidStyle.iosDockClearance(context)+
+        (MediaQuery.sizeOf(context).width >= 850 ? 110 : 0)),
       children: [
         widget.header,
-        const OrchidHero(
-          eyebrow: 'Your collection',
-          title: 'Keep what you love.',
-          description: 'All your favorites and handpicked playlists, together in one place.',
-          icon: LucideIcons.library,
-        ),
-        const SizedBox(height: 26),
-        const OrchidSectionHeader(title: 'Liked songs'),
-
-        _collectionTile('Favorites', '${widget.library.favorites.length} songs',
-          () => _openCollection('Favorites', () => widget.library.favorites),
-          icon: LucideIcons.heart),
-        const SizedBox(height: 24),
-        const OrchidSectionHeader(
-          title: 'Your playlists',
-          subtitle: 'Little worlds built one song at a time',
-        ),
-        const SizedBox(height: 8),
-        if (widget.library.playlists.isEmpty)
-          const Text('Right-click a song and choose Create new playlist to get started.').muted()
-        else
-          ...widget.library.playlists.map((p) => _collectionTile(
-            p.name, '${p.songs.length} songs',
-            () => _openCollection(p.name, () => p.songs, playlist: p),
-          )),
+        if (widget.playlistsOnly) ...[
+          const OrchidHero(
+            eyebrow: 'Your collection',
+            title: 'Playlists',
+            description: 'Your handpicked collections, saved and synced.',
+            icon: LucideIcons.listMusic,
+          ),
+          const SizedBox(height: 26),
+          _collectionTile(
+            'Favorites', '${widget.library.favorites.length} songs',
+            () => _openCollection('Favorites', () => widget.library.favorites),
+            icon: LucideIcons.heart,
+          ),
+          const SizedBox(height: 18),
+          const OrchidSectionHeader(title: 'Your playlists'),
+          const SizedBox(height: 8),
+          if (widget.library.visiblePlaylists.isEmpty)
+            const Text('Right-click a song and choose Create new playlist to get started.').muted()
+          else
+            ...widget.library.visiblePlaylists.map((p) => _collectionTile(
+              p.name, '${p.songs.length} songs',
+              () => _openCollection(p.name, () => p.songs, playlist: p),
+            )),
+        ] else ...[
+          const OrchidHero(
+            eyebrow: 'Your collection',
+            title: 'Your Library',
+            description: 'Every song you saved, favorited or added to a playlist.',
+            icon: LucideIcons.library,
+          ),
+          const SizedBox(height: 22),
+          _collectionTile(
+            'Saved songs', '${widget.library.librarySongs.length} songs',
+            () => _openCollection('Your Library',
+              () => widget.library.librarySongs),
+            icon: LucideIcons.library,
+          ),
+          const SizedBox(height: 12),
+          if (widget.library.librarySongs.isEmpty)
+            const Text('Favorite a song or add one to a playlist to build your Library.').muted()
+          else ...[
+            const OrchidSectionHeader(title: 'Recently added'),
+            const SizedBox(height: 10),
+            ...widget.library.librarySongs.reversed.take(30).map(
+              (song) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: SongContextMenu(
+                  track: TrackResult(
+                    id: song.key, title: song.title, artist: song.artist,
+                    album: song.album, artworkUrl: song.artwork,
+                    sourceId: 'orchid-library', sourceName: 'Library',
+                  ),
+                  player: widget.player, library: widget.library,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => _openSong(song),
+                    child: Row(children: [
+                      AppleCover(artist: song.artist, name: song.title,
+                        album: song.album, fallbackUrl: song.artwork,
+                        size: 44, radius: 8),
+                      const SizedBox(width: 12),
+                      Expanded(child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(song.title).semiBold(),
+                          Text(song.artist).small().muted(),
+                        ],
+                      )),
+                    ]),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
       ],
     ),
   );
-
 }
