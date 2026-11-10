@@ -597,9 +597,11 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
           return GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: widget.openLibrary,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(9),
-              child: ColoredBox(
+            child: OrchidHoverZoom(
+              scale: 1.035,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(9),
+                child: ColoredBox(
                 color: const Color(0xFF30263C),
                 child: SizedBox(
                   width: width,
@@ -637,6 +639,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                   const SizedBox(width: 8),
                   ]),
                 ),
+              ),
               ),
             ),
           );
@@ -833,8 +836,14 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
 
   Widget _clickable({required Widget child,required VoidCallback onTap}) {
     return MouseRegion(
-      cursor:SystemMouseCursors.click,
-      child:GestureDetector(behavior:HitTestBehavior.opaque,onTap:onTap,child:child),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        // Covers gradient-only Made for You cards and Daily Mixes too,
+        // which don't all contain a shared AppleCover widget.
+        child: OrchidHoverZoom(scale: 1.035, child: child),
+      ),
     );
   }
 
