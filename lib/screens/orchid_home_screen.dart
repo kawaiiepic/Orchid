@@ -206,6 +206,8 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
             (song['artist']??'').toString(),
             album:song['album']?.toString(),
             artwork:song['image']?.toString(),
+            duration:song['duration'] is num
+              ? (song['duration'] as num).toInt() : null,
           ),
         ).where((song)=>song.title.isNotEmpty&&song.artist.isNotEmpty).toList();
       }).toList());
