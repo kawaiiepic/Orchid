@@ -91,6 +91,8 @@ class OrchidAudioPlayer {
   Future<void> setVolume(double v)=>engine.action.setVolume(v);
   Future<void> setCrossfade(Duration v)=>engine.action.setCrossfadeDuration(v);
   Future<void> setNormalization(bool value)=>engine.action.setVolumeNormalization(value);
+  Future<void> setRepeatOne(bool enabled)=>engine.action.setLoopMode(
+    enabled?mini.LoopMode.one:mini.LoopMode.off);
   Future<void> setEq(List<double> gains)=>engine.action.setEqualizer(
     mini.Equalizer.fromList(gains));
   Future<void> setEqBand(int band,double db)=>engine.action.setEqualizerBand(band,db);
