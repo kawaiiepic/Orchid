@@ -1,5 +1,6 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
+import 'orchid_hover_zoom.dart';
 import '../services/artist_image_service.dart';
 
 /// Artist portraits are looked up by name, not inferred from an album cover.
@@ -24,7 +25,8 @@ class ArtistArtwork extends StatelessWidget {
       final url = snapshot.data ?? fallbackUrl;
       return ClipRRect(
         borderRadius: BorderRadius.circular(radius),
-        child: SizedBox(
+        child: OrchidHoverZoom(
+          child: SizedBox(
           width: size,
           height: size,
           child: url == null || !url.startsWith('https://')
@@ -34,6 +36,7 @@ class ArtistArtwork extends StatelessWidget {
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => _placeholder(context),
                 ),
+          ),
         ),
       );
     },
