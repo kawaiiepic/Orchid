@@ -780,11 +780,24 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
   /// Dense desktop track rows, keeping the iOS artwork shelf unchanged.
   Widget _desktopSongList(List<Map<String, dynamic>> tracks) {
     final visible = tracks.take(12).toList();
+    // Show two equally sized song columns on desktop, with reading order
+    // moving left to right. Each cell retains its own context menu and play.
     return Column(
       children: [
-        for (var index = 0; index < visible.length; index++) ...[
-          _desktopSongRow(visible[index], index),
-          if (index < visible.length - 1)
+        for (var index = 0; index < visible.length; index += 2) ...[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: _desktopSongRow(visible[index], index)),
+              const SizedBox(width: 18),
+              Expanded(
+                child: index + 1 < visible.length
+                    ? _desktopSongRow(visible[index + 1], index + 1)
+                    : const SizedBox.shrink(),
+              ),
+            ],
+          ),
+          if (index + 2 < visible.length)
             const Divider(color: Color(0x293C3546)),
         ],
       ],
@@ -858,16 +871,6 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                   ],
                 ),
               ),
-              if (album != null && album.isNotEmpty) ...[
-                const SizedBox(width: 14),
-                Expanded(
-                  flex: 2,
-                  child: Text(album, maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Color(0xFF8F879D), fontSize: 11)),
-                ),
-              ],
               const SizedBox(width: 12),
               SizedBox(
                 width: 48,
