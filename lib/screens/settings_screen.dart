@@ -163,7 +163,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final desktop = bounds.maxWidth >= 850;
       final currentSection = desktop && _section == -1 ? 0 : _section;
       final content = ListView(
-      padding: EdgeInsets.fromLTRB(desktop ? 24 : 16, 16, desktop ? 30 : 16, 110),
+      padding: EdgeInsets.fromLTRB(desktop ? 4 : 16, 0, desktop ? 18 : 16, desktop ? 100 : 110),
       children: [
         if (!desktop && _section == -1) ...[
           const Text('Settings').x2Large().semiBold(),
@@ -226,7 +226,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               'Account', 'Connections', 'Lyrics', 'Sources',
             ][currentSection]).large().semiBold(),
           ]),
-          const SizedBox(height: 22),
+          const SizedBox(height: 14),
         if (currentSection == 0)
           ProfileScreen(account: widget.account,
             embedded: true, section: 'account'),
@@ -464,10 +464,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
       if (!desktop) return content;
       const categories = ['Account', 'Connections', 'Lyrics', 'Sources'];
-      const descriptions = [
-        'Your Petal account', 'Connected services',
-        'Lyrics appearance', 'Playback sources and addons',
-      ];
       const icons = [
         LucideIcons.user, LucideIcons.link,
         LucideIcons.music2, LucideIcons.radio,
