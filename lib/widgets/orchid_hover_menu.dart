@@ -1,4 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:flutter/material.dart' as material;
 import 'orchid_style.dart';
 
 /// A contextual ellipsis for media cards. It stays invisible until a mouse
@@ -41,6 +42,10 @@ class _OrchidHoverMenuState extends State<OrchidHoverMenu> {
 
   void _open({Offset? at}) {
     if (widget.actions.isEmpty) return;
+    if (MediaQuery.sizeOf(context).width < 850) {
+      _openMobileSheet();
+      return;
+    }
     _close();
     final object = context.findRenderObject();
     if (object is! RenderBox) return;
@@ -88,6 +93,62 @@ class _OrchidHoverMenuState extends State<OrchidHoverMenu> {
       ),
     ]));
     Overlay.of(context).insert(_entry!);
+  }
+
+  void _openMobileSheet() {
+    material.showModalBottomSheet<void>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      backgroundColor: const Color(0x00000000),
+      barrierColor: const Color(0x99000000),
+      builder: (sheetContext) => material.SafeArea(
+        top: false,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 8),
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(sheetContext).height * .84),
+          decoration: const BoxDecoration(
+            color: Color(0xFF2E2239),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+          ),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const SizedBox(height: 12),
+            Container(width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFF806F90),
+                borderRadius: BorderRadius.circular(4))),
+            const SizedBox(height: 17),
+            Flexible(child: ListView(
+              shrinkWrap: true,
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
+              children: [
+                for (final action in widget.actions)
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      Navigator.of(sheetContext).pop();
+                      action.onSelected();
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 16),
+                      child: Row(children: [
+                        Icon(action.icon, size: 21,
+                          color: OrchidStyle.lilac),
+                        const SizedBox(width: 16),
+                        Expanded(child: Text(action.label,
+                          style: const TextStyle(
+                            fontSize: 15, color: Color(0xFFF7F0FF)))),
+                      ]),
+                    ),
+                  ),
+              ],
+            )),
+          ]),
+        ),
+      ),
+    );
   }
 
   @override
