@@ -560,6 +560,17 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                 onTap: () => setState(() => _mobileControlsHidden = false),
                 child: Stack(children: [
                   const SizedBox.expand(),
+                  // Give synced karaoke lyrics the full available canvas while
+                  // reserving the bottom strip for song and artist details.
+                  Positioned.fill(
+                    left: 18, right: 18, top: 12, bottom: 120,
+                    child: SafeArea(
+                      bottom: false,
+                      child: IgnorePointer(
+                        child: RepaintBoundary(child: _lyricsBody()),
+                      ),
+                    ),
+                  ),
                   Positioned(
                     left: 20, right: 20, bottom: 14,
                     child: SafeArea(
