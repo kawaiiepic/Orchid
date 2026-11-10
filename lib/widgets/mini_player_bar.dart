@@ -20,25 +20,6 @@ class _BorderlessPlayerGlass extends StatelessWidget {
   final Widget child;
   const _BorderlessPlayerGlass({required this.radius, required this.child});
 
-  // Desktop uses the lightweight shader pipeline on Linux. Reduce refraction
-  // and dispersion to avoid the stepped/pixelated look while retaining blur.
-  static const _desktopGlassSettings = glass.LiquidGlassSettings(
-    glassColor: Color(0x84392447),
-    blur: 7,
-    thickness: 9,
-    refractiveIndex: 1.015,
-    chromaticAberration: 0,
-    saturation: 1,
-    lightIntensity: 0,
-    ambientStrength: 0,
-    ambientRim: 0,
-    fresnelStrength: 0,
-    glowIntensity: 0,
-    rimLight: 0,
-    rimShade: 0,
-    shadowElevation: 0,
-  );
-
   @override
   Widget build(BuildContext context) {
     final desktop = MediaQuery.sizeOf(context).width >= 850;
@@ -59,7 +40,7 @@ class _BorderlessPlayerGlass extends StatelessWidget {
                 shape: glass.LiquidRoundedSuperellipse(
                   borderRadius: radius + 8),
                 settings: desktop
-                    ? _desktopGlassSettings
+                    ? OrchidStyle.desktopGlassSettings
                     : OrchidStyle.glassSettings,
                 child: const SizedBox.expand(),
               ),
