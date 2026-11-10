@@ -535,6 +535,9 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
       final genres = catalog?.genres ?? <String>[];
       final singlesAndEps = catalog?.albums.where(
         (album) => album.releaseType != 'album').toList() ?? <MusicAlbum>[];
+      // Keep singles after EPs within the final releases section.
+      singlesAndEps.sort((a, b) => (a.releaseType == 'single' ? 1 : 0)
+          .compareTo(b.releaseType == 'single' ? 1 : 0));
       final albums = catalog?.albums.where(
         (album) => album.releaseType == 'album').toList() ?? <MusicAlbum>[];
       return ListView(
@@ -602,13 +605,6 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
               _popularTracks(tracks),
               const SizedBox(height: 28),
             ],
-            if (singlesAndEps.isNotEmpty) ...[
-              OrchidSectionHeader(title: 'Singles & EPs',
-                subtitle: '${singlesAndEps.length} releases'),
-              const SizedBox(height: 12),
-              _releaseCards(singlesAndEps),
-              const SizedBox(height: 28),
-            ],
             if (catalog.similarArtists.isNotEmpty) ...[
               const OrchidSectionHeader(title: 'Fans also like'),
               const SizedBox(height: 12),
@@ -657,6 +653,13 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
                 subtitle: '${albums.length} releases'),
               const SizedBox(height: 12),
               _releaseCards(albums),
+              if (singlesAndEps.isNotEmpty) const SizedBox(height: 28),
+            ],
+            if (singlesAndEps.isNotEmpty) ...[
+              OrchidSectionHeader(title: 'Singles & EPs',
+                subtitle: '${singlesAndEps.length} releases'),
+              const SizedBox(height: 12),
+              _releaseCards(singlesAndEps),
             ],
           ],
         ],
