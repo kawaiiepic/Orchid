@@ -165,6 +165,51 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     );
   }
 
+  Widget _albums() {
+    final albums = _items('featuredAlbums');
+    if (albums.isEmpty) return const SizedBox.shrink();
+    return SizedBox(
+      height: 192,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          for (final item in albums.take(14))
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => openAlbumPage(
+                context,
+                artist: (item['artist'] ?? '').toString(),
+                album: (item['name'] ?? '').toString(),
+                artwork: item['image']?.toString(),
+                player: widget.player, addonService: widget.addonService,
+                addons: widget.addons, library: widget.library,
+              ),
+              child: SizedBox(
+                width: 150,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppleCover(
+                      artist: (item['artist'] ?? '').toString(),
+                      name: (item['name'] ?? '').toString(),
+                      isAlbum: true,
+                      fallbackUrl: item['image']?.toString(),
+                      size: 130, radius: 11,
+                    ),
+                    const SizedBox(height: 7),
+                    Text((item['name'] ?? '').toString(),
+                      maxLines: 1, overflow: TextOverflow.ellipsis).semiBold(),
+                    Text((item['artist'] ?? '').toString(),
+                      maxLines: 1, overflow: TextOverflow.ellipsis).small().muted(),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => ListView(
     padding: EdgeInsets.fromLTRB(28, 22, 30,
@@ -189,6 +234,12 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         const SizedBox(height: 12),
         _artists(),
         const SizedBox(height: 22),
+        if (_items('featuredAlbums').isNotEmpty) ...[
+          const OrchidSectionHeader(title: 'Featured Albums'),
+          const SizedBox(height: 12),
+          _albums(),
+          const SizedBox(height: 22),
+        ],
         const OrchidSectionHeader(title: 'Popular Right Now'),
         const SizedBox(height: 8),
         _tracks(),
