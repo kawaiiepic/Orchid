@@ -683,8 +683,7 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
         ],
       )),
-      if (_controller.text.trim().isEmpty && !_searchFocus.hasFocus &&
-          _recentSearches.isNotEmpty)
+      if (_controller.text.trim().isEmpty && _recentSearches.isNotEmpty)
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
           child: Column(
