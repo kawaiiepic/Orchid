@@ -349,6 +349,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     if (desktop) {
       return _clickable(
         onTap: onTap,
+        zoomCard: false,
         child: SizedBox(
           width: cardWidth,
           height: cardHeight,
@@ -433,6 +434,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     if (desktopCircle) {
       return _clickable(
         onTap: onTap,
+        zoomCard: false,
         child: SizedBox(
           width: cardWidth,
           height: cardHeight,
@@ -834,15 +836,21 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     return number.toStringAsFixed(0);
   }
 
-  Widget _clickable({required Widget child,required VoidCallback onTap}) {
+  Widget _clickable({
+    required Widget child,
+    required VoidCallback onTap,
+    bool zoomCard = true,
+  }) {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        // Covers gradient-only Made for You cards and Daily Mixes too,
-        // which don't all contain a shared AppleCover widget.
-        child: OrchidHoverZoom(scale: 1.035, child: child),
+        // Album and artist tiles zoom their artwork through AppleCover and
+        // ArtistArtwork; don't zoom the title and subtitle along with it.
+        child: zoomCard
+            ? OrchidHoverZoom(scale: 1.035, child: child)
+            : child,
       ),
     );
   }
