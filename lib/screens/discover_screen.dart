@@ -122,7 +122,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                           artist: (item['artist'] ?? '').toString(),
                           name: (item['title'] ?? '').toString(),
                           fallbackUrl: (item['image'] ?? item['artwork'])?.toString(),
-                          size: 130, radius: 11,
+                          size: 130, radius: 11, zoomOnHover: true,
                         ),
                         const SizedBox(height: 7),
                         SizedBox(width: 130, child: Text(
@@ -165,7 +165,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                   ClipOval(child: ArtistArtwork(
                     artist: (item['name'] ?? '').toString(),
                     fallbackUrl: item['image']?.toString(),
-                    size: 102, radius: 50)),
+                    size: 102, radius: 50, zoomOnHover: true)),
                   const SizedBox(height: 9),
                   Text((item['name'] ?? '').toString(),
                     textAlign: TextAlign.center,
@@ -207,7 +207,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                       name: (item['name'] ?? '').toString(),
                       isAlbum: true,
                       fallbackUrl: item['image']?.toString(),
-                      size: 130, radius: 11,
+                      size: 130, radius: 11, zoomOnHover: true,
                     ),
                     const SizedBox(height: 7),
                     SizedBox(width: 130, child: Text(
