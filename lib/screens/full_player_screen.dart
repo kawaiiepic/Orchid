@@ -495,16 +495,41 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
             intensity: 0.95,
             child: const SizedBox.expand(),
           ),
-          Positioned.fill(child: DecoratedBox(
-            decoration: BoxDecoration(gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                const Color(0xFFB28A68).withValues(alpha: .19),
-                const Color(0xFF7E3D2B).withValues(alpha: .10),
-                const Color(0xFF080609).withValues(alpha: .24),
-              ],
-            )),
+          // Play the album's animated Apple Music cover behind the entire
+          // mobile player. CanvasVideo loops silently and reports HLS errors.
+          // The artwork-reactive static background remains underneath as the
+          // fallback if no animation exists or playback fails.
+          if (_animatedEnabled && !_animationFailed &&
+              _appleArtwork != null)
+            Positioned.fill(
+              child: ClipRect(
+                child: Transform.scale(
+                  // CanvasVideo normally rounds cover corners. Overscan keeps
+                  // them outside the screen for an edge-to-edge background.
+                  scale: 1.06,
+                  child: CanvasVideo(
+                    key: ValueKey('mobile-background-${_appleArtwork!.url}'),
+                    url: _appleArtwork!.url,
+                    fallbackArtworkUrl: track?.artworkUrl,
+                    onFailure: _artworkFailed,
+                  ),
+                ),
+              ),
+            ),
+          // Keep text and controls readable, even over bright video frames.
+          Positioned.fill(child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  const Color(0xFF130D16).withValues(alpha: .33),
+                  const Color(0xFF140A14).withValues(alpha: .45),
+                  const Color(0xFF080609).withValues(alpha: .76),
+                ],
+                stops: const [0.0, .52, 1.0],
+              )),
+            ),
           )),
           SafeArea(
             child: LayoutBuilder(builder: (context, constraints) {
