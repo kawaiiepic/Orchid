@@ -10,6 +10,8 @@ class DesktopSidebar extends StatelessWidget {
   final String accountName;
   final VoidCallback onHome;
   final VoidCallback onSearch;
+  final VoidCallback onDiscover;
+  final VoidCallback onPlaylists;
   final VoidCallback onLibrary;
   final VoidCallback onReplay;
   final VoidCallback onRadio;
@@ -24,6 +26,8 @@ class DesktopSidebar extends StatelessWidget {
     required this.accountName,
     required this.onHome,
     required this.onSearch,
+    required this.onDiscover,
+    required this.onPlaylists,
     required this.onLibrary,
     required this.onReplay,
     required this.onRadio,
@@ -82,8 +86,9 @@ class DesktopSidebar extends StatelessWidget {
           const SizedBox(height: 20),
           _nav('Home', LucideIcons.house, onHome, selected: selectedTab == 0),
           _nav('Search', LucideIcons.search, onSearch, selected: selectedTab == 1),
-          _nav('Discover', LucideIcons.compass, onSearch),
+          _nav('Discover', LucideIcons.compass, onDiscover, selected: selectedTab == 3),
           _nav('Library', LucideIcons.library, onLibrary, selected: selectedTab == 2),
+          _nav('Playlists', LucideIcons.listMusic, onPlaylists, selected: selectedTab == 4),
           _nav('Replay', LucideIcons.audioLines, onReplay),
           _nav('Radio', LucideIcons.radio, onRadio),
           _nav('AI DJ', LucideIcons.bot, onAiDj),
@@ -94,16 +99,16 @@ class DesktopSidebar extends StatelessWidget {
               fontSize: 10, fontWeight: FontWeight.w700,
               letterSpacing: 1.3, color: Color(0xFF88819D))),
           ),
-          _nav('Favorites', LucideIcons.heart, onLibrary),
+          _nav('Favorites', LucideIcons.heart, onPlaylists),
           Expanded(
             child: ListenableBuilder(
               listenable: library,
               builder: (context, _) => ListView(
                 padding: EdgeInsets.zero,
                 children: [
-                  for (final playlist in library.playlists)
-                    _nav(playlist.name, LucideIcons.listMusic, onLibrary),
-                  if (library.playlists.isEmpty)
+                  for (final playlist in library.visiblePlaylists)
+                    _nav(playlist.name, LucideIcons.listMusic, onPlaylists),
+                  if (library.visiblePlaylists.isEmpty)
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                       child: Text('Your playlists will appear here',
