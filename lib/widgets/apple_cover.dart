@@ -10,6 +10,7 @@ class AppleCover extends StatelessWidget {
   final String? fallbackUrl;
   final String? preferredUrl;
   final bool isAlbum;
+  final bool zoomOnHover;
   final double size;
   final double radius;
 
@@ -21,6 +22,7 @@ class AppleCover extends StatelessWidget {
     this.fallbackUrl,
     this.preferredUrl,
     this.isAlbum = false,
+    this.zoomOnHover = true,
     this.size = 48,
     this.radius = 8,
   });
@@ -60,32 +62,31 @@ class AppleCover extends StatelessWidget {
           color: Theme.of(context).colorScheme.muted,
           child: const Center(child: Icon(LucideIcons.music2, size: 20)),
         );
+        final image = SizedBox(
+          width: size,
+          height: size,
+          child: url == null
+              ? placeholder()
+              : Image.network(
+                  url,
+                  width: size,
+                  height: size,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) =>
+                      apple != null && fallback != null &&
+                              fallback.startsWith('https://') &&
+                              fallback != apple
+                          ? Image.network(
+                              fallback,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => placeholder(),
+                            )
+                          : placeholder(),
+                ),
+        );
         return ClipRRect(
           borderRadius: BorderRadius.circular(radius),
-          child: OrchidHoverZoom(
-            child: SizedBox(
-            width: size,
-            height: size,
-            child: url == null
-                ? placeholder()
-                : Image.network(
-                    url,
-                    width: size,
-                    height: size,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) =>
-                        apple != null && fallback != null &&
-                                fallback.startsWith('https://') &&
-                                fallback != apple
-                            ? Image.network(
-                                fallback,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => placeholder(),
-                              )
-                            : placeholder(),
-                  ),
-            ),
-          ),
+          child: zoomOnHover ? OrchidHoverZoom(child: image) : image,
         );
       },
     );
