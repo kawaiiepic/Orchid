@@ -47,12 +47,12 @@ void showOrchidActionDrawer(
   glass.GlassModalSheet.show<void>(
     context: context,
     useRootNavigator: true,
-    halfSize: maxHeightFraction.clamp(.35, .85),
+    halfSize: maxHeightFraction.clamp(.35, .85).toDouble(),
     initialState: glass.GlassSheetState.half,
     settings: OrchidStyle.glassSettings,
     builder: (sheetContext) => SizedBox(
       height: MediaQuery.sizeOf(sheetContext).height *
-          maxHeightFraction.clamp(.35, .85),
+          maxHeightFraction.clamp(.35, .85).toDouble(),
       child: builder(
         sheetContext,
         () => Navigator.of(sheetContext, rootNavigator: true).pop(),
