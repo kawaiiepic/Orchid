@@ -545,7 +545,7 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: main
+      ref: "7c8c419cde3f6173cbe8606106032ae58a8b771c"
       resolved-ref: "7c8c419cde3f6173cbe8606106032ae58a8b771c"
       url: "https://github.com/chomusuke-mk/miniaudio_player.git"
     source: git
