@@ -545,9 +545,9 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: "7c8c419cde3f6173cbe8606106032ae58a8b771c"
-      resolved-ref: "7c8c419cde3f6173cbe8606106032ae58a8b771c"
-      url: "https://github.com/chomusuke-mk/miniaudio_player.git"
+      ref: ee93fd0cf555266f47c2007c46706b8e4497c534
+      resolved-ref: ee93fd0cf555266f47c2007c46706b8e4497c534
+      url: "https://github.com/kawaiiepic/miniaudio_player.git"
     source: git
     version: "3.0.2"
   objective_c:

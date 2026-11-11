@@ -23,8 +23,8 @@ dependencies:
   audio_session: ^0.2.4
   miniaudio_player:
     git:
-      url: https://github.com/chomusuke-mk/miniaudio_player.git
-      ref: c351ef34c0b3ad5562bde60506fa1acdf0938689
+      url: https://github.com/kawaiiepic/miniaudio_player.git
+      ref: ee93fd0cf555266f47c2007c46706b8e4497c534
   audio_service: ^0.18.19
 
   shared_preferences: ^2.3.3
