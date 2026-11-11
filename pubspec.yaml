@@ -25,7 +25,6 @@ dependencies:
     git:
       url: https://github.com/chomusuke-mk/miniaudio_player.git
       ref: 7c8c419cde3f6173cbe8606106032ae58a8b771c
-      path: miniaudio_player
   audio_service: ^0.18.19
 
   shared_preferences: ^2.3.3
