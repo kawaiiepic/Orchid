@@ -58,7 +58,7 @@ packages:
     source: hosted
     version: "0.1.4"
   audio_session:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: audio_session
       sha256: f9e7711a0e24ca8b40f5d7ac374c3c6e55016f3157912badd18199cdbbca5c4d
@@ -73,6 +73,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.2"
+  build_cli_annotations:
+    dependency: transitive
+    description:
+      name: build_cli_annotations
+      sha256: e563c2e01de8974566a1998410d3f6f03521788160a02503b0b1f1a46c7b3d95
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.1.1"
   cached_network_image:
     dependency: "direct main"
     description:
@@ -267,6 +275,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.35"
+  flutter_rust_bridge:
+    dependency: transitive
+    description:
+      name: flutter_rust_bridge
+      sha256: ec69331e2335ab4d456c0a9fc700892c2c85b72b9c0cb39df3ecfe8833d5d5c8
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.13.0"
   flutter_test:
     dependency: "direct dev"
     description: flutter
@@ -277,6 +293,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  freezed_annotation:
+    dependency: transitive
+    description:
+      name: freezed_annotation
+      sha256: "7294967ff0a6d98638e7acb774aac3af2550777accd8149c90af5b014e6d44d8"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.1.0"
   gap:
     dependency: transitive
     description:
@@ -285,14 +309,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.1"
-  glob:
-    dependency: transitive
-    description:
-      name: glob
-      sha256: "218aeb56050c714f62a3182775320dfa04602b55074873e24e31bbd39bda96fb"
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.2.0"
   hooks:
     dependency: transitive
     description:
@@ -365,6 +381,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.2"
+  json_annotation:
+    dependency: transitive
+    description:
+      name: json_annotation
+      sha256: "2a743920d81b7910627f68ee2c9ac1fc0bfee32b9fc3403587d7c6791ca12f80"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.12.0"
   leak_tracker:
     dependency: transitive
     description:
@@ -520,19 +544,12 @@ packages:
   miniaudio_player:
     dependency: "direct main"
     description:
-      name: miniaudio_player
-      sha256: "40468732ba29466d0b5d2df26d1dc504ba743a2d545a12a6748f809732840397"
-      url: "https://pub.dev"
-    source: hosted
+      path: "."
+      ref: main
+      resolved-ref: ce083020e82a05742c7c2c63c4c795b011620c71
+      url: "https://github.com/kawaiiepic/miniaudio_player.git"
+    source: git
     version: "3.0.2"
-  native_toolchain_c:
-    dependency: transitive
-    description:
-      name: native_toolchain_c
-      sha256: "90eaad8059ebc2004a63810a4696ea9acdb02473e47ed3b6b3bafb100ac77e31"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.19.5"
   objective_c:
     dependency: transitive
     description:
@@ -661,14 +678,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.5.2"
-  process:
-    dependency: transitive
-    description:
-      name: process
-      sha256: "4242ba3508d37e01808bdf71ad1d5bb93a8d671bf2e7450e6b1b353fb0808891"
-      url: "https://pub.dev"
-    source: hosted
-    version: "5.0.6"
   pub_semver:
     dependency: transitive
     description:
