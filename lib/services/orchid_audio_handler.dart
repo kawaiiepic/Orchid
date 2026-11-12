@@ -8,13 +8,15 @@ import 'orchid_audio_player.dart';
 import '../models/addon.dart';
 import 'player_service.dart';
 import 'apple_artwork_service.dart';
+import 'ios_animated_now_playing.dart';
 
-/// Bridges Orchid's existing just_audio player to Android media controls,
+/// Bridges Orchid's miniaudio player to Android media controls,
 /// lock-screen artwork, headset buttons and iOS Control Center.
 /// Playback and queue ownership remain in PlayerService.
 class OrchidAudioHandler extends BaseAudioHandler {
   PlayerService? _service;
   int _artworkGeneration = 0;
+  final IosAnimatedNowPlaying _animatedArtwork = IosAnimatedNowPlaying();
   AudioSession? _session;
   StreamSubscription<OrchidPlayerState>? _playbackSubscription;
   StreamSubscription<Duration>? _positionSubscription;
@@ -22,8 +24,7 @@ class OrchidAudioHandler extends BaseAudioHandler {
   StreamSubscription<Duration>? _bufferedSubscription;
   Future<void> configureSession() async {
     _session = await AudioSession.instance;
-    // just_audio already handles interruptions and headphone disconnects.
-    // Configure the OS session once without installing duplicate listeners.
+    // Configure the OS audio session once without installing duplicate listeners.
     await _session!.configure(AudioSessionConfiguration.music());
   }
 
@@ -43,6 +44,7 @@ class OrchidAudioHandler extends BaseAudioHandler {
     if (service != null) service.removeListener(_sync);
     _service = null;
     ++_artworkGeneration;
+    _animatedArtwork.update(null, null);
     unawaited(_playbackSubscription?.cancel() ?? Future<void>.value());
     unawaited(_positionSubscription?.cancel() ?? Future<void>.value());
     unawaited(_durationSubscription?.cancel() ?? Future<void>.value());
@@ -157,6 +159,7 @@ class OrchidAudioHandler extends BaseAudioHandler {
           ? service.queueIndex
           : null,
     ));
+    _animatedArtwork.update(track, id);
   }
 
   @override
@@ -196,6 +199,7 @@ class OrchidAudioHandler extends BaseAudioHandler {
 
   void disposeHandler() {
     detach();
+    _animatedArtwork.dispose();
   }
 }
 
