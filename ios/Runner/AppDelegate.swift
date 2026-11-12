@@ -76,6 +76,19 @@ private final class OrchidLockScreenArtwork: NSObject, AVAssetDownloadDelegate {
         cover = next
         animatedArtwork = nil
       }
+      // Warm both assets while the song is playing. Apple may request them
+      // immediately after the lock screen appears, so avoid starting the
+      // network download inside its request callback.
+      loadPreview(for: next) { [weak self] _ in
+        guard let self, self.cover?.id == next.id,
+              self.cover?.hls == next.hls else { return }
+        self.apply()
+      }
+      loadVideo(for: next) { [weak self] localURL in
+        guard let self, self.cover?.id == next.id,
+              self.cover?.hls == next.hls else { return }
+        if localURL != nil { self.apply() }
+      }
       apply()
       result(nil)
     case "refresh":
