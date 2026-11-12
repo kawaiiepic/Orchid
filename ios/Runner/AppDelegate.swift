@@ -47,6 +47,79 @@ private final class OrchidLockScreenArtwork: NSObject, AVAssetDownloadDelegate {
   private var downloadLocations: [Int: URL] = [:]
   private var lastError: String?
   private var previewReady = false
+  private weak var flutterChannel: FlutterMethodChannel?
+  private var currentTrackId: String?
+  private var staticArtworkId: String?
+
+  func configureRemoteCommands(channel: FlutterMethodChannel) {
+    flutterChannel = channel
+    let commands = MPRemoteCommandCenter.shared()
+    commands.playCommand.isEnabled = true
+    commands.pauseCommand.isEnabled = true
+    commands.nextTrackCommand.isEnabled = true
+    commands.previousTrackCommand.isEnabled = true
+    commands.changePlaybackPositionCommand.isEnabled = true
+    commands.playCommand.addTarget { [weak self] _ in
+      self?.flutterChannel?.invokeMethod("play", arguments: nil)
+      return .success
+    }
+    commands.pauseCommand.addTarget { [weak self] _ in
+      self?.flutterChannel?.invokeMethod("pause", arguments: nil)
+      return .success
+    }
+    commands.nextTrackCommand.addTarget { [weak self] _ in
+      self?.flutterChannel?.invokeMethod("next", arguments: nil)
+      return .success
+    }
+    commands.previousTrackCommand.addTarget { [weak self] _ in
+      self?.flutterChannel?.invokeMethod("previous", arguments: nil)
+      return .success
+    }
+    commands.changePlaybackPositionCommand.addTarget { [weak self] event in
+      if let value = event as? MPChangePlaybackPositionCommandEvent {
+        self?.flutterChannel?.invokeMethod("seek", arguments: value.positionTime)
+      }
+      return .success
+    }
+  }
+
+  private func publishMetadata(_ args: [String: Any]) {
+    guard let id = args["id"] as? String,
+          let title = args["title"] as? String,
+          let artist = args["artist"] as? String else { return }
+    let center = MPNowPlayingInfoCenter.default()
+    var info = center.nowPlayingInfo ?? [:]
+    let changed = id != currentTrackId
+    currentTrackId = id
+    if changed {
+      info = [:]
+      staticArtworkId = nil
+      animatedArtwork = nil
+    }
+    info[MPMediaItemPropertyTitle] = title
+    info[MPMediaItemPropertyArtist] = artist
+    info[MPMediaItemPropertyAlbumTitle] = args["album"] as? String ?? ""
+    info[MPMediaItemPropertyPlaybackDuration] = args["duration"] as? Double ?? 0
+    info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = args["elapsed"] as? Double ?? 0
+    let playing = args["playing"] as? Bool ?? false
+    info[MPNowPlayingInfoPropertyPlaybackRate] = playing ? (args["rate"] as? Double ?? 1.0) : 0.0
+    center.nowPlayingInfo = info
+    if changed, let imageString = args["artwork"] as? String,
+       let imageURL = URL(string: imageString), imageURL.scheme == "https" {
+      URLSession.shared.dataTask(with: imageURL) { [weak self] data, _, _ in
+        guard let image = data.flatMap(UIImage.init(data:)) else { return }
+        DispatchQueue.main.async {
+          guard let self, self.currentTrackId == id else { return }
+          let staticArt = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+          var updated = center.nowPlayingInfo ?? [:]
+          updated[MPMediaItemPropertyArtwork] = staticArt
+          center.nowPlayingInfo = updated
+          self.apply()
+        }
+      }.resume()
+    }
+    apply()
+  }
 
   private func log(_ message: String) {
     NSLog("[Orchid Animated Artwork] %@", message)
@@ -66,6 +139,13 @@ private final class OrchidLockScreenArtwork: NSObject, AVAssetDownloadDelegate {
 
   func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     switch call.method {
+    case "nativeAvailable":
+      result(true)
+    case "nowPlaying":
+      if let args = call.arguments as? [String: Any] {
+        publishMetadata(args)
+      }
+      result(nil)
     case "set":
       guard let args = call.arguments as? [String: String],
             let id = args["id"], let title = args["title"],
@@ -116,6 +196,7 @@ private final class OrchidLockScreenArtwork: NSObject, AVAssetDownloadDelegate {
     case "clear":
       cover = nil
       animatedArtwork = nil
+      currentTrackId = nil
       var info = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
       info.removeValue(forKey: MPNowPlayingInfoProperty1x1AnimatedArtwork)
       info.removeValue(forKey: MPNowPlayingInfoProperty3x4AnimatedArtwork)
@@ -290,6 +371,7 @@ private final class OrchidLockScreenArtwork: NSObject, AVAssetDownloadDelegate {
         name: "dev.blossomvale.orchid/animated-now-playing",
         binaryMessenger: registrar.messenger()
       )
+      bridge.configureRemoteCommands(channel: channel)
       channel.setMethodCallHandler { [weak bridge] call, result in
         bridge?.handle(call, result: result)
       }
