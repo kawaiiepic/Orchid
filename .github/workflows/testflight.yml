@@ -8,6 +8,8 @@ on:
         required: true
         type: boolean
         default: true
+  # Unsigned build on PRs so compile errors show up early
+  pull_request:
 
 concurrency:
   group: orchid-ios-${{ github.ref }}
@@ -17,9 +19,13 @@ jobs:
   ios:
     runs-on: macos-latest
     timeout-minutes: 75
+    env:
+      IPHONEOS_DEPLOYMENT_TARGET: "13.0"
     steps:
       - uses: actions/checkout@v6
 
+      # Only the device target is needed for `flutter build ios` / `flutter build ipa`.
+      # Add aarch64-apple-ios-sim and x86_64-apple-ios back if you build for the simulator.
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios,aarch64-apple-darwin,x86_64-apple-darwin
@@ -37,12 +43,79 @@ jobs:
       - name: Analyze Dart source
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
+      # Caches CocoaPods' download cache (not the Pods folder), keyed on pubspec.lock.
+      # Safe without a committed Podfile.lock: a stale entry only means re-downloading.
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/CocoaPods
+          key: pods-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
+          restore-keys: |
+            pods-${{ runner.os }}-
+
+      # miniaudio_player_rust compiles its C bridge as plain C on iOS, but miniaudio's
+      # iOS backend is Objective-C. Patch the checked-out build.rs so it compiles as
+      # Objective-C and links the needed frameworks. Idempotent (the pub cache is cached).
+      # Remove this step once you use a fork / upstream fix.
+      - name: Patch miniaudio_player_rust build.rs for iOS
+        run: |
+          set -euo pipefail
+          PUB_CACHE_DIR="${PUB_CACHE:-$HOME/.pub-cache}"
+          REF=$(awk '/^  miniaudio_player:/{f=1} f && /resolved-ref:/{gsub(/"/,"",$2); print $2; exit}' pubspec.lock)
+          if [[ -z "$REF" ]]; then
+            echo "::error::Could not find miniaudio_player resolved-ref in pubspec.lock"
+            exit 1
+          fi
+          BUILD_RS="$PUB_CACHE_DIR/git/miniaudio_player-$REF/rust/build.rs"
+          if [[ ! -f "$BUILD_RS" ]]; then
+            echo "::error::build.rs not found at $BUILD_RS"
+            exit 1
+          fi
+          python3 - "$BUILD_RS" <<'PY'
+          import sys
+          p = sys.argv[1]
+          s = open(p).read()
+          if "objective-c" in s:
+              print("build.rs already patched")
+              sys.exit(0)
+          marker = 'build.compile("miniaudio_bridge");'
+          if marker not in s:
+              sys.exit("marker not found in build.rs; patch needs updating for this commit")
+          patch = '''if target_os == "ios" {
+                  build.flag("-x").flag("objective-c");
+                  println!("cargo:rustc-link-lib=objc");
+                  for framework in [
+                      "Foundation",
+                      "CoreFoundation",
+                      "CoreAudio",
+                      "AudioToolbox",
+                      "AVFoundation",
+                      "AVFAudio",
+                      "UIKit",
+                  ] {
+                      println!("cargo:rustc-link-lib=framework={framework}");
+                  }
+              }
+              '''
+          open(p, "w").write(s.replace(marker, patch + marker, 1))
+          print("patched", p)
+          PY
+          grep -n "objective-c" "$BUILD_RS"
+
+      - name: Pin iOS deployment target for cargo builds
+        run: |
+          mkdir -p "$HOME/.cargo"
+          cat >> "$HOME/.cargo/config.toml" <<'EOF'
+          [env]
+          IPHONEOS_DEPLOYMENT_TARGET = "13.0"
+          EOF
+
       - name: Generate Orchid iOS app icons
         run: bash scripts/generate_ios_icons.sh
 
       - name: Build unsigned iOS app (pull requests)
         if: ${{ github.event_name == 'pull_request' }}
-        run: flutter build ios --release --no-codesign
+        run: flutter build ios --release --no-codesign -v
 
       - name: Install App Store signing identity
         if: ${{ github.event_name == 'workflow_dispatch' }}
@@ -83,6 +156,8 @@ jobs:
           cp "$PP_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
           security find-identity -v -p codesigning
 
+      # One command does build + archive + export. -v is verbose so any Rust/linker
+      # error shows up in the log; remove it once the build is stable.
       - name: Archive and export signed IPA
         if: ${{ github.event_name == 'workflow_dispatch' }}
         env:
@@ -90,23 +165,10 @@ jobs:
           BUILD_NUMBER: ${{ github.run_number }}
         run: |
           set -euo pipefail
-          flutter build ios --release --no-codesign --build-name="$BUILD_NAME" --build-number="$BUILD_NUMBER"
-          xcodebuild -workspace ios/Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Release \
-            -destination 'generic/platform=iOS' \
-            -archivePath build/ios/archive/Runner.xcarchive \
-            archive \
-            MARKETING_VERSION="$BUILD_NAME" \
-            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
-            FLUTTER_BUILD_NAME="$BUILD_NAME" \
-            FLUTTER_BUILD_NUMBER="$BUILD_NUMBER"
-
-          mkdir -p build/ios/ipa
-          xcodebuild -exportArchive \
-            -archivePath build/ios/archive/Runner.xcarchive \
-            -exportOptionsPlist ios/ExportOptions.plist \
-            -exportPath build/ios/ipa
+          flutter build ipa --release -v \
+            --export-options-plist=ios/ExportOptions.plist \
+            --build-name="$BUILD_NAME" \
+            --build-number="$BUILD_NUMBER"
 
           IPA_PATH=$(find build/ios/ipa -maxdepth 1 -name '*.ipa' -print -quit)
           if [[ -z "$IPA_PATH" ]]; then
