@@ -203,11 +203,19 @@ class OrchidAudioHandler extends BaseAudioHandler {
   }
 }
 
-/// Initialized only on iOS and Android, leaving desktop playback unchanged.
+/// Android uses audio_service. iOS 26 can temporarily use native Now Playing
+/// exclusively, for isolating the animated artwork integration.
 class OrchidBackgroundAudio {
   static OrchidAudioHandler? handler;
+  static bool nativeIosMode = false;
+  static final IosAnimatedNowPlaying _nativeIos = IosAnimatedNowPlaying();
 
   static Future<void> initialize() async {
+    nativeIosMode = await IosAnimatedNowPlaying.probeNativeMode();
+    if (nativeIosMode) {
+      debugPrint('[Orchid Audio] Isolating iOS 26 Now Playing from audio_service');
+      return;
+    }
     if (handler != null) return;
     handler = await AudioService.init<OrchidAudioHandler>(
       builder: OrchidAudioHandler.new,
@@ -221,6 +229,18 @@ class OrchidBackgroundAudio {
     await handler!.configureSession();
   }
 
-  static void attach(PlayerService service) => handler?.attach(service);
-  static void detach() => handler?.detach();
+  static void attach(PlayerService service) {
+    if (nativeIosMode) {
+      _nativeIos.attach(service);
+    } else {
+      handler?.attach(service);
+    }
+  }
+  static void detach() {
+    if (nativeIosMode) {
+      _nativeIos.detach();
+    } else {
+      handler?.detach();
+    }
+  }
 }
