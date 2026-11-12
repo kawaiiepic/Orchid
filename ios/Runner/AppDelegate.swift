@@ -135,6 +135,11 @@ private final class OrchidLockScreenArtwork: NSObject, AVAssetDownloadDelegate {
     guard var info = center.nowPlayingInfo,
           (info[MPMediaItemPropertyTitle] as? String) == cover.title,
           (info[MPMediaItemPropertyArtist] as? String) == cover.artist else { return }
+    // Publishing too early can cause iOS to settle on the static cover.
+    let key = cover.hls.absoluteString
+    guard previewImages[cover.id] != nil,
+          let local = localAssets[key],
+          FileManager.default.fileExists(atPath: local.path) else { return }
     if animatedArtwork == nil {
       animatedArtwork = MPMediaItemAnimatedArtwork(
         artworkID: cover.id,
@@ -148,6 +153,7 @@ private final class OrchidLockScreenArtwork: NSObject, AVAssetDownloadDelegate {
     }
     info[MPNowPlayingInfoProperty1x1AnimatedArtwork] = animatedArtwork
     center.nowPlayingInfo = info
+    log("Published ready 1x1 animated artwork to Now Playing")
   }
 
   private func loadPreview(for cover: Cover, completion: @escaping (UIImage?) -> Void) {
