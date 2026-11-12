@@ -209,6 +209,10 @@ class OrchidBackgroundAudio {
   static Future<void> initialize() async {
     nativeIosMode = await IosAnimatedNowPlaying.probeNativeMode();
     if (nativeIosMode) {
+      // Keep the normal playback audio session while disabling only
+      // audio_service's competing iOS Now Playing metadata writer.
+      final session = await AudioSession.instance;
+      await session.configure(AudioSessionConfiguration.music());
       debugPrint('[Orchid Audio] Isolating iOS 26 Now Playing from audio_service');
       return;
     }
