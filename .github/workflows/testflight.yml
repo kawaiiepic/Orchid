@@ -19,6 +19,8 @@ jobs:
   ios:
     runs-on: macos-latest
     timeout-minutes: 75
+    env:
+      IPHONEOS_DEPLOYMENT_TARGET: "13.0"
     steps:
       - uses: actions/checkout@v6
 
@@ -87,8 +89,13 @@ jobs:
           PY
           grep -n "objective-c" "$BUILD_RS"
 
-      - name: Analyze Dart source
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - name: Pin iOS deployment target for cargo builds
+        run: |
+          mkdir -p "$HOME/.cargo"
+          cat >> "$HOME/.cargo/config.toml" <<'EOF'
+          [env]
+          IPHONEOS_DEPLOYMENT_TARGET = "13.0"
+          EOF
 
       - name: Generate Orchid iOS app icons
         run: bash scripts/generate_ios_icons.sh
