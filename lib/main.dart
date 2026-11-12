@@ -1,7 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'services/orchid_audio_handler.dart';
-import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart' as glass;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -46,7 +45,6 @@ Future<void> main() async {
   // Preload Liquid Glass shaders before building the first frame.
   await glass.LiquidGlassWidgets.initialize();
   MediaKit.ensureInitialized();
-  JustAudioMediaKit.ensureInitialized();
   if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS ||
       defaultTargetPlatform == TargetPlatform.android)) {
     try {

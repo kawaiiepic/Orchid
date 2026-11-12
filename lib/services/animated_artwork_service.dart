@@ -6,7 +6,9 @@ import 'package:http/http.dart' as http;
 class AnimatedArtwork {
   final String url;
   final bool portrait;
-  const AnimatedArtwork({required this.url, required this.portrait});
+  /// Square HLS variant, suitable for iOS's 1:1 Now Playing artwork API.
+  final String? squareUrl;
+  const AnimatedArtwork({required this.url, required this.portrait, this.squareUrl});
 }
 
 /// Public Apple Music animated cover lookup, separate from Spotify Canvas.
@@ -106,10 +108,10 @@ class AnimatedArtworkService {
       final portrait = valid(portraitUrl);
       final square = valid(squareUrl);
       if (portrait != null) {
-        return _cache[key] = AnimatedArtwork(url: portrait, portrait: true);
+        return _cache[key] = AnimatedArtwork(url: portrait, portrait: true, squareUrl: square);
       }
       if (square != null) {
-        return _cache[key] = AnimatedArtwork(url: square, portrait: false);
+        return _cache[key] = AnimatedArtwork(url: square, portrait: false, squareUrl: square);
       }
     } catch (e) {
       debugPrint('[Orchid Artwork] Lookup failed: $e');

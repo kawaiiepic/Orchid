@@ -20,12 +20,12 @@ dependencies:
   media_kit: ^1.2.6
   media_kit_video: ^2.0.1
   media_kit_libs_video: ^1.0.7
-  just_audio: ^0.10.6
   audio_session: ^0.2.4
+  miniaudio_player:
+    git:
+      url: https://github.com/kawaiiepic/miniaudio_player.git
+      ref: 5e1631747507efc8e5137517f1008269818db116
   audio_service: ^0.18.19
-  just_audio_media_kit: ^2.1.0
-  media_kit_libs_linux: any
-  media_kit_libs_windows_audio: any
 
   shared_preferences: ^2.3.3
   cached_network_image: ^4.0.4
