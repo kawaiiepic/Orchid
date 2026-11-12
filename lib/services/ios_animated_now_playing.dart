@@ -35,7 +35,7 @@ class IosAnimatedNowPlaying {
       }
       return;
     }
-    if (!_ready || track == null) return;
+    if (!_ready || track == null || id == null) return;
     final now = DateTime.now();
     if (_lastRefresh != null &&
         now.difference(_lastRefresh!) < const Duration(seconds: 3)) return;
