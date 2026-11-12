@@ -6,50 +6,101 @@ import 'package:flutter/services.dart';
 import '../models/addon.dart';
 import 'animated_artwork_service.dart';
 import 'apple_artwork_service.dart';
+import 'player_service.dart';
 
-/// iOS 26 Now Playing animation. Regular lock-screen metadata remains owned by
-/// audio_service; this updates only Apple's animated-artwork property.
+/// Temporary iOS 26 diagnostic path: the Swift bridge exclusively owns
+/// MPNowPlayingInfoCenter, removing audio_service's competing metadata writer.
+/// Android and older iOS versions keep the existing audio_service implementation.
 class IosAnimatedNowPlaying {
   static const _channel =
       MethodChannel('dev.blossomvale.orchid/animated-now-playing');
+
+  static Future<bool> probeNativeMode() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return false;
+    try {
+      return await _channel.invokeMethod<bool>('nativeAvailable') ?? false;
+    } on MissingPluginException {
+      return false;
+    } catch (error) {
+      debugPrint('[Orchid Artwork] Native mode unavailable: $error');
+      return false;
+    }
+  }
+
+  PlayerService? _service;
   String? _trackId;
   int _revision = 0;
-  bool _ready = false;
+  int _metadataRevision = 0;
   Timer? _refresh;
-  DateTime? _lastRefresh;
+  StreamSubscription<dynamic>? _position;
+  StreamSubscription<dynamic>? _state;
   bool _disposed = false;
 
-  bool get _supported => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+  void attach(PlayerService service) {
+    detach();
+    _disposed = false;
+    _service = service;
+    _channel.setMethodCallHandler(_remoteCommand);
+    service.addListener(_sync);
+    _position = service.player.positionStream.listen((_) => _sync());
+    _state = service.player.playerStateStream.listen((_) => _sync());
+    _sync();
+  }
 
-  void update(TrackResult? track, String? id) {
-    if (!_supported || _disposed) return;
+  Future<void> _remoteCommand(MethodCall call) async {
+    final player = _service;
+    if (player == null) return;
+    switch (call.method) {
+      case 'play':
+        await player.player.play();
+      case 'pause':
+        await player.player.pause();
+      case 'next':
+        await player.playNext();
+      case 'previous':
+        await player.playPrevious();
+      case 'seek':
+        final value = call.arguments;
+        if (value is num) {
+          await player.seek(Duration(milliseconds: (value.toDouble() * 1000).round()));
+        }
+    }
+  }
+
+  void _sync() {
+    if (_disposed) return;
+    final service = _service;
+    if (service == null) return;
+    final track = service.current;
+    final id = track == null ? null : '${track.sourceId}:${track.id}';
     if (id != _trackId) {
       _trackId = id;
-      _ready = false;
-      _refresh?.cancel();
-      _lastRefresh = null;
       final revision = ++_revision;
-      unawaited(_invoke('clear'));
+      _refresh?.cancel();
       if (track != null && id != null) {
         unawaited(_load(track, id, revision));
       }
+    }
+
+    if (track == null) {
+      unawaited(_invoke('clear'));
       return;
     }
-    if (!_ready || track == null || id == null) return;
-    final now = DateTime.now();
-    if (_lastRefresh != null &&
-        now.difference(_lastRefresh!) < const Duration(seconds: 3)) return;
-    _lastRefresh = now;
-    _scheduleRefresh(id);
-  }
-
-  void _scheduleRefresh(String id) {
-    _refresh?.cancel();
-    _refresh = Timer(const Duration(milliseconds: 350), () {
-      if (!_disposed && _ready && _trackId == id) {
-        unawaited(_invoke('refresh'));
-      }
-    });
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (now - _metadataRevision < 900) return;
+    _metadataRevision = now;
+    unawaited(_invoke('nowPlaying', <String, dynamic>{
+      'id': id,
+      'title': track.title,
+      'artist': track.artist,
+      'album': track.album,
+      'artwork': track.artworkUrl ?? '',
+      'duration': (service.player.duration?.inMilliseconds ??
+          ((track.duration ?? 0) * 1000)) / 1000,
+      'elapsed': service.player.position.inMilliseconds / 1000,
+      'playing': service.player.playing,
+      'rate': service.player.speed,
+    }));
   }
 
   Future<void> _load(TrackResult track, String id, int revision) async {
@@ -65,48 +116,51 @@ class IosAnimatedNowPlaying {
       }
       if (preview == null || !preview.startsWith('https://') ||
           _disposed || revision != _revision) return;
-      await _invoke('set', <String, String>{
+      await _invoke('set', <String, dynamic>{
         'id': id, 'title': track.title, 'artist': track.artist,
         'video': video, 'preview': preview,
       });
       if (_disposed || revision != _revision) return;
-      _ready = true;
-      _lastRefresh = null;
-      _scheduleRefresh(id);
-      // One diagnostic snapshot per track. Native iOS reports whether the
-      // HLS package completed, the preview is ready, and the artwork key
-      // survived audio_service's Now Playing metadata updates.
+      _refresh = Timer(const Duration(seconds: 2), () {
+        if (!_disposed && _trackId == id) unawaited(_invoke('refresh'));
+      });
       unawaited(Future<void>.delayed(const Duration(seconds: 8), () async {
         if (_disposed || revision != _revision || _trackId != id) return;
         try {
           final status = await _channel.invokeMapMethod<String, dynamic>('status');
-          debugPrint('[Orchid Artwork] iOS animated lock-screen status: $status');
-        } on MissingPluginException {
-          // Older iOS devices show static artwork.
+          debugPrint('[Orchid Artwork] Native Now Playing status: $status');
         } catch (error) {
-          debugPrint('[Orchid Artwork] Cannot inspect iOS artwork: $error');
+          debugPrint('[Orchid Artwork] Native Now Playing status failed: $error');
         }
       }));
     } catch (error) {
-      debugPrint('[Orchid Artwork] Lock-screen animation failed: $error');
+      debugPrint('[Orchid Artwork] Animated cover lookup failed: $error');
     }
   }
 
-  Future<void> _invoke(String method, [Map<String, String>? arguments]) async {
+  Future<void> _invoke(String method, [Map<String, dynamic>? arguments]) async {
     try {
       await _channel.invokeMethod<void>(method, arguments);
-    } on MissingPluginException {
-      // iOS versions without the native animation bridge use static artwork.
     } catch (error) {
-      debugPrint('[Orchid Artwork] Now Playing $method: $error');
+      debugPrint('[Orchid Artwork] Native Now Playing $method failed: $error');
     }
+  }
+
+  void detach() {
+    final service = _service;
+    if (service != null) service.removeListener(_sync);
+    _service = null;
+    ++_revision;
+    _trackId = null;
+    _refresh?.cancel();
+    _position?.cancel();
+    _state?.cancel();
+    _channel.setMethodCallHandler(null);
+    unawaited(_invoke('clear'));
   }
 
   void dispose() {
+    detach();
     _disposed = true;
-    _trackId = null;
-    ++_revision;
-    _refresh?.cancel();
-    if (_supported) unawaited(_invoke('clear'));
   }
 }
