@@ -8,7 +8,6 @@ import 'orchid_audio_player.dart';
 import '../models/addon.dart';
 import 'player_service.dart';
 import 'apple_artwork_service.dart';
-import 'ios_animated_now_playing.dart';
 
 /// Bridges Orchid's miniaudio player to Android media controls,
 /// lock-screen artwork, headset buttons and iOS Control Center.
@@ -199,23 +198,11 @@ class OrchidAudioHandler extends BaseAudioHandler {
   }
 }
 
-/// Android uses audio_service. iOS 26 can temporarily use native Now Playing
-/// exclusively, for isolating the animated artwork integration.
+/// Uses audio_service for Android and iOS system media controls.
 class OrchidBackgroundAudio {
   static OrchidAudioHandler? handler;
-  static bool nativeIosMode = false;
-  static final IosAnimatedNowPlaying _nativeIos = IosAnimatedNowPlaying();
 
   static Future<void> initialize() async {
-    nativeIosMode = await IosAnimatedNowPlaying.probeNativeMode();
-    if (nativeIosMode) {
-      // Keep the normal playback audio session while disabling only
-      // audio_service's competing iOS Now Playing metadata writer.
-      final session = await AudioSession.instance;
-      await session.configure(AudioSessionConfiguration.music());
-      debugPrint('[Orchid Audio] Isolating iOS 26 Now Playing from audio_service');
-      return;
-    }
     if (handler != null) return;
     handler = await AudioService.init<OrchidAudioHandler>(
       builder: OrchidAudioHandler.new,
@@ -229,18 +216,6 @@ class OrchidBackgroundAudio {
     await handler!.configureSession();
   }
 
-  static void attach(PlayerService service) {
-    if (nativeIosMode) {
-      _nativeIos.attach(service);
-    } else {
-      handler?.attach(service);
-    }
-  }
-  static void detach() {
-    if (nativeIosMode) {
-      _nativeIos.detach();
-    } else {
-      handler?.detach();
-    }
-  }
+  static void attach(PlayerService service) => handler?.attach(service);
+  static void detach() => handler?.detach();
 }
