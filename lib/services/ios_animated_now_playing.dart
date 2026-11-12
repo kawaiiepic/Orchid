@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 
 import '../models/addon.dart';
 import 'animated_artwork_service.dart';
-import 'apple_artwork_service.dart';
 import 'player_service.dart';
 
 /// Temporary iOS 26 diagnostic path: the Swift bridge exclusively owns
@@ -109,16 +108,12 @@ class IosAnimatedNowPlaying {
         artist: track.artist, album: track.album, title: track.title);
       final video = animation?.squareUrl;
       if (video == null || _disposed || revision != _revision) return;
-      var preview = track.artworkUrl;
-      if (preview == null || !preview.startsWith('https://')) {
-        preview = await AppleArtworkService.instance.trackOrAlbum(
-          artist: track.artist, title: track.title, album: track.album);
-      }
-      if (preview == null || !preview.startsWith('https://') ||
-          _disposed || revision != _revision) return;
+      if (_disposed || revision != _revision) return;
+      // The native bridge now decodes frame zero from this same video for
+      // the animated preview. The static album cover stays independent.
       await _invoke('set', <String, dynamic>{
         'id': id, 'title': track.title, 'artist': track.artist,
-        'video': video, 'preview': preview,
+        'video': video,
       });
       if (_disposed || revision != _revision) return;
       _refresh = Timer(const Duration(seconds: 2), () {
