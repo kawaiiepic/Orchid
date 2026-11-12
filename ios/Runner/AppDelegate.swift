@@ -167,15 +167,14 @@ private final class OrchidLockScreenArtwork: NSObject, AVAssetDownloadDelegate {
       // Warm both assets while the song is playing. Apple may request them
       // immediately after the lock screen appears, so avoid starting the
       // network download inside its request callback.
-      loadPreview(for: next) { [weak self] _ in
-        guard let self, self.cover?.id == next.id,
-              self.cover?.hls == next.hls else { return }
-        self.apply()
-      }
       loadVideo(for: next) { [weak self] localURL in
         guard let self, self.cover?.id == next.id,
-              self.cover?.hls == next.hls else { return }
-        if localURL != nil { self.apply() }
+              self.cover?.hls == next.hls, localURL != nil else { return }
+        self.loadPreview(for: next) { [weak self] image in
+          guard let self, self.cover?.id == next.id,
+                self.cover?.hls == next.hls, image != nil else { return }
+          self.apply()
+        }
       }
       apply()
       result(nil)
@@ -218,7 +217,7 @@ private final class OrchidLockScreenArtwork: NSObject, AVAssetDownloadDelegate {
           (info[MPMediaItemPropertyArtist] as? String) == cover.artist else { return }
     // Publishing too early can cause iOS to settle on the static cover.
     let key = cover.hls.absoluteString
-    guard previewImages[cover.id] != nil,
+    guard previewImages[key] != nil,
           let local = localAssets[key],
           FileManager.default.fileExists(atPath: local.path) else { return }
     if animatedArtwork == nil {
@@ -237,43 +236,54 @@ private final class OrchidLockScreenArtwork: NSObject, AVAssetDownloadDelegate {
     log("Published ready 1x1 animated artwork to Now Playing")
   }
 
+  /// Preview the first decoded frame of the exact local video Apple plays.
   private func loadPreview(for cover: Cover, completion: @escaping (UIImage?) -> Void) {
-    DispatchQueue.main.async {
-      if let image = self.previewImages[cover.id] {
-        completion(image)
-        return
-      }
-      URLSession.shared.dataTask(with: cover.preview) { data, _, error in
-        let downloaded = error == nil ? data.flatMap(UIImage.init(data:)) : nil
-        // A rectangular image can cause iOS to ignore 1x1 animated artwork.
-        let image: UIImage?
-        if let source = downloaded {
-          let side = min(source.size.width, source.size.height)
-          let format = UIGraphicsImageRendererFormat()
-          format.scale = 1
-          image = UIGraphicsImageRenderer(
-            size: CGSize(width: side, height: side), format: format
-          ).image { _ in
-            source.draw(at: CGPoint(
-              x: (side - source.size.width) / 2,
-              y: (side - source.size.height) / 2
-            ))
+    let key = cover.hls.absoluteString
+    if let cached = previewImages[key] {
+      completion(cached)
+      return
+    }
+    guard let local = localAssets[key],
+          FileManager.default.fileExists(atPath: local.path) else {
+      completion(nil)
+      return
+    }
+
+    // Loading an offline HLS package may block; decode away from main.
+    DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+      let asset = AVURLAsset(url: local)
+      let generator = AVAssetImageGenerator(asset: asset)
+      generator.appliesPreferredTrackTransform = true
+      generator.requestedTimeToleranceBefore = .zero
+      generator.requestedTimeToleranceAfter = .zero
+      do {
+        var actualTime = CMTime.zero
+        let frame = try generator.copyCGImage(at: .zero, actualTime: &actualTime)
+        let aspect = Double(frame.width) / Double(frame.height)
+        // Never crop only the preview. That would no longer match the video.
+        guard abs(aspect - 1.0) < 0.025 else {
+          DispatchQueue.main.async {
+            self?.lastError = "Animated video is not square (aspect \(aspect))"
+            self?.log(self?.lastError ?? "Video aspect mismatch")
+            completion(nil)
           }
-        } else {
-          image = nil
+          return
         }
+        let image = UIImage(cgImage: frame)
         DispatchQueue.main.async {
-          if let image {
-            self.previewImages[cover.id] = image
-            self.previewReady = true
-            self.log("Square preview ready")
-          } else {
-            self.lastError = "Preview download or decoding failed"
-            self.log(self.lastError!)
-          }
+          guard let self else { completion(nil); return }
+          self.previewImages[key] = image
+          self.previewReady = true
+          self.log("First-frame preview decoded from local animated video")
           completion(image)
         }
-      }.resume()
+      } catch {
+        DispatchQueue.main.async {
+          self?.lastError = "First video frame extraction failed: \(error.localizedDescription)"
+          self?.log(self?.lastError ?? "First frame decode failed")
+          completion(nil)
+        }
+      }
     }
   }
 
