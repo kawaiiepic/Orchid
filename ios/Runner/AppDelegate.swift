@@ -47,7 +47,7 @@ private final class OrchidLockScreenArtwork: NSObject, AVAssetDownloadDelegate {
   private var downloadLocations: [Int: URL] = [:]
   private var lastError: String?
   private var previewReady = false
-  private weak var flutterChannel: FlutterMethodChannel?
+  private var flutterChannel: FlutterMethodChannel?
   private var currentTrackId: String?
   private var staticArtworkId: String?
 
@@ -152,7 +152,7 @@ private final class OrchidLockScreenArtwork: NSObject, AVAssetDownloadDelegate {
             let artist = args["artist"],
             let video = URL(string: args["video"] ?? ""),
             video.scheme == "https", video.pathExtension.lowercased() == "m3u8",
-            let preview = URL(string: args["preview"] ?? ""),
+            let preview = URL(string: args["preview"] ?? "https://example.invalid/"),
             preview.scheme == "https" else {
         result(FlutterError(code: "invalid_artwork", message: "Expected HTTPS HLS and preview URLs", details: nil))
         return
