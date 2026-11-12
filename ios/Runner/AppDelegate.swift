@@ -45,6 +45,12 @@ private final class OrchidLockScreenArtwork: NSObject, AVAssetDownloadDelegate {
   private var pendingVideo: [String: [(URL?) -> Void]] = [:]
   private var taskKeys: [Int: String] = [:]
   private var downloadLocations: [Int: URL] = [:]
+  private var lastError: String?
+  private var previewReady = false
+
+  private func log(_ message: String) {
+    NSLog("[Orchid Animated Artwork] %@", message)
+  }
 
   private lazy var downloads: AVAssetDownloadURLSession = {
     let configuration = URLSessionConfiguration.background(
@@ -75,6 +81,8 @@ private final class OrchidLockScreenArtwork: NSObject, AVAssetDownloadDelegate {
       if cover?.id != next.id || cover?.hls != next.hls || cover?.preview != next.preview {
         cover = next
         animatedArtwork = nil
+        previewReady = false
+        lastError = nil
       }
       // Warm both assets while the song is playing. Apple may request them
       // immediately after the lock screen appears, so avoid starting the
@@ -91,6 +99,17 @@ private final class OrchidLockScreenArtwork: NSObject, AVAssetDownloadDelegate {
       }
       apply()
       result(nil)
+    case "status":
+      let key = cover?.hls.absoluteString
+      result([
+        "track": cover?.id ?? "",
+        "supported": MPNowPlayingInfoCenter.supportedAnimatedArtworkKeys.contains(MPNowPlayingInfoProperty1x1AnimatedArtwork),
+        "previewReady": previewReady,
+        "videoReady": key.flatMap { localAssets[$0] }.map { FileManager.default.fileExists(atPath: $0.path) } ?? false,
+        "downloading": key.flatMap { pendingVideo[$0] } != nil,
+        "lastError": lastError ?? "",
+        "metadataAttached": MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPNowPlayingInfoProperty1x1AnimatedArtwork] != nil
+      ] as [String: Any])
     case "refresh":
       apply()
       result(nil)
@@ -138,9 +157,33 @@ private final class OrchidLockScreenArtwork: NSObject, AVAssetDownloadDelegate {
         return
       }
       URLSession.shared.dataTask(with: cover.preview) { data, _, error in
-        let image = error == nil ? data.flatMap(UIImage.init(data:)) : nil
+        let downloaded = error == nil ? data.flatMap(UIImage.init(data:)) : nil
+        // A rectangular image can cause iOS to ignore 1x1 animated artwork.
+        let image: UIImage?
+        if let source = downloaded {
+          let side = min(source.size.width, source.size.height)
+          let format = UIGraphicsImageRendererFormat()
+          format.scale = 1
+          image = UIGraphicsImageRenderer(
+            size: CGSize(width: side, height: side), format: format
+          ).image { _ in
+            source.draw(at: CGPoint(
+              x: (side - source.size.width) / 2,
+              y: (side - source.size.height) / 2
+            ))
+          }
+        } else {
+          image = nil
+        }
         DispatchQueue.main.async {
-          if let image { self.previewImages[cover.id] = image }
+          if let image {
+            self.previewImages[cover.id] = image
+            self.previewReady = true
+            self.log("Square preview ready")
+          } else {
+            self.lastError = "Preview download or decoding failed"
+            self.log(self.lastError!)
+          }
           completion(image)
         }
       }.resume()
@@ -152,6 +195,15 @@ private final class OrchidLockScreenArtwork: NSObject, AVAssetDownloadDelegate {
       let key = cover.hls.absoluteString
       if let local = self.localAssets[key],
          FileManager.default.fileExists(atPath: local.path) {
+        self.log("Serving cached HLS animated artwork")
+        completion(local)
+        return
+      }
+      if let saved = UserDefaults.standard.string(forKey: "orchid.artwork." + key),
+         let local = URL(string: saved),
+         FileManager.default.fileExists(atPath: local.path) {
+        self.localAssets[key] = local
+        self.log("Restored cached HLS animated artwork from disk")
         completion(local)
         return
       }
@@ -168,6 +220,7 @@ private final class OrchidLockScreenArtwork: NSObject, AVAssetDownloadDelegate {
         return
       }
       self.taskKeys[task.taskIdentifier] = key
+      self.log("Starting HLS animated artwork download")
       task.resume()
     }
   }
@@ -175,6 +228,10 @@ private final class OrchidLockScreenArtwork: NSObject, AVAssetDownloadDelegate {
   private func finishVideo(key: String, localURL: URL?) {
     if let localURL, FileManager.default.fileExists(atPath: localURL.path) {
       localAssets[key] = localURL
+      UserDefaults.standard.set(localURL.absoluteString, forKey: "orchid.artwork." + key)
+      log("HLS animated artwork download completed: \(localURL.lastPathComponent)")
+    } else {
+      log("No valid local HLS artwork asset found")
     }
     let callbacks = pendingVideo.removeValue(forKey: key) ?? []
     callbacks.forEach { $0(localAssets[key]) }
@@ -195,6 +252,13 @@ private final class OrchidLockScreenArtwork: NSObject, AVAssetDownloadDelegate {
                   didCompleteWithError error: Error?) {
     guard let key = taskKeys.removeValue(forKey: task.taskIdentifier) else { return }
     let local = error == nil ? downloadLocations[task.taskIdentifier] : nil
+    if let error {
+      lastError = "HLS download failed: \(error.localizedDescription)"
+      log(lastError!)
+    } else if local == nil {
+      lastError = "HLS download completed without a local package URL"
+      log(lastError!)
+    }
     downloadLocations.removeValue(forKey: task.taskIdentifier)
     finishVideo(key: key, localURL: local)
   }
