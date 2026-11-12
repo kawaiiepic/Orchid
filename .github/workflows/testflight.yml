@@ -40,6 +40,19 @@ jobs:
       - name: Resolve Flutter packages
         run: flutter pub get
 
+      - name: Analyze Dart source
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      # Caches CocoaPods' download cache (not the Pods folder), keyed on pubspec.lock.
+      # Safe without a committed Podfile.lock: a stale entry only means re-downloading.
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/CocoaPods
+          key: pods-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
+          restore-keys: |
+            pods-${{ runner.os }}-
+
       # miniaudio_player_rust compiles its C bridge as plain C on iOS, but miniaudio's
       # iOS backend is Objective-C. Patch the checked-out build.rs so it compiles as
       # Objective-C and links the needed frameworks. Idempotent (the pub cache is cached).
