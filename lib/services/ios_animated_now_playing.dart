@@ -73,6 +73,20 @@ class IosAnimatedNowPlaying {
       _ready = true;
       _lastRefresh = null;
       _scheduleRefresh(id);
+      // One diagnostic snapshot per track. Native iOS reports whether the
+      // HLS package completed, the preview is ready, and the artwork key
+      // survived audio_service's Now Playing metadata updates.
+      unawaited(Future<void>.delayed(const Duration(seconds: 8), () async {
+        if (_disposed || revision != _revision || _trackId != id) return;
+        try {
+          final status = await _channel.invokeMapMethod<String, dynamic>('status');
+          debugPrint('[Orchid Artwork] iOS animated lock-screen status: $status');
+        } on MissingPluginException {
+          // Older iOS devices show static artwork.
+        } catch (error) {
+          debugPrint('[Orchid Artwork] Cannot inspect iOS artwork: $error');
+        }
+      }));
     } catch (error) {
       debugPrint('[Orchid Artwork] Lock-screen animation failed: $error');
     }
