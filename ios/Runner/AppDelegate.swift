@@ -36,7 +36,6 @@ private final class OrchidLockScreenArtwork: NSObject, AVAssetDownloadDelegate {
     let title: String
     let artist: String
     let hls: URL
-    let preview: URL
   }
   private var cover: Cover?
   private var animatedArtwork: MPMediaItemAnimatedArtwork?
@@ -151,14 +150,12 @@ private final class OrchidLockScreenArtwork: NSObject, AVAssetDownloadDelegate {
             let id = args["id"], let title = args["title"],
             let artist = args["artist"],
             let video = URL(string: args["video"] ?? ""),
-            video.scheme == "https", video.pathExtension.lowercased() == "m3u8",
-            let preview = URL(string: args["preview"] ?? "https://example.invalid/"),
-            preview.scheme == "https" else {
-        result(FlutterError(code: "invalid_artwork", message: "Expected HTTPS HLS and preview URLs", details: nil))
+            video.scheme == "https", video.pathExtension.lowercased() == "m3u8" else {
+        result(FlutterError(code: "invalid_artwork", message: "Expected HTTPS HLS URL", details: nil))
         return
       }
-      let next = Cover(id: id, title: title, artist: artist, hls: video, preview: preview)
-      if cover?.id != next.id || cover?.hls != next.hls || cover?.preview != next.preview {
+      let next = Cover(id: id, title: title, artist: artist, hls: video)
+      if cover?.id != next.id || cover?.hls != next.hls {
         cover = next
         animatedArtwork = nil
         previewReady = false
