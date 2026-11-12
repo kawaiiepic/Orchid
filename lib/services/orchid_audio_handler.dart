@@ -16,7 +16,6 @@ import 'ios_animated_now_playing.dart';
 class OrchidAudioHandler extends BaseAudioHandler {
   PlayerService? _service;
   int _artworkGeneration = 0;
-  final IosAnimatedNowPlaying _animatedArtwork = IosAnimatedNowPlaying();
   AudioSession? _session;
   StreamSubscription<OrchidPlayerState>? _playbackSubscription;
   StreamSubscription<Duration>? _positionSubscription;
@@ -44,7 +43,6 @@ class OrchidAudioHandler extends BaseAudioHandler {
     if (service != null) service.removeListener(_sync);
     _service = null;
     ++_artworkGeneration;
-    _animatedArtwork.update(null, null);
     unawaited(_playbackSubscription?.cancel() ?? Future<void>.value());
     unawaited(_positionSubscription?.cancel() ?? Future<void>.value());
     unawaited(_durationSubscription?.cancel() ?? Future<void>.value());
@@ -159,7 +157,6 @@ class OrchidAudioHandler extends BaseAudioHandler {
           ? service.queueIndex
           : null,
     ));
-    _animatedArtwork.update(track, id);
   }
 
   @override
@@ -199,7 +196,6 @@ class OrchidAudioHandler extends BaseAudioHandler {
 
   void disposeHandler() {
     detach();
-    _animatedArtwork.dispose();
   }
 }
 
