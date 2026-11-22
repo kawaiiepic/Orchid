@@ -545,8 +545,8 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: ee93fd0cf555266f47c2007c46706b8e4497c534
-      resolved-ref: ee93fd0cf555266f47c2007c46706b8e4497c534
+      ref: "5e1631747507efc8e5137517f1008269818db116"
+      resolved-ref: "5e1631747507efc8e5137517f1008269818db116"
       url: "https://github.com/kawaiiepic/miniaudio_player.git"
     source: git
     version: "3.0.2"
