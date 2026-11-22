@@ -1,6 +1,8 @@
 name: Orchid iOS / TestFlight
 
 on:
+  push:
+    branches: ['release/testflight-d0e82ce']
   workflow_dispatch:
     inputs:
       upload_testflight:
@@ -118,7 +120,7 @@ jobs:
         run: flutter build ios --release --no-codesign -v
 
       - name: Install App Store signing identity
-        if: ${{ github.event_name == 'workflow_dispatch' }}
+        if: ${{ github.event_name != 'pull_request' }}
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
           P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
@@ -159,7 +161,7 @@ jobs:
       # One command does build + archive + export. -v is verbose so any Rust/linker
       # error shows up in the log; remove it once the build is stable.
       - name: Archive and export signed IPA
-        if: ${{ github.event_name == 'workflow_dispatch' }}
+        if: ${{ github.event_name != 'pull_request' }}
         env:
           BUILD_NAME: "0.1.0"
           BUILD_NUMBER: ${{ github.run_number }}
@@ -178,7 +180,7 @@ jobs:
           echo "IPA_PATH=$IPA_PATH" >> "$GITHUB_ENV"
 
       - name: Preserve signed IPA
-        if: ${{ github.event_name == 'workflow_dispatch' }}
+        if: ${{ github.event_name != 'pull_request' }}
         uses: actions/upload-artifact@v7
         with:
           name: orchid-ios-ipa
@@ -186,7 +188,7 @@ jobs:
           archive: false
 
       - name: Upload to TestFlight
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.upload_testflight }}
+        if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.upload_testflight) }}
         uses: apple-actions/upload-testflight-build@v5
         with:
           app-path: ${{ env.IPA_PATH }}
