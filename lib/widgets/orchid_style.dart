@@ -1,8 +1,21 @@
 import 'dart:ui' show ImageFilter;
+import 'package:flutter/cupertino.dart' show CupertinoActivityIndicator;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart' as glass;
 import 'package:sizer/sizer.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
+
+class OrchidLoadingIndicator extends StatelessWidget {
+  const OrchidLoadingIndicator({super.key, this.color = const Color(0xFFF7EDFF)});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: 'Loading',
+    child: CupertinoActivityIndicator(radius: 9, color: color),
+  );
+}
 
 /// Compact iOS-style glass navigation button with a true circular shape.
 class OrchidBackButton extends StatelessWidget {
@@ -114,8 +127,9 @@ class OrchidSectionHeader extends StatelessWidget {
   final String title;
   final String? subtitle;
   final Widget? trailing;
+  final double? titleSize;
   const OrchidSectionHeader({
-    super.key, required this.title, this.subtitle, this.trailing,
+    super.key, required this.title, this.subtitle, this.trailing, this.titleSize,
   });
 
   @override
@@ -138,7 +152,7 @@ class OrchidSectionHeader extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(title, style: TextStyle(
-              fontSize: compact ? 15 : 18,
+              fontSize: titleSize ?? (compact ? 15 : 18),
               fontWeight: FontWeight.w600,
               color: const Color(0xFFF7EDFF),
             )),

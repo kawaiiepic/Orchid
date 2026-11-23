@@ -33,6 +33,17 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
   bool _mobileLyrics = false;
   bool _mobileVideoReady = false;
   bool _mobileControlsHidden = false;
+  double _dismissDrag = 0;
+
+  void _startDismiss(DragStartDetails _) => _dismissDrag = 0;
+  void _updateDismiss(DragUpdateDetails details) =>
+      _dismissDrag += details.primaryDelta ?? 0;
+  void _endDismiss(DragEndDetails details) {
+    if (_dismissDrag > 65 ||
+        (_dismissDrag > 14 && (details.primaryVelocity ?? 0) > 450)) {
+      Navigator.of(context).maybePop();
+    }
+  }
   bool _animatedEnabled = true;
   bool _animationFailed = false;
   static const _animatedPreferenceKey = 'orchid_animated_artwork_enabled';
@@ -554,16 +565,29 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
               )),
             ),
           )),
-          if (_mobileControlsHidden)
-            Positioned.fill(
-              child: GestureDetector(
+          Positioned.fill(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween(begin: const Offset(0, .025), end: Offset.zero)
+                      .animate(animation),
+                  child: child,
+                ),
+              ),
+              child: _mobileControlsHidden ? GestureDetector(
+                key: const ValueKey('clean-player'),
                 behavior: HitTestBehavior.opaque,
+                onVerticalDragStart: _startDismiss,
+                onVerticalDragUpdate: _updateDismiss,
+                onVerticalDragEnd: _endDismiss,
                 onTap: () => setState(() => _mobileControlsHidden = false),
                 child: Stack(children: [
                   const SizedBox.expand(),
                   // Give synced karaoke lyrics the full available canvas while
                   // reserving the bottom strip for song and artist details.
-                  Positioned.fill(
+                  if (_mobileLyrics) Positioned.fill(
                     left: 18, right: 18, top: 12, bottom: 120,
                     child: SafeArea(
                       bottom: false,
@@ -582,9 +606,8 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                     ),
                   ),
                 ]),
-              ),
-            )
-          else SafeArea(
+              ) : SafeArea(
+            key: const ValueKey('normal-player'),
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
               onTap: () => setState(() => _mobileControlsHidden = true),
@@ -601,7 +624,12 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(children: [
+                      GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onVerticalDragStart: _startDismiss,
+                        onVerticalDragUpdate: _updateDismiss,
+                        onVerticalDragEnd: _endDismiss,
+                        child: Row(children: [
                         GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: () => Navigator.of(context).maybePop(),
@@ -628,7 +656,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                               fontWeight: FontWeight.w600)),
                         ])),
                         const SizedBox(width: 42),
-                      ]),
+                      ])),
                       SizedBox(height: compact ? 16 : 22),
                       SizedBox.square(
                         dimension: coverSize,
@@ -730,7 +758,10 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                           _mobileTransport(
                             LucideIcons.skipBack,
                             () => widget.player.playPrevious(), 43),
-                          _mobileTransport(
+                          if (widget.player.playbackLoading)
+                            const SizedBox.square(dimension: 58,
+                              child: Center(child: OrchidLoadingIndicator()))
+                          else _mobileTransport(
                             widget.player.player.playing
                                 ? LucideIcons.pause : LucideIcons.play,
                             widget.player.togglePlayPause, 58),
@@ -762,6 +793,8 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
               );
             }),
             ),
+          ),
+          ),
           ),
         ]),
       ),
@@ -1045,7 +1078,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                         sizing: StackFit.expand,
                         children: [
                           _animatedArtworkBody(scheme),
-                          _lyricsBody(),
+                          if (_viewMode == 0) _lyricsBody() else const SizedBox.shrink(),
                         ],
                       ),
                     ),

@@ -34,6 +34,8 @@ class _ShellScreenState extends State<ShellScreen>{
  final _account=OrchidAccount();
  final _library=MusicLibrary();
  final _contentRevision=ValueNotifier<int>(0);
+ final _homeScroll=ScrollController();
+ String? _lastPlaybackError;
  String? _libraryUser;
  String? _addonsUser;
  late final PlayerService _player;
@@ -77,7 +79,14 @@ class _ShellScreenState extends State<ShellScreen>{
   _contentRevision.value++;
  }
  void _selectTab(int index) {
-  orchidContentNavigatorKey.currentState?.popUntil((route) => route.isFirst);
+  final nav=orchidContentNavigatorKey.currentState;
+  final reselectHome=index==0 && selected==const ValueKey(0) &&
+      !(nav?.canPop() ?? false);
+  nav?.popUntil((route) => route.isFirst);
+  if(reselectHome && _homeScroll.hasClients) {
+   _homeScroll.animateTo(0, duration:const Duration(milliseconds:300),
+       curve:Curves.easeOutCubic);
+  }
   setState(() {
    selected=ValueKey(index);
    if (index == 4) _selectedPlaylistId = null;
@@ -136,6 +145,14 @@ class _ShellScreenState extends State<ShellScreen>{
   }
  }
  void _trackChanged(){
+  final failure=_player.error;
+  if(failure!=null && failure!=_lastPlaybackError && mounted && _account.signedIn) {
+   showToast(context:context, location:ToastLocation.topCenter,
+     builder:(context, overlay) =>
+     const Card(child:Padding(padding:EdgeInsets.all(14),
+       child:Text('Could not load this song. Try again or choose another track.'))));
+  }
+  _lastPlaybackError=failure;
   if(_trackGeneration==_player.lyricsGeneration)return;
   _trackGeneration=_player.lyricsGeneration;
   _scrobbled=false;_maxPositionSeconds=0;
@@ -186,6 +203,7 @@ class _ShellScreenState extends State<ShellScreen>{
  }
  @override void dispose(){
   _positionSubscription?.cancel();_player.removeListener(_trackChanged);
+  _homeScroll.dispose();
   _contentRevision.dispose();
   OrchidBackgroundAudio.detach();
   if(identical(OrchidConnect.active,_connect))OrchidConnect.active=null;
@@ -202,7 +220,7 @@ class _ShellScreenState extends State<ShellScreen>{
         ? OrchidStyle.pink
         : const Color(0xFFF8F6FC)),
     onTap: () {
-      if (_iosDockCollapsed) {
+      if (_iosDockCollapsed && !(page == 0 && index == 0)) {
         setState(() {
           _iosDockCollapsed = false;
           _verticalScrollAccum = 0;
@@ -401,7 +419,8 @@ class _ShellScreenState extends State<ShellScreen>{
       player:_player,addonService:_addonService,addons:_addons,account:_account,
       openExplore:()=>_selectTab(3),
       openProfile:_openProfile,
-      openLibrary:()=>_selectTab(2),
+      openPlaylist:_selectPlaylist,
+      scrollController:_homeScroll,
       openAiDj:()=>_selectTab(7),
       openRadio:()=>_selectTab(6),
       openTopSongs:()=>_selectTab(8),
@@ -466,7 +485,10 @@ class _ShellScreenState extends State<ShellScreen>{
 
  @override Widget build(BuildContext context){
   if(_account.loading){
-   return const SafeArea(child:Scaffold(child:Center(child:Text('Checking your Petal session…'))));
+   return const SafeArea(child:Scaffold(child:Center(child:Row(
+    mainAxisSize:MainAxisSize.min,children:[OrchidLoadingIndicator(),
+    SizedBox(width:8),Text('Checking your Petal session…')],
+   ))));
   }
   if(!_account.signedIn){
    if(_account.hasStoredSession){
@@ -522,10 +544,10 @@ class _ShellScreenState extends State<ShellScreen>{
             begin:Alignment.topLeft,
             end:Alignment.bottomRight,
             colors:[
-              Color(0xFF6E6C90),
-              Color(0xFF624E78),
-              Color(0xFF512A50),
-              Color(0xFF302637),
+              Color(0xFF323044),
+              Color(0xFF2C2038),
+              Color(0xFF251527),
+              Color(0xFF17121D),
             ],
             stops:[0,0.32,0.72,1],
           ),
@@ -578,10 +600,10 @@ class _ShellScreenState extends State<ShellScreen>{
       begin:Alignment.topLeft,
       end:Alignment.bottomRight,
       colors:[
-       Color(0xFF2D1B36),
-       Color(0xFF24152D),
-       Color(0xFF130F1A),
-       Color(0xFF0D0D15),
+       Color(0xFF211429),
+       Color(0xFF1A1021),
+       Color(0xFF100C15),
+       Color(0xFF0A0A11),
       ],
       stops:[0,0.32,0.72,1],
      ),

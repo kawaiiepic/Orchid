@@ -129,6 +129,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                         const SizedBox(height: 7),
                         SizedBox(width: 130, child: Text(
                           (item['title'] ?? '').toString(),
+                          style: const TextStyle(fontSize: 13),
                           maxLines: 1, overflow: TextOverflow.ellipsis)),
                         SizedBox(width: 130, child: Text(
                           (item['artist'] ?? '').toString(),
@@ -221,6 +222,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                     const SizedBox(height: 7),
                     SizedBox(width: 130, child: Text(
                       (item['name'] ?? '').toString(),
+                      style: const TextStyle(fontSize: 13),
                       maxLines: 1, overflow: TextOverflow.ellipsis)),
                     SizedBox(width: 130, child: Text(
                       (item['artist'] ?? '').toString(),
@@ -260,23 +262,27 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       )),
       const SizedBox(height: 24),
       if (loading && home == null)
-        const Text('Discovering music…').muted(),
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          const OrchidLoadingIndicator(),
+          const SizedBox(width: 8),
+          const Text('Discovering music…').muted(),
+        ]),
       if (error != null) ...[
         Text('Discover is unavailable right now.').muted(),
         OutlineButton(onPressed: _refresh, child: const Text('Try again')),
       ],
       if (home != null) ...[
-        _pageInset(const OrchidSectionHeader(title: 'Artists to Explore')),
+        _pageInset(const OrchidSectionHeader(title: 'Artists to Explore', titleSize: 14)),
         const SizedBox(height: 12),
         _artists(),
         SizedBox(height: MediaQuery.sizeOf(context).width < 850 ? 30 : 22),
         if (_items('featuredAlbums').isNotEmpty) ...[
-          _pageInset(const OrchidSectionHeader(title: 'Featured Albums')),
+          _pageInset(const OrchidSectionHeader(title: 'Featured Albums', titleSize: 14)),
           const SizedBox(height: 12),
           _albums(),
           const SizedBox(height: 22),
         ],
-        _pageInset(const OrchidSectionHeader(title: 'Popular Right Now')),
+        _pageInset(const OrchidSectionHeader(title: 'Popular Right Now', titleSize: 14)),
         const SizedBox(height: 8),
         _tracks(),
       ],

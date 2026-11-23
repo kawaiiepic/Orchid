@@ -1,6 +1,13 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:flutter/cupertino.dart' show CupertinoPageRoute;
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:liquid_glass_widgets/liquid_glass_widgets.dart' as glass;
 import 'orchid_style.dart';
+
+PageRoute<void> _orchidPageRoute(WidgetBuilder builder) =>
+    !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS
+        ? CupertinoPageRoute<void>(builder: builder)
+        : ShadcnPageRoute<void>(builder: builder);
 
 /// Shared content navigator keeps sidebar and mini-player outside page routes.
 final orchidContentNavigatorKey = GlobalKey<NavigatorState>();
@@ -15,10 +22,9 @@ void showContentDrawer(
   bool fullWidth = true,
 }) {
   (orchidContentNavigatorKey.currentState ?? Navigator.of(context))
-      .push(ShadcnPageRoute<void>(
-    // The shell already paints the app-wide gradient. Avoid a second,
-    // differently scaled gradient when a detail page replaces its content.
-    builder: (pageContext) => SafeArea(
+      .push(_orchidPageRoute(
+    // Detail pages share the background of the app shell.
+    (pageContext) => SafeArea(
       child: Builder(builder: builder),
     ),
   ));
@@ -32,9 +38,7 @@ void dismissContentDrawer(BuildContext context) {
 
 /// The expanded music player is deliberately above the entire app shell.
 void showFullScreenPlayer(BuildContext context, WidgetBuilder builder) {
-  Navigator.of(context, rootNavigator: true).push(ShadcnPageRoute<void>(
-    builder: (pageContext) => Builder(builder: builder),
-  ));
+  Navigator.of(context, rootNavigator: true).push(_orchidPageRoute(builder));
 }
 
 /// Native Liquid Glass mobile action drawer, using the package's modal
