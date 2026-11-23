@@ -8,13 +8,18 @@ import '../services/player_service.dart';
 import 'content_drawer.dart';
 
 /// Device outputs, Orchid Connect handoff and shared listening controls.
-void showAudioConnectSheet(BuildContext context, PlayerService player) {
+void showAudioConnectSheet(
+  BuildContext context,
+  PlayerService player, {
+  bool listenTogether = false,
+}) {
   showOrchidActionDrawer(
     context,
     maxHeightFraction: .84,
     builder: (sheetContext, close) => _AudioConnectSheet(
       player: player,
       close: close,
+      listenTogether: listenTogether,
     ),
   );
 }
@@ -22,7 +27,12 @@ void showAudioConnectSheet(BuildContext context, PlayerService player) {
 class _AudioConnectSheet extends StatefulWidget {
   final PlayerService player;
   final VoidCallback close;
-  const _AudioConnectSheet({required this.player, required this.close});
+  final bool listenTogether;
+  const _AudioConnectSheet({
+    required this.player,
+    required this.close,
+    required this.listenTogether,
+  });
 
   @override
   State<_AudioConnectSheet> createState() => _AudioConnectSheetState();
@@ -42,7 +52,8 @@ class _AudioConnectSheetState extends State<_AudioConnectSheet> {
   @override
   void initState(){
     super.initState();
-    _loadOutputs();
+    _jamExpanded = widget.listenTogether;
+    if (!widget.listenTogether) _loadOutputs();
   }
   Future<void> _loadOutputs() async{
     if(kIsWeb)return;
@@ -81,6 +92,7 @@ class _AudioConnectSheetState extends State<_AudioConnectSheet> {
     builder:(context,_) {
       final others=connect.devices.where((d)=>d['id']!=connect.deviceId).toList();
       return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        if (!widget.listenTogether) ...[
         _section('Your Devices'),
         if(!connect.account.signedIn)
           _tile(LucideIcons.logIn,'Sign in to Orchid',
@@ -101,10 +113,15 @@ class _AudioConnectSheetState extends State<_AudioConnectSheet> {
             onTap:connect.working?null:()=>_run(()=>connect.transferTo(device['id'] as String)),
             trailing:const Icon(LucideIcons.chevronRight,color:Color(0xFF99999F)),
           ),
+        ],
         if(connect.error!=null)
           Padding(padding:const EdgeInsets.symmetric(horizontal:18,vertical:6),
             child:Text(connect.error!,style:const TextStyle(fontSize:12,color:Color(0xFFF6B1B1)))),
-        _section('Listen Together'),
+        if (widget.listenTogether && !connect.account.signedIn)
+          _tile(LucideIcons.logIn, 'Sign in to Orchid',
+            'An account is required to start or join a Jam'),
+        if (connect.account.signedIn) ...[
+        if (!widget.listenTogether) _section('Listen Together'),
         _tile(LucideIcons.radio,connect.jamId==null?'Start a Jam':
           'Jam · ${connect.jamId}',
           connect.jamId==null?'Listen together in real time':
@@ -134,6 +151,7 @@ class _AudioConnectSheetState extends State<_AudioConnectSheet> {
             ],
           ]),
         ),
+        ],
       ]);
     },
   );
@@ -324,16 +342,18 @@ class _AudioConnectSheetState extends State<_AudioConnectSheet> {
             Expanded(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Connect to a device', style: TextStyle(
+                Text(widget.listenTogether ? 'Listen Together' : 'Audio Output',
+                  style: const TextStyle(
                   fontSize: 23, fontWeight: FontWeight.w700,
                   color: Color(0xFFFFFFFF))),
                 const SizedBox(height: 5),
-                const Text('Choose where Orchid plays audio',
-                  style: TextStyle(fontSize: 14,
+                Text(widget.listenTogether ? 'Start or join an Orchid Jam'
+                    : 'Choose where Orchid plays audio',
+                  style: const TextStyle(fontSize: 14,
                     color: Color(0xFF9E9EA4))),
               ],
             )),
-            GestureDetector(
+            if (!widget.listenTogether) GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: _refreshDevices,
               child:Padding(padding:const EdgeInsets.all(8),
@@ -353,7 +373,7 @@ class _AudioConnectSheetState extends State<_AudioConnectSheet> {
           ]),
         ),
         const Divider(),
-        _tile(LucideIcons.smartphone, 'This device',
+        if (!widget.listenTogether) _tile(LucideIcons.smartphone, 'This device',
           widget.player.player.playing?'Currently playing':'Ready to play',
           subtitleColor: const Color(0xFFE35C9B),
           trailing: const Icon(LucideIcons.volume2,
@@ -362,6 +382,7 @@ class _AudioConnectSheetState extends State<_AudioConnectSheet> {
           _connectContent(OrchidConnect.active!)
         else _tile(LucideIcons.monitor,'Orchid Connect',
           'Session service not ready'),
+        if (!widget.listenTogether) ...[
         _section('AirPlay & Bluetooth'),
         if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)
           Padding(
@@ -416,6 +437,7 @@ class _AudioConnectSheetState extends State<_AudioConnectSheet> {
               : LucideIcons.chevronRight,
               color: const Color(0xFF99999F))),
         if (_pipeline) _pipelineControls(),
+        ],
         if (_message != null) Padding(
           padding: const EdgeInsets.all(16),
           child: Text(_message!, style: const TextStyle(

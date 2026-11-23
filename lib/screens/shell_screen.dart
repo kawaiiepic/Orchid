@@ -81,7 +81,7 @@ class _ShellScreenState extends State<ShellScreen>{
  void _selectTab(int index) {
   final nav=orchidContentNavigatorKey.currentState;
   final reselectHome=index==0 && selected==const ValueKey(0) &&
-      !(nav?.canPop() ?? false);
+      !_iosDockCollapsed && !(nav?.canPop() ?? false);
   nav?.popUntil((route) => route.isFirst);
   if(reselectHome && _homeScroll.hasClients) {
    _homeScroll.animateTo(0, duration:const Duration(milliseconds:300),
@@ -220,7 +220,7 @@ class _ShellScreenState extends State<ShellScreen>{
         ? OrchidStyle.pink
         : const Color(0xFFF8F6FC)),
     onTap: () {
-      if (_iosDockCollapsed && !(page == 0 && index == 0)) {
+      if (_iosDockCollapsed) {
         setState(() {
           _iosDockCollapsed = false;
           _verticalScrollAccum = 0;

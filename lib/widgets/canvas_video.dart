@@ -31,6 +31,7 @@ class _CanvasVideoState extends State<CanvasVideo> {
   late final VideoController _controller;
   StreamSubscription<String>? _errorSubscription;
   StreamSubscription<Duration>? _positionSubscription;
+  StreamSubscription<bool>? _bufferingSubscription;
   Timer? _stallWatchdog;
   DateTime _lastProgress = DateTime.now();
   Duration _lastPosition = Duration.zero;
@@ -38,6 +39,8 @@ class _CanvasVideoState extends State<CanvasVideo> {
   int _recoveries = 0;
   DateTime _recoveryWindow = DateTime.now();
   bool _ready = false;
+  bool _buffering = false;
+  bool _hasRendered = false;
   bool _failed = false;
   int _generation = 0;
   bool _failureReported = false;
@@ -60,6 +63,11 @@ class _CanvasVideoState extends State<CanvasVideo> {
         enableHardwareAcceleration: true,
       ),
     );
+    _bufferingSubscription = _video.stream.buffering.listen((buffering) {
+      if (mounted && _buffering != buffering) {
+        setState(() => _buffering = buffering);
+      }
+    });
     _positionSubscription = _video.stream.position.listen((position) {
       // Ignore repeat-loop position resets, but count actual forward motion.
       if (position > _lastPosition + const Duration(milliseconds: 150) ||
@@ -107,6 +115,10 @@ class _CanvasVideoState extends State<CanvasVideo> {
         _reportFailure();
         return;
       }
+      // Cover the texture before stopping it: mpv can clear it immediately.
+      setState(() => _ready = false);
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) return;
       await _video.stop();
       if (!mounted) return;
       await _start();
@@ -147,10 +159,22 @@ class _CanvasVideoState extends State<CanvasVideo> {
       if (!mounted || generation != _generation) return;
       // MPV can report "playing" while the texture still contains a black
       // frame. Wait for media_kit_video's actual first-render notification.
-      await _controller.waitUntilFirstFrameRendered
-          .timeout(const Duration(seconds: 15));
+      if (!_hasRendered) {
+        await _controller.waitUntilFirstFrameRendered
+            .timeout(const Duration(seconds: 15));
+      } else if (_video.state.position < const Duration(milliseconds: 100)) {
+        // media_kit's first-frame future completes only once per controller.
+        // After reopening, wait until the new stream is actually advancing.
+        await _video.stream.position
+            .firstWhere((position) => position >= const Duration(milliseconds: 100))
+            .timeout(const Duration(seconds: 15));
+      }
       if (!mounted || generation != _generation || _failed) return;
-      setState(() => _ready = true);
+      _hasRendered = true;
+      setState(() {
+        _buffering = _video.state.buffering;
+        _ready = true;
+      });
       _lastProgress = DateTime.now();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && generation == _generation && !_failed) {
@@ -179,8 +203,12 @@ class _CanvasVideoState extends State<CanvasVideo> {
       _recoveries = 0;
       _recoveryWindow = DateTime.now();
       _recovering = false;
-      unawaited(_video.stop().then((_) {
-        if (mounted) return _start();
+      _ready = false;
+      final generation = _generation;
+      unawaited(WidgetsBinding.instance.endOfFrame.then((_) async {
+        if (!mounted || generation != _generation) return;
+        await _video.stop();
+        if (mounted && generation == _generation) await _start();
       }));
     }
   }
@@ -190,6 +218,7 @@ class _CanvasVideoState extends State<CanvasVideo> {
     ++_generation;
     _stallWatchdog?.cancel();
     _positionSubscription?.cancel();
+    _bufferingSubscription?.cancel();
     _errorSubscription?.cancel();
     unawaited(_video.dispose());
     super.dispose();
@@ -197,35 +226,41 @@ class _CanvasVideoState extends State<CanvasVideo> {
 
   @override
   Widget build(BuildContext context) {
+    final showCover = !_ready || _failed || _buffering;
     Widget cover() {
       final url = widget.fallbackArtworkUrl;
-      if (url != null && url.startsWith('https://')) {
-        return CachedNetworkImage(
-          imageUrl: url,
-          fit: BoxFit.cover,
-          errorWidget: (_, __, ___) =>
-              const Center(child: Icon(LucideIcons.music2, size: 52)),
-        );
-      }
-      return const Center(child: Icon(LucideIcons.music2, size: 52));
+      const placeholder = Center(child: Icon(LucideIcons.music2, size: 52));
+      return ColoredBox(
+        color: const Color(0xFF211627),
+        child: url != null && url.startsWith('https://')
+            ? CachedNetworkImage(
+                imageUrl: url,
+                fit: BoxFit.cover,
+                fadeInDuration: Duration.zero,
+                errorWidget: (_, __, ___) => placeholder,
+              )
+            : placeholder,
+      );
     }
-    // Keep the video mounted from the first build so its first frame can
-    // actually render, but paint the static artwork above it until then.
+    // Keep the video mounted so it can render its first frame. The same
+    // cover sits underneath it and masks its texture while buffering.
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: Stack(
         fit: StackFit.expand,
         children: [
+          RepaintBoundary(child: cover()),
           if (!_failed)
             Video(
               controller: _controller,
               controls: NoVideoControls,
               fit: BoxFit.cover,
+              fill: const Color(0x00000000),
             ),
           IgnorePointer(
             child: AnimatedOpacity(
-              opacity: _ready && !_failed ? 0 : 1,
-              duration: const Duration(milliseconds: 350),
+              opacity: showCover ? 1 : 0,
+              duration: showCover ? Duration.zero : const Duration(milliseconds: 280),
               curve: Curves.easeInOut,
               child: cover(),
             ),

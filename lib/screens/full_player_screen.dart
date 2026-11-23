@@ -30,7 +30,6 @@ class FullPlayerScreen extends StatefulWidget {
 class _FullPlayerScreen extends State<FullPlayerScreen> {
   // Two views only: animated/static artwork or lyrics.
   int _viewMode = 1;
-  bool _showVolume = false;
   bool _mobileLyrics = false;
   bool _mobileVideoReady = false;
   bool _mobileControlsHidden = false;
@@ -352,32 +351,23 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
   );
 
   Widget _displayToggles() => Padding(
-    padding:const EdgeInsets.fromLTRB(16, 2, 16, 8),
-    child:Row(
-      mainAxisAlignment:MainAxisAlignment.end,
-      children:[
-        if(_showVolume)SizedBox(
-          width:110,
-          child:Slider(
-            value:SliderValue.single(widget.player.volume),
-            min:0,max:1,
-            onChanged:(value)=>widget.player.setVolume(value.value),
-          ),
-        ),
-        IconButton(
-          variance:ButtonVariance.ghost,
-          onPressed:()=>setState(()=>_showVolume=!_showVolume),
-          icon:Icon(widget.player.volume==0
-              ?LucideIcons.volumeX:LucideIcons.volume2,size:23),
-        ),
-        const SizedBox(width:8),
-        IconButton(
-          variance:ButtonVariance.ghost,
-          onPressed:_nextView,
-          icon:Icon(_viewMode==0?LucideIcons.image:LucideIcons.mic,
-              size:23),
-        ),
-      ],
+    padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 340),
+      child: Column(
+        children: [
+          Row(children: [
+            const Icon(LucideIcons.volume2, size: 18),
+            const SizedBox(width: 10),
+            Expanded(child: Slider(
+              value: SliderValue.single(widget.player.volume),
+              min: 0, max: 1,
+              onChanged: (value) => widget.player.setVolume(value.value),
+            )),
+          ]),
+          _playerActions(lyricsEnabled: _viewMode == 0, onLyrics: _nextView),
+        ],
+      ),
     ),
   );
 
@@ -501,16 +491,15 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
       child: ClipRRect(
         borderRadius: BorderRadius.zero,
         child: Stack(fit: StackFit.expand, children: [
-          // Avoid repainting a heavily blurred still behind the moving
-          // video. It is useful only until the first video frame is ready.
-          if (_mobileVideoReady && _animatedEnabled && !_animationFailed)
-            const ColoredBox(color: Color(0xFF110C16))
-          else
-            LiquidArtworkBackground(
+          // Keep a still background available when the video texture drops
+          // a frame, loops, or is temporarily recreated.
+          RepaintBoundary(
+            child: LiquidArtworkBackground(
               imageUrl: track?.artworkUrl,
               intensity: 0.95,
               child: const SizedBox.expand(),
             ),
+          ),
           // Play the album's animated Apple Music cover behind the entire
           // mobile player. CanvasVideo loops silently and reports HLS errors.
           // The artwork-reactive static background remains underneath as the
@@ -755,19 +744,10 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                       ),
                       SizedBox(height: compact ? 17 : 26),
                       _mobileVolume(),
-                      SizedBox(height: compact ? 16 : 25),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _mobileBottomAction(
-                            _mobileLyrics ? LucideIcons.image : LucideIcons.mic,
-                            () => setState(() => _mobileLyrics = !_mobileLyrics),
-                            active: _mobileLyrics),
-                          _mobileBottomAction(LucideIcons.speaker,
-                            () => showAudioConnectSheet(context, widget.player)),
-                          _mobileBottomAction(LucideIcons.listMusic,
-                            () => showQueueSheet(context, widget.player)),
-                        ],
+                      const SizedBox(height: 9),
+                      _playerActions(
+                        lyricsEnabled: _mobileLyrics,
+                        onLyrics: () => setState(() => _mobileLyrics = !_mobileLyrics),
                       ),
                     ],
                   ),
@@ -862,17 +842,59 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
         ),
       );
 
-  Widget _mobileBottomAction(IconData icon, VoidCallback action,
-      {bool active = false}) => GestureDetector(
-        behavior: HitTestBehavior.opaque,
+  Widget _playerActions({required bool lyricsEnabled, required VoidCallback onLyrics}) {
+    return Row(children: [
+      _playerAction(LucideIcons.messageSquareQuote, 'Lyrics', onLyrics,
+        selected: lyricsEnabled),
+      _playerAction(LucideIcons.airplay, 'Audio Output',
+        () => showAudioConnectSheet(context, widget.player)),
+      _playerAction(LucideIcons.usersRound, 'Listen Together',
+        () => showAudioConnectSheet(context, widget.player, listenTogether: true)),
+      _playerAction(LucideIcons.listMusic, 'Queue',
+        () => showQueueSheet(context, widget.player)),
+    ]);
+  }
+
+  Widget _playerAction(IconData icon, String label, VoidCallback action,
+      {bool? selected}) {
+    final active = selected == true;
+    const color = Color(0xFFF5E7F2);
+    return Expanded(
+      child: Semantics(
+        button: true,
+        label: label,
+        toggled: selected,
         onTap: action,
-        child: SizedBox(
-          width: 58, height: 48,
-          child: Center(child: Icon(icon, size: 26,
-            color: active
-                ? const Color(0xFFBFE8C1) : const Color(0xD9F0E7EE))),
+        excludeSemantics: true,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: action,
+          child: SizedBox(
+            height: 48,
+            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: active ? color : null,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+                  child: Icon(icon, size: 19,
+                    color: active ? const Color(0xFF271A2B) : color),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: FittedBox(fit: BoxFit.scaleDown,
+                  child: Text(label, style: const TextStyle(fontSize: 10, color: color))),
+              ),
+            ]),
+          ),
         ),
-      );
+      ),
+    );
+  }
 
   Widget _mobileProgress() => StreamBuilder<Duration>(
     stream: widget.player.player.positionStream,
