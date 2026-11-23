@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:orchid/widgets/karaoke_lyrics.dart';
+import 'package:orchid/widgets/player_dismiss_gestures.dart';
 import 'package:orchid/widgets/liquid_artwork_background.dart';
 import 'package:orchid/widgets/queue_sheet.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -33,17 +34,6 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
   bool _mobileLyrics = false;
   bool _mobileVideoReady = false;
   bool _mobileControlsHidden = false;
-  double _dismissDrag = 0;
-
-  void _startDismiss(DragStartDetails _) => _dismissDrag = 0;
-  void _updateDismiss(DragUpdateDetails details) =>
-      _dismissDrag += details.primaryDelta ?? 0;
-  void _endDismiss(DragEndDetails details) {
-    if (_dismissDrag > 65 ||
-        (_dismissDrag > 14 && (details.primaryVelocity ?? 0) > 450)) {
-      Navigator.of(context).maybePop();
-    }
-  }
   bool _animatedEnabled = true;
   bool _animationFailed = false;
   static const _animatedPreferenceKey = 'orchid_animated_artwork_enabled';
@@ -579,9 +569,6 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
               child: _mobileControlsHidden ? GestureDetector(
                 key: const ValueKey('clean-player'),
                 behavior: HitTestBehavior.opaque,
-                onVerticalDragStart: _startDismiss,
-                onVerticalDragUpdate: _updateDismiss,
-                onVerticalDragEnd: _endDismiss,
                 onTap: () => setState(() => _mobileControlsHidden = false),
                 child: Stack(children: [
                   const SizedBox.expand(),
@@ -624,12 +611,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      GestureDetector(
-                        behavior: HitTestBehavior.translucent,
-                        onVerticalDragStart: _startDismiss,
-                        onVerticalDragUpdate: _updateDismiss,
-                        onVerticalDragEnd: _endDismiss,
-                        child: Row(children: [
+                      Row(children: [
                         GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: () => Navigator.of(context).maybePop(),
@@ -656,7 +638,7 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
                               fontWeight: FontWeight.w600)),
                         ])),
                         const SizedBox(width: 42),
-                      ])),
+                      ]),
                       SizedBox(height: compact ? 16 : 22),
                       SizedBox.square(
                         dimension: coverSize,
@@ -996,7 +978,14 @@ class _FullPlayerScreen extends State<FullPlayerScreen> {
     return ListenableBuilder(
       listenable: widget.player,
       builder: (context, _) {
-        if (isMobile) return _mobileNowPlaying(context);
+        if (isMobile) {
+          return PlayerDismissGestures(
+            // In the normal lyrics view, leave the scrollable lyrics alone.
+            downStartFraction: _mobileLyrics && !_mobileControlsHidden ? .17 : .65,
+            onDismiss: () => Navigator.of(context).maybePop(),
+            child: _mobileNowPlaying(context),
+          );
+        }
         final track = widget.player.current;
         final mobileAnimated = isMobile &&
             _animatedEnabled && _appleArtwork != null && !_animationFailed;

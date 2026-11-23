@@ -38,7 +38,11 @@ void dismissContentDrawer(BuildContext context) {
 
 /// The expanded music player is deliberately above the entire app shell.
 void showFullScreenPlayer(BuildContext context, WidgetBuilder builder) {
-  Navigator.of(context, rootNavigator: true).push(_orchidPageRoute(builder));
+  // The player handles both dismissal gestures itself. Avoid a second
+  // interactive Cupertino pop competing with its left-edge gesture.
+  Navigator.of(context, rootNavigator: true).push(
+    ShadcnPageRoute<void>(builder: builder),
+  );
 }
 
 /// Native Liquid Glass mobile action drawer, using the package's modal
