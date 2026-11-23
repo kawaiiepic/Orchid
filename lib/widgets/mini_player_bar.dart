@@ -143,7 +143,9 @@ class MiniPlayerBar extends StatelessWidget {
                   color: OrchidStyle.violet,
                   borderRadius: BorderRadius.circular(13),
                 ),
-                child: nativeIOS
+                child: player.playbackLoading
+                  ? const Center(child: OrchidLoadingIndicator(color: OrchidStyle.ink))
+                  : nativeIOS
                   ? ios.CupertinoButton(
                       padding: EdgeInsets.zero,
                       onPressed: () => player.togglePlayPause(),
@@ -230,7 +232,7 @@ class IOSMiniPlayer extends StatelessWidget {
           clipBehavior: Clip.antiAlias,
           child: Container(
               height: 58,
-              padding: const EdgeInsets.symmetric(horizontal: 9),
+              padding: EdgeInsets.symmetric(horizontal: compact ? 11 : 15),
               child: Row(
                 children: [
                   Expanded(
@@ -292,7 +294,9 @@ class IOSMiniPlayer extends StatelessWidget {
                       ]),
                     ),
                   ),
-                  ios.CupertinoButton(
+                  if (player.playbackLoading)
+                    const SizedBox(width: 44, child: Center(child: OrchidLoadingIndicator()))
+                  else ios.CupertinoButton(
                     padding: EdgeInsets.zero,
                     onPressed: player.togglePlayPause,
                     child: Icon(
@@ -595,7 +599,9 @@ class DesktopPlayerBar extends StatelessWidget {
                                   size: 15),
                                 _control(LucideIcons.skipBack,
                                   active ? player.playPrevious : null),
-                                _control(
+                                if (player.playbackLoading)
+                                  const SizedBox(width: 40, child: Center(child: OrchidLoadingIndicator()))
+                                else _control(
                                   player.player.playing
                                     ? LucideIcons.pause
                                     : LucideIcons.play,

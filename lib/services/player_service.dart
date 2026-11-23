@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'orchid_audio_player.dart';
@@ -173,7 +174,58 @@ class PlayerService extends ChangeNotifier {
   LyricsResult? lyrics;
   bool lyricsLoading = false;
   bool resolving = false;
+  bool _needsLoad = false;
   String? error;
+
+  bool get playbackLoading => resolving || (error == null &&
+      (player.processingState == OrchidProcessingState.loading ||
+       player.processingState == OrchidProcessingState.buffering));
+
+  static const _lastTrackKey = 'orchid_last_track';
+
+  Future<void> _restoreLastTrack() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_lastTrackKey);
+      if (_disposed || current != null || raw == null) return;
+      final data = jsonDecode(raw) as Map<String, dynamic>;
+      final track = TrackResult(
+        id: data['id'] as String,
+        title: data['title'] as String,
+        artist: data['artist'] as String,
+        album: data['album'] as String?,
+        artworkUrl: data['artwork'] as String?,
+        duration: data['duration'] as int?,
+        isrc: data['isrc'] as String?,
+        spotifyTrackId: data['spotifyTrackId'] as String?,
+        sourceId: data['sourceId'] as String,
+        sourceName: data['sourceName'] as String,
+      );
+      current = track;
+      queue = [track];
+      queueIndex = 0;
+      _needsLoad = true;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('[Orchid] Could not restore last track: $e');
+    }
+  }
+
+  Future<void> _rememberTrack(TrackResult track) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (_disposed || current != track) return;
+      await prefs.setString(_lastTrackKey, jsonEncode({
+        'id': track.id, 'title': track.title, 'artist': track.artist,
+        'album': track.album, 'artwork': track.artworkUrl,
+        'duration': track.duration, 'isrc': track.isrc,
+        'spotifyTrackId': track.spotifyTrackId,
+        'sourceId': track.sourceId, 'sourceName': track.sourceName,
+      }));
+    } catch (e) {
+      debugPrint('[Orchid] Could not save last track: $e');
+    }
+  }
 
   List<TrackResult> queue = [];
   int queueIndex = -1;
@@ -190,6 +242,7 @@ class PlayerService extends ChangeNotifier {
     required this.addonService,
     LyricsService? lyricsService,
   }) : lyricsService = lyricsService ?? LyricsService() {
+    unawaited(_restoreLastTrack());
     unawaited(_restoreKeepPlaying());
     unawaited(_restoreAudioPipeline());
     _trackTransitionSubscription=player.trackTransitions.listen(_handleEngineTransition);
@@ -527,17 +580,22 @@ class PlayerService extends ChangeNotifier {
       final stream = await addonService
           .resolvePlayback(track, _addons)
           .timeout(const Duration(seconds: 50));
-      if (generation != lyricsGeneration) return;
+      if (_disposed || generation != lyricsGeneration) return;
       playingVia = _sourceName(stream.via ?? stream.quality, stream, track);
       streamQuality = stream.quality;
       streamCodec = stream.format;
       await player.openTrack(stream.url,_trackKey(track))
         .timeout(const Duration(seconds:20));
+      if (_disposed || generation != lyricsGeneration) return;
       streamUrl=stream.url;
-      if (generation != lyricsGeneration) return;
       await player.setVolume(volume);
-      unawaited(player.play().catchError((Object e) {
-        debugPrint('[Orchid] Audio playback failed: $e');
+      if (_disposed || generation != lyricsGeneration) return;
+      _needsLoad = false;
+      unawaited(player.play().then<void>((_) => _rememberTrack(track)).catchError((Object e) {
+        if (_disposed || generation != lyricsGeneration) return;
+        _needsLoad = true;
+        error = 'Playback failed: $e';
+        notifyListeners();
       }));
       resolving = false;
       notifyListeners();
@@ -552,7 +610,8 @@ class PlayerService extends ChangeNotifier {
         unawaited(_beginNewRecommendations());
       }
     } catch (e) {
-      if (generation == lyricsGeneration) {
+      if (!_disposed && generation == lyricsGeneration) {
+        _needsLoad = true;
         resolving = false;
         lyricsLoading = false;
         error = 'Playback failed: $e';
@@ -590,6 +649,9 @@ class PlayerService extends ChangeNotifier {
     queueIndex++;
     final track=queue[queueIndex];
     current=track;
+    _needsLoad=false;
+    error=null;
+    unawaited(_rememberTrack(track));
     streamUrl=null;
     playingVia=track.sourceName;
     streamQuality=null;
@@ -658,12 +720,21 @@ class PlayerService extends ChangeNotifier {
   }
 
   Future<void> togglePlayPause() async {
-    if (player.playing) {
-      await player.pause();
-    } else {
-      await player.play();
+    if (resolving || current == null) return;
+    try {
+      if (_needsLoad) {
+        await _loadAndPlay(current!);
+      } else if (player.playing) {
+        await player.pause();
+      } else {
+        await player.play();
+      }
+    } catch (e) {
+      if (_disposed) return;
+      _needsLoad = true;
+      error = 'Playback failed: $e';
     }
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
   Future<void> setVolume(double v) async {

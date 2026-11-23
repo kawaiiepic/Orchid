@@ -1,20 +1,32 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:orchid/app.dart';
+import 'package:orchid/services/addon_service.dart';
+import 'package:orchid/services/player_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  testWidgets('Orchid app smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const OrchidApp());
+  setUp(() => SharedPreferences.setMockInitialValues({}));
 
-    // Verify the home screen is displayed.
-    expect(find.text('Search'), findsOneWidget);
+  testWidgets('Orchid asks for sign-in without a saved session', (tester) async {
+    await tester.pumpWidget(const OrchidApp());
+    await tester.pumpAndSettle();
+    expect(find.text('Sign in'), findsOneWidget);
+  });
+
+  testWidgets('last song is restored without starting playback', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'orchid_last_track': '{"id":"1","title":"Last song","artist":"Artist",'
+          '"sourceId":"itunes","sourceName":"iTunes"}',
+    });
+    final service = PlayerService(addonService: AddonService());
+    try {
+      await tester.pump();
+      expect(service.current?.title, 'Last song');
+      expect(service.player.playing, isFalse);
+      expect(service.playbackLoading, isFalse);
+    } finally {
+      service.dispose();
+    }
   });
 }

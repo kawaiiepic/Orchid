@@ -22,7 +22,8 @@ class OrchidHomeScreen extends StatefulWidget {
   final List<InstalledAddon> addons;
   final OrchidAccount account;
   final VoidCallback openExplore;
-  final VoidCallback openLibrary;
+  final ValueChanged<String> openPlaylist;
+  final ScrollController scrollController;
   final VoidCallback openReplay;
   final VoidCallback openRadio;
   final VoidCallback openTopSongs;
@@ -38,7 +39,8 @@ class OrchidHomeScreen extends StatefulWidget {
     required this.addons,
     required this.account,
     required this.openExplore,
-    required this.openLibrary,
+    required this.openPlaylist,
+    required this.scrollController,
     required this.openReplay,
     required this.openRadio,
     required this.openTopSongs,
@@ -274,8 +276,9 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
       return _clickable(
         onTap: onTap,
         child: SizedBox(
-          width: wideWidth, height: wideHeight,
-          child: ClipRRect(
+          width: wideWidth, height: wideHeight + 25,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(child: ClipRRect(
             borderRadius: BorderRadius.circular(15),
             child: Stack(fit: StackFit.expand, children: [
               if (artwork != null)
@@ -332,16 +335,15 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                         color: Color(0xFFFFFFFF),
                         fontSize: 19, fontWeight: FontWeight.w700,
                       )),
-                    const SizedBox(height: 4),
-                    Text(subtitle, maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFFE6DEED), fontSize: 12)),
                   ],
                 ),
               ),
             ]),
-          ),
+          )),
+          const SizedBox(height: 5),
+          Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Color(0xFFE6DEED), fontSize: 12)),
+          ]),
         ),
       );
     }
@@ -478,8 +480,11 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
       zoomCard: zoomCard,
       child: SizedBox(
         width: cardWidth,
-        height: cardHeight,
-        child: ClipRRect(
+        height: cardHeight + 25,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+          Expanded(child: ClipRRect(
           borderRadius: BorderRadius.circular(17),
           child: Stack(
             fit: StackFit.expand,
@@ -561,23 +566,16 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                         shadows: [Shadow(blurRadius: 8, color: Color(0xAA000000))],
                       ),
                     ),
-                    if (subtitle.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Color(0xFFE6E0E9),
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
             ],
           ),
+        )),
+        const SizedBox(height: 5),
+        Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: Color(0xFFE6E0E9), fontSize: 11)),
+        ],
         ),
       ),
     );
@@ -596,11 +594,11 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
         final columns = box.maxWidth >= 940 ? 3 : 2;
         const gap = 10.0;
         final width = (box.maxWidth - gap * (columns - 1)) / columns;
-        Widget shortcut(String label, String subtitle, String? artist,
+        Widget shortcut(String id, String label, String subtitle, String? artist,
             String? song, String? artwork) {
           return GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: widget.openLibrary,
+            onTap: () => widget.openPlaylist(id),
             child: OrchidHoverZoom(
               scale: 1.035,
               child: ClipRRect(
@@ -649,7 +647,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
           );
         }
         final items = <Widget>[
-          shortcut('Favorites',
+          shortcut('favorites', 'Favorites',
             '${widget.library.favorites.length} songs',
             widget.library.favorites.isNotEmpty
               ? widget.library.favorites.first.artist : null,
@@ -658,7 +656,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
             widget.library.favorites.isNotEmpty
               ? widget.library.favorites.first.artwork : null),
           for (final p in playlists.take(8))
-            shortcut(p.name, '${p.songs.length} songs',
+            shortcut(p.id, p.name, '${p.songs.length} songs',
               p.songs.isNotEmpty ? p.songs.first.artist : null,
               p.songs.isNotEmpty ? p.songs.first.title : null,
               p.songs.isNotEmpty ? p.songs.first.artwork : null),
@@ -706,23 +704,7 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
                             radius: 0,
                           )
                         : null,
-                    onTap: () {
-                      if (playlist.songs.isEmpty) return;
-                      widget.player.setAddons(widget.addons);
-                      final queue = playlist.songs.map((song) => TrackResult(
-                        id: song.key,
-                        title: song.title,
-                        artist: song.artist,
-                        album: song.album,
-                        artworkUrl: song.artwork,
-                        sourceId: 'orchid-library',
-                        sourceName: 'Library',
-                      )).toList();
-                      widget.player.playTrack(queue.first, fromQueue: queue)
-                        .catchError((Object e) {
-                          debugPrint('[Orchid] Cannot play pinned playlist: $e');
-                        });
-                    },
+                    onTap: () => widget.openPlaylist(playlist.id),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -1120,12 +1102,14 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
     final charts = _items('charts');
     final recent = _uniqueRecent();
     return ListView(
+      controller: widget.scrollController,
       padding: EdgeInsets.fromLTRB(_desktop ? 28 : 0,
         _desktop ? 28 : 12, _desktop ? 30 : 0,
         _desktop ? 0 : OrchidStyle.iosDockClearance(context)),
       children: [
         _homeInset(widget.header),
         _homeInset(_desktopShortcuts()),
+        _pinnedPlaylists(),
         gap,
         _homeInset(_desktopSection('Made For You')),
         SingleChildScrollView(
@@ -1162,7 +1146,10 @@ class _OrchidHomeScreenState extends State<OrchidHomeScreen> {
         gap,
         _homeInset(_desktopSection('New For You')),
         if (_loading && _history == null)
-          _homeInset(const Text('Finding music for you…').muted())
+          _homeInset(Row(children: [
+            const OrchidLoadingIndicator(), const SizedBox(width: 8),
+            const Text('Finding music for you…').muted(),
+          ]))
         else if (charts.isNotEmpty)
           _homeInset(_desktopSongList(charts))
         else

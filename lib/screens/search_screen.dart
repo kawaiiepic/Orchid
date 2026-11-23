@@ -943,7 +943,7 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
             const SizedBox(width:8),
             OrchidAdaptiveControls.button(prominent: true, onPressed:_searching?null:_submitSearch,
-              child:Text(_searching?'…':'Search')),
+              child:_searching ? const OrchidLoadingIndicator() : const Text('Search')),
           ]),
         ),
         if (_searchFocus.hasFocus || _controller.text.trim().isNotEmpty)
