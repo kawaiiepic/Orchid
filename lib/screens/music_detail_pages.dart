@@ -121,18 +121,6 @@ class _HoverMusicVideoArtworkState extends State<_HoverMusicVideoArtwork> {
   );
 }
 
-Widget _back(BuildContext context) => Align(
-  alignment: Alignment.centerLeft,
-  child: MediaQuery.sizeOf(context).width < 850
-    ? OrchidBackButton(
-        onPressed: () => dismissContentDrawer(context),
-      )
-    : IconButton.ghost(
-        onPressed: () => dismissContentDrawer(context),
-        icon: const Icon(LucideIcons.arrowLeft),
-      ),
-);
-
 void _openTrack(BuildContext context, TrackResult track, {
   required PlayerService player, required AddonService addonService,
   required List<InstalledAddon> addons, required MusicLibrary library,
@@ -545,11 +533,8 @@ class _ArtistDetailPageState extends State<ArtistDetailPage> {
       final albums = catalog?.albums.where(
         (album) => album.releaseType == 'album').toList() ?? <MusicAlbum>[];
       return ListView(
-        padding: EdgeInsets.fromLTRB(24, 24, 30,
-          28 + (MediaQuery.sizeOf(context).width >= 850 ? 104 : 0)),
+        padding: const EdgeInsets.fromLTRB(24, 16, 30, 28),
         children: [
-          _back(context),
-          const SizedBox(height: 12),
           _musicHeader(context,
             eyebrow: 'Artist',
             title: widget.artist,
@@ -781,8 +766,6 @@ class _AlbumDetailPageState extends State<AlbumDetailPage> {
         return ListView(
           padding: const EdgeInsets.all(24),
           children: [
-            _back(context),
-            const SizedBox(height: 12),
             _musicHeader(context,
               eyebrow:'Album',
               title:widget.album,

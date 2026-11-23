@@ -168,7 +168,10 @@ jobs:
           flutter build ipa --release -v \
             --export-options-plist=ios/ExportOptions.plist \
             --build-name="$BUILD_NAME" \
-            --build-number="$BUILD_NUMBER"
+            --build-number="$BUILD_NUMBER" \
+            --dart-define="ORCHID_BUILD_BRANCH=$GITHUB_REF_NAME" \
+            --dart-define="ORCHID_BUILD_COMMIT=$GITHUB_SHA" \
+            --dart-define="ORCHID_BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
           IPA_PATH=$(find build/ios/ipa -maxdepth 1 -name '*.ipa' -print -quit)
           if [[ -z "$IPA_PATH" ]]; then

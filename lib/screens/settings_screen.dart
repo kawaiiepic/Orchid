@@ -6,6 +6,7 @@ import '../models/addon.dart';
 import '../services/addon_service.dart';
 import '../services/lyrics_appearance.dart';
 import '../services/orchid_account.dart';
+import 'app_info_screen.dart';
 import 'profile_screen.dart';
 import '../widgets/orchid_style.dart';
 
@@ -14,6 +15,7 @@ class SettingsScreen extends StatefulWidget {
   final AddonService addonService;
   final List<InstalledAddon> addons;
   final ValueChanged<List<InstalledAddon>> onAddonsChanged;
+  final VoidCallback onBack;
 
   const SettingsScreen({
     super.key,
@@ -21,6 +23,7 @@ class SettingsScreen extends StatefulWidget {
     required this.addonService,
     required this.addons,
     required this.onAddonsChanged,
+    required this.onBack,
   });
 
   @override
@@ -156,6 +159,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  static const _categories = ['Account', 'Connections', 'Lyrics', 'Sources', 'App Info'];
+  static const _icons = [
+    LucideIcons.user, LucideIcons.link, LucideIcons.music2, LucideIcons.radio,
+    LucideIcons.info,
+  ];
+
   @override
   Widget build(BuildContext context) {
     final a = _appearance;
@@ -169,11 +178,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
         desktop ? 100 : 20 + OrchidStyle.iosDockClearance(context)),
       children: [
         if (!desktop && _section == -1) ...[
-          const Text('Settings').x2Large().semiBold(),
+          Row(children: [
+            OrchidBackButton(onPressed: widget.onBack),
+            const SizedBox(width: 12),
+            const Text('Settings').x2Large().semiBold(),
+          ]),
           const SizedBox(height: 8),
           const Text('Manage your Orchid experience.').muted(),
           const SizedBox(height: 24),
-          for (var i = 0; i < 4; i++)
+          for (var i = 0; i < _categories.length; i++)
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: MouseRegion(
@@ -186,25 +199,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     child: Padding(
                       padding: const EdgeInsets.all(18),
                       child: Row(children: [
-                        Icon(const [
-                          LucideIcons.user,
-                          LucideIcons.link,
-                          LucideIcons.music2,
-                          LucideIcons.radio,
-                        ][i], color: OrchidStyle.lilac, size: 20),
+                        Icon(_icons[i], color: OrchidStyle.lilac, size: 20),
                         const SizedBox(width: 15),
                         Expanded(child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(const [
-                              'Account', 'Connections', 'Lyrics', 'Sources',
-                            ][i]).semiBold(),
+                            Text(_categories[i]).semiBold(),
                             const SizedBox(height: 4),
                             Text(const [
                               'Profile and sign-in details',
                               'Linked music services',
                               'Lyrics appearance and timing',
                               'Built-in sources and installed addons',
+                              'Version, contributors, licenses, and support',
                             ][i]).small().muted(),
                           ],
                         )),
@@ -223,12 +230,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onPressed: () => setState(() => _section = -1),
               ),
               const SizedBox(width: 12),
-              Text(const [
-                'Account', 'Connections', 'Lyrics', 'Sources',
-              ][currentSection]).large().semiBold(),
+              Text(_categories[currentSection]).large().semiBold(),
             ]),
             const SizedBox(height: 14),
           ],
+        if (currentSection == 4) const AppInfoScreen(),
         if (currentSection == 0)
           ProfileScreen(account: widget.account,
             embedded: true, section: 'account'),
@@ -465,11 +471,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ],
       );
       if (!desktop) return content;
-      const categories = ['Account', 'Connections', 'Lyrics', 'Sources'];
-      const icons = [
-        LucideIcons.user, LucideIcons.link,
-        LucideIcons.music2, LucideIcons.radio,
-      ];
       return Padding(
         padding: const EdgeInsets.fromLTRB(28, 28, 30, 0),
         child: Column(
@@ -494,7 +495,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             fontWeight: FontWeight.w700,
                           )),
                         ),
-                        for (var i = 0; i < categories.length; i++)
+                        for (var i = 0; i < _categories.length; i++)
                           Padding(
                             padding: const EdgeInsets.only(bottom: 4),
                             child: MouseRegion(
@@ -514,12 +515,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Row(children: [
-                                    Icon(icons[i], size: 17,
+                                    Icon(_icons[i], size: 17,
                                       color: currentSection == i
                                         ? OrchidStyle.pink
                                         : const Color(0xFFB1A5C3)),
                                     const SizedBox(width: 11),
-                                    Expanded(child: Text(categories[i],
+                                    Expanded(child: Text(_categories[i],
                                       style: TextStyle(
                                         color: currentSection == i
                                           ? OrchidStyle.pink

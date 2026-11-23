@@ -379,21 +379,8 @@ class _SongDetailScreenState extends State<SongDetailScreen>{
 
  @override
  Widget build(BuildContext context) => ListView(
-     padding: EdgeInsets.fromLTRB(24, 24, 30,
-       28 + (MediaQuery.sizeOf(context).width >= 850 ? 104 : 0)),
+     padding: const EdgeInsets.fromLTRB(24, 16, 30, 28),
      children:[
-       Align(
-         alignment: Alignment.centerLeft,
-         child: MediaQuery.sizeOf(context).width < 850
-           ? OrchidBackButton(
-               onPressed: () => dismissContentDrawer(context),
-             )
-           : IconButton.ghost(
-               onPressed: () => dismissContentDrawer(context),
-               icon: const Icon(LucideIcons.arrowLeft),
-             ),
-       ),
-       const SizedBox(height: 12),
        OrchidDetailHeader(
          eyebrow: 'Song',
          title: widget.title,

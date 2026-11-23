@@ -399,7 +399,13 @@ class _ShellScreenState extends State<ShellScreen>{
 
  Widget _featurePage(Widget page, bool desktop) {
   if (desktop) return page;
-  return page;
+  return SafeArea(bottom:false, child:Column(children:[
+   Align(alignment:Alignment.centerLeft,child:Padding(
+    padding:const EdgeInsets.fromLTRB(16,6,16,0),
+    child:Semantics(label:'Back',child:OrchidBackButton(onPressed:()=>_selectTab(0))),
+   )),
+   Expanded(child:page),
+  ]));
  }
 
   bool _isDesktopLayout(BuildContext context) =>
@@ -467,15 +473,16 @@ class _ShellScreenState extends State<ShellScreen>{
       _featurePage(AllTimeTopSongsScreen(account:_account,player:_player,addons:_addons),desktop)
      else const SizedBox.shrink(),
      if(_initializedTabs.contains(9))
-      _featurePage(SettingsScreen(
+      SettingsScreen(
        account:_account,addonService:_addonService,addons:_addons,
+       onBack:()=>_selectTab(0),
        onAddonsChanged:(list) {
         if(!mounted)return;
         setState(()=>_addons=list);
         _contentRevision.value++;
         _player.setAddons(list);
        },
-      ),desktop)
+      )
      else const SizedBox.shrink(),
 
       ],

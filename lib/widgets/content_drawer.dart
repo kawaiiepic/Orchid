@@ -25,9 +25,30 @@ void showContentDrawer(
       .push(_orchidPageRoute(
     // Detail pages share the background of the app shell.
     (pageContext) => SafeArea(
-      child: Builder(builder: builder),
+      bottom: false,
+      child: Padding(
+        padding: EdgeInsets.only(bottom: _detailBottomPadding(pageContext)),
+        child: Column(children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+              child: Semantics(
+                label: 'Back',
+                child: OrchidBackButton(onPressed: () => dismissContentDrawer(pageContext)),
+              ),
+            ),
+          ),
+          Expanded(child: Builder(builder: builder)),
+        ]),
+      ),
     ),
   ));
+}
+
+double _detailBottomPadding(BuildContext context) {
+  final dock = OrchidStyle.iosDockClearance(context);
+  return dock == 0 ? 104 : dock + 16;
 }
 
 /// Close the current full page rather than dismissing a modal overlay.
