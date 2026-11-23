@@ -59,11 +59,24 @@ void dismissContentDrawer(BuildContext context) {
 
 /// The expanded music player is deliberately above the entire app shell.
 void showFullScreenPlayer(BuildContext context, WidgetBuilder builder) {
-  // The player handles both dismissal gestures itself. Avoid a second
-  // interactive Cupertino pop competing with its left-edge gesture.
-  Navigator.of(context, rootNavigator: true).push(
-    ShadcnPageRoute<void>(builder: builder),
-  );
+  final navigator = Navigator.of(context, rootNavigator: true);
+  if (MediaQuery.sizeOf(context).shortestSide >= 600) {
+    navigator.push(ShadcnPageRoute<void>(builder: builder));
+    return;
+  }
+  // Keep the previous route painted so the home screen is revealed as the
+  // fullscreen player follows the finger.
+  navigator.push(PageRouteBuilder<void>(
+    opaque: false,
+    pageBuilder: (context, animation, secondaryAnimation) => builder(context),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+        SlideTransition(
+      position: Tween(begin: const Offset(0, 1), end: Offset.zero)
+          .chain(CurveTween(curve: Curves.easeOutCubic))
+          .animate(animation),
+      child: child,
+    ),
+  ));
 }
 
 /// Native Liquid Glass mobile action drawer, using the package's modal
